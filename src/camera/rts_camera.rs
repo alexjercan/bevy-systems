@@ -29,11 +29,11 @@ impl Default for RTSCamera {
     fn default() -> Self {
         Self {
             focus: Vec3::ZERO,
-            orbit_sensitivity: 0.005,
-            pan_sensitivity: 0.01,
-            zoom_sensitivity: 1.5,
+            orbit_sensitivity: 0.01,
+            pan_sensitivity: 0.1,
+            zoom_sensitivity: 2.5,
             min_zoom: 0.1,
-            max_zoom: 20.0,
+            max_zoom: 100.0,
             orbit_smooth: 0.1,
             zoom_smooth: 0.1,
         }
