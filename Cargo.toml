@@ -45,6 +45,7 @@ dev = [
 [dependencies]
 bevy = { version = "0.16" }
 bevy_asset_loader = { version = "0.23.0" }
+leafwing-input-manager = "0.17.1"
 
 [workspace]
 members = [
@@ -54,3 +55,14 @@ resolver = "2"
 
 [build-dependencies]
 embed-resource = "1"
+
+[[example]]
+name = "rts_camera"
+path = "examples/02-camera/rts_camera.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.rts_camera]
+name = "RTS Camera"
+description = "Simple RTS Camera Example."
+category = "Camera"
+wasm = true
