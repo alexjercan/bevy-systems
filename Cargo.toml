@@ -1,0 +1,56 @@
+[package]
+name = "bevy-systems"
+version = "0.1.0"
+authors = ["jercan_alex27@yahoo.com"]
+edition = "2021"
+license = "MIT"
+homepage = "https://github.com/alexjercan/bevy-systems"
+description = "Random systems that I think are interesting."
+categories = ["games"]
+exclude = ["dist", "build", "assets", "credits"]
+
+[lib]
+name = "systems"
+path = "src/lib.rs"
+
+# Enable a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
+
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3
+
+# This is used by trunk as it doesn't support custom profiles: https://github.com/trunk-rs/trunk/issues/605
+# xbuild also uses this profile for building android AABs because I couldn't find a configuration for it
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+
+# Profile for distribution
+[profile.dist]
+inherits = "release"
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[features]
+dev = [
+    "bevy/dynamic_linking"
+]
+
+[dependencies]
+bevy = { version = "0.16" }
+bevy_asset_loader = { version = "0.23.0" }
+
+[workspace]
+members = [
+    # "crates/*",
+]
+resolver = "2"
+
+[build-dependencies]
+embed-resource = "1"
