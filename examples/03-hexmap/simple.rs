@@ -1,14 +1,12 @@
 //! TODO: Hexmap coordinates docs
 
-use std::time::SystemTime;
-
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use systems::{
     camera::wasd_camera::{WASDCamera, WASDCameraInput, WASDCameraPlugin, WASDCameraSet},
     debug::DebugPlugin,
-    hexmap::map::{GeneratorKind, HexDiscoverEvent, HexMapPlugin, HexMapSet},
+    hexmap::map::{HexDiscoverEvent, HexMapPlugin, HexMapSet},
 };
 
 #[derive(Actionlike, Clone, Debug, Copy, PartialEq, Eq, Hash, Reflect)]
@@ -31,12 +29,6 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(HexMapPlugin::new(
-            GeneratorKind::Perlin(
-                SystemTime::now()
-                    .duration_since(SystemTime::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs() as u32,
-            ),
             HEX_SIZE,
             CHUNK_RADIUS,
             DISCOVER_RADIUS,

@@ -2,14 +2,10 @@
 
 use bevy::{platform::collections::HashMap, prelude::*};
 use hexx::*;
-use noise::{NoiseFn, Perlin};
+use noise::NoiseFn;
 
 #[cfg(feature = "debug")]
 use self::debug::{DebugPlugin, DebugSet};
-
-pub enum GeneratorKind {
-    Perlin(u32),
-}
 
 #[derive(Event, Clone, Debug)]
 pub struct HexDiscoverEvent(pub Vec2);
@@ -73,16 +69,14 @@ impl HexMapStorage {
 pub struct HexMapSet;
 
 pub struct HexMapPlugin {
-    generator: GeneratorKind,
     hex_size: f32,
     chunk_radius: u32,
     discover_radius: u32,
 }
 
 impl HexMapPlugin {
-    pub fn new(generator: GeneratorKind, hex_size: f32, chunk_radius: u32, discover_radius: u32) -> Self {
+    pub fn new(hex_size: f32, chunk_radius: u32, discover_radius: u32) -> Self {
         Self {
-            generator,
             hex_size,
             chunk_radius,
             discover_radius,
@@ -108,13 +102,6 @@ impl Plugin for HexMapPlugin {
             discover_radius: self.discover_radius,
             chunks: HashMap::default(),
         });
-
-        match self.generator {
-            GeneratorKind::Perlin(seed) => {
-                app.add_plugins(HexMapPerlinPlugin::new(seed, Vec2::splat(self.hex_size) / self.chunk_radius as f32));
-                app.configure_sets(Update, HexMapPerlinSet.in_set(HexMapSet));
-            }
-        }
 
         app.add_systems(Update, (generate_chunks).in_set(HexMapSet).chain());
     }
@@ -150,65 +137,75 @@ fn generate_chunks(
     }
 }
 
-#[derive(Component, Clone, Debug, Deref, DerefMut)]
-pub struct HexNoise(pub f32);
-
-#[derive(Resource, Debug, Clone)]
-struct HexMapGenerator {
-    perlin: Perlin,
-    scale: Vec2,
+pub trait FromNoise: Component {
+    fn from_noise(value: f32) -> Self;
 }
 
-impl HexMapGenerator {
+#[derive(Resource, Debug, Clone)]
+struct HexMapGenerator<F: NoiseFn<f64, 3>> {
+    func: F,
+}
+
+impl<F: NoiseFn<f64, 3>> HexMapGenerator<F> {
     fn noise(&self, hex: Hex) -> f32 {
-        let q = hex.x as f64 * (self.scale.x as f64);
-        let r = hex.y as f64 * (self.scale.y as f64);
+        let q = hex.x as f64;
+        let r = hex.y as f64;
         let s = -(q + r);
 
-        self.perlin.get([q, r, s]) as f32
+        self.func.get([q, r, s]) as f32
     }
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct HexMapPerlinSet;
+pub struct HexMapNoiseSet;
 
-struct HexMapPerlinPlugin {
-    seed: u32,
-    scale: Vec2,
+pub struct HexMapNoisePlugin<F: NoiseFn<f64, 3>, C: FromNoise> {
+    func: F,
+    _marker: std::marker::PhantomData<C>,
 }
 
-impl HexMapPerlinPlugin {
-    pub fn new(seed: u32, scale: Vec2) -> Self {
-        Self { seed, scale }
+impl<F: NoiseFn<f64, 3>, C: FromNoise> HexMapNoisePlugin<F, C> {
+    pub fn new(func: F) -> Self {
+        Self {
+            func,
+            _marker: std::marker::PhantomData,
+        }
     }
 }
 
-impl Plugin for HexMapPerlinPlugin {
+impl<F: NoiseFn<f64, 3> + Copy + Send + Sync + 'static, C: FromNoise + Send + Sync + 'static> Plugin
+    for HexMapNoisePlugin<F, C>
+{
     fn build(&self, app: &mut App) {
         app.insert_resource(HexMapGenerator {
-            perlin: Perlin::new(self.seed),
-            scale: self.scale,
+            func: self.func,
         });
 
-        app.add_systems(Update, (generate_perlin_noise).in_set(HexMapPerlinSet).chain());
+        app.add_systems(
+            Update,
+            (generate_noise::<F, C>).in_set(HexMapNoiseSet).chain(),
+        );
     }
 }
 
-fn generate_perlin_noise(
+fn generate_noise<
+    F: NoiseFn<f64, 3> + Send + Sync + 'static,
+    C: FromNoise + Send + Sync + 'static,
+>(
     mut commands: Commands,
-    generator: Res<HexMapGenerator>,
-    q_hex: Query<(Entity, &HexCoord), Without<HexNoise>>,
+    generator: Res<HexMapGenerator<F>>,
+    q_hex: Query<(Entity, &HexCoord), Without<C>>,
 ) {
     for (entity, coord) in q_hex.iter() {
         let noise = generator.noise(**coord);
 
-        commands.entity(entity).insert(HexNoise(noise));
+        commands.entity(entity).insert(C::from_noise(noise));
     }
 }
 
 mod debug {
-    use bevy::prelude::*;
     use super::{HexCoord, HexMapStorage};
+    use bevy::prelude::*;
 
     #[derive(Debug, Resource, Default, Clone, Deref, DerefMut)]
     struct ShowGrid(pub bool);
@@ -225,16 +222,18 @@ mod debug {
         }
     }
 
-    fn toggle(
-        kbd: Res<ButtonInput<KeyCode>>,
-        mut show_grid: ResMut<ShowGrid>,
-    ) {
+    fn toggle(kbd: Res<ButtonInput<KeyCode>>, mut show_grid: ResMut<ShowGrid>) {
         if kbd.just_pressed(KeyCode::F12) {
             show_grid.0 = !show_grid.0;
         }
     }
 
-    fn draw_grid(mut gizmos: Gizmos, q_hex: Query<&HexCoord>, show_grid: Res<ShowGrid>, storage: Res<HexMapStorage>) {
+    fn draw_grid(
+        mut gizmos: Gizmos,
+        q_hex: Query<&HexCoord>,
+        show_grid: Res<ShowGrid>,
+        storage: Res<HexMapStorage>,
+    ) {
         if !**show_grid {
             return;
         }
