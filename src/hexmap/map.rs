@@ -4,6 +4,9 @@ use bevy::{platform::collections::HashMap, prelude::*};
 use hexx::*;
 use noise::{NoiseFn, Perlin};
 
+#[cfg(feature = "debug")]
+use self::debug::{DebugPlugin, DebugSet};
+
 pub enum GeneratorKind {
     Perlin(u32),
 }
@@ -24,10 +27,18 @@ struct Chunk {
 struct HexMapStorage {
     layout: HexLayout,
     chunk_radius: u32,
+    discover_radius: u32,
     chunks: HashMap<Hex, Chunk>,
 }
 
 impl HexMapStorage {
+    fn discover(&self, center: Hex) -> Vec<Hex> {
+        shapes::hexagon(Hex::ZERO, self.discover_radius)
+            .map(|hex| hex.to_higher_res(self.chunk_radius))
+            .map(|hex| center + hex)
+            .collect()
+    }
+
     fn chunk(&self, center: Hex) -> Chunk {
         let hexes = shapes::hexagon(Hex::ZERO, self.chunk_radius)
             .map(move |hex| center + hex)
@@ -65,20 +76,27 @@ pub struct HexMapPlugin {
     generator: GeneratorKind,
     hex_size: f32,
     chunk_radius: u32,
+    discover_radius: u32,
 }
 
 impl HexMapPlugin {
-    pub fn new(generator: GeneratorKind, hex_size: f32, chunk_radius: u32) -> Self {
+    pub fn new(generator: GeneratorKind, hex_size: f32, chunk_radius: u32, discover_radius: u32) -> Self {
         Self {
             generator,
             hex_size,
             chunk_radius,
+            discover_radius,
         }
     }
 }
 
 impl Plugin for HexMapPlugin {
     fn build(&self, app: &mut App) {
+        #[cfg(feature = "debug")]
+        app.add_plugins(DebugPlugin);
+        #[cfg(feature = "debug")]
+        app.configure_sets(Update, DebugSet.in_set(HexMapSet));
+
         app.add_event::<HexDiscoverEvent>();
 
         app.insert_resource(HexMapStorage {
@@ -87,6 +105,7 @@ impl Plugin for HexMapPlugin {
                 ..default()
             },
             chunk_radius: self.chunk_radius,
+            discover_radius: self.discover_radius,
             chunks: HashMap::default(),
         });
 
@@ -110,21 +129,23 @@ fn generate_chunks(
         let hex = storage.world_pos_to_hex(*pos);
         let center = storage.center(&hex);
 
-        if let Some(_) = storage.get_chunk(center) {
-            continue;
-        }
+        for center in storage.discover(center) {
+            if let Some(_) = storage.get_chunk(center) {
+                continue;
+            }
 
-        let chunk = storage.chunk(center);
-        storage.insert_chunk(chunk.clone());
+            let chunk = storage.chunk(center);
+            storage.insert_chunk(chunk.clone());
 
-        for hex in chunk.hexes {
-            let pos = storage.hex_to_world_pos(hex).extend(0.0).xzy();
+            for hex in chunk.hexes {
+                let pos = storage.hex_to_world_pos(hex).extend(0.0).xzy();
 
-            commands.spawn((
-                HexCoord(hex),
-                Transform::from_translation(pos),
-                Name::new("Hex"),
-            ));
+                commands.spawn((
+                    HexCoord(hex),
+                    Transform::from_translation(pos),
+                    Name::new("Hex"),
+                ));
+            }
         }
     }
 }
@@ -182,5 +203,54 @@ fn generate_perlin_noise(
         let noise = generator.noise(**coord);
 
         commands.entity(entity).insert(HexNoise(noise));
+    }
+}
+
+mod debug {
+    use bevy::prelude::*;
+    use super::{HexCoord, HexMapStorage};
+
+    #[derive(Debug, Resource, Default, Clone, Deref, DerefMut)]
+    struct ShowGrid(pub bool);
+
+    #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+    pub struct DebugSet;
+
+    pub struct DebugPlugin;
+
+    impl Plugin for DebugPlugin {
+        fn build(&self, app: &mut App) {
+            app.insert_resource(ShowGrid(true));
+            app.add_systems(Update, (toggle, draw_grid).in_set(DebugSet));
+        }
+    }
+
+    fn toggle(
+        kbd: Res<ButtonInput<KeyCode>>,
+        mut show_grid: ResMut<ShowGrid>,
+    ) {
+        if kbd.just_pressed(KeyCode::F12) {
+            show_grid.0 = !show_grid.0;
+        }
+    }
+
+    fn draw_grid(mut gizmos: Gizmos, q_hex: Query<&HexCoord>, show_grid: Res<ShowGrid>, storage: Res<HexMapStorage>) {
+        if !**show_grid {
+            return;
+        }
+
+        for hex in q_hex.iter() {
+            let pos = storage.hex_to_world_pos(**hex).extend(0.0).xzy();
+            let size = storage.layout.scale.x;
+
+            let mut direction = Vec3::new(-size, 0.0, 0.0);
+            let rotation = Quat::from_rotation_y(std::f32::consts::PI / 3.0);
+            for _ in 0..6 {
+                let prev = pos + direction;
+                direction = rotation.mul_vec3(direction);
+                let next = pos + direction;
+                gizmos.line(prev, next, Color::WHITE);
+            }
+        }
     }
 }

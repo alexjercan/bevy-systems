@@ -38,8 +38,9 @@ codegen-units = 1
 strip = true
 
 [features]
+debug = []
 dev = [
-    "bevy/dynamic_linking"
+    "bevy/dynamic_linking", "debug"
 ]
 
 [dependencies]
@@ -83,12 +84,21 @@ category = "Camera"
 wasm = true
 
 [[example]]
-name = "hexmap_perlin"
-path = "examples/03-hexmap/perlin.rs"
+name = "hexmap_simple"
+path = "examples/03-hexmap/simple.rs"
 doc-scrape-examples = true
 
-[package.metadata.example.hexmap_perlin]
-name = "Hexmap Perlin"
-description = "Hexmap with Perlin noise example."
+[package.metadata.example.hexmap_simple]
+name = "Hexmap Simple"
+description = "Simple Hexmap Example."
 category = "Hexmap"
-wasm = true
+
+[[example]]
+name = "hexmap_mesh"
+path = "examples/03-hexmap/mesh.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.hexmap_mesh]
+name = "Hexmap Mesh"
+description = "Hexmap with Mesh Example."
+category = "Hexmap"

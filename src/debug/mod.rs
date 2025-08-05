@@ -30,7 +30,7 @@ impl Plugin for DebugPlugin {
             // so that iyes_perf_ui can process any new Perf UI in the same
             // frame as we spawn the entities. Otherwise, Bevy UI will complain.
             .add_systems(Update, toggle.before(iyes_perf_ui::PerfUiSet::Setup))
-            .add_systems(Update, (draw_axes, draw_cursor, add_ui_border))
+            .add_systems(Update, draw_cursor)
             .add_systems(Startup, setup);
     }
 }
@@ -61,19 +61,6 @@ fn toggle(
     }
 }
 
-// This system draws the axes based on the cube's transform, with length based on the size of
-// the entity's axis-aligned bounding box (AABB).
-fn draw_axes(mut gizmos: Gizmos, query: Query<&Transform>, show_axes: Res<ShowAxes>) {
-    if !show_axes.0 {
-        return;
-    }
-
-    for &transform in &query {
-        let length = 3.0;
-        gizmos.axes(transform, length);
-    }
-}
-
 fn draw_cursor(
     q_camera: Query<(&Camera, &GlobalTransform)>,
     windows: Query<&Window>,
@@ -97,12 +84,4 @@ fn draw_cursor(
     let point = ray.get_point(distance);
 
     gizmos.cross(point + Vec3::Y * 0.01, 0.5, Color::WHITE);
-}
-
-fn add_ui_border(mut commands: Commands, q_node: Query<Entity, (With<Node>, Without<Outline>)>) {
-    for entity in q_node.iter() {
-        commands
-            .entity(entity)
-            .insert(Outline::new(Val::Px(1.0), Val::Px(0.0), Color::WHITE));
-    }
 }
