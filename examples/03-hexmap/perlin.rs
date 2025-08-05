@@ -11,19 +11,20 @@ use hexx::*;
 use leafwing_input_manager::prelude::*;
 
 use systems::{
-    camera::rts_camera::{RTSCamera, RTSCameraInput, RTSCameraPlugin, RTSCameraSet},
-    hexmap::perlin::{HexCoord, HexMapPerlinPlugin, HexMapPerlinSet, HexNoise, HexProbe},
+    camera::wasd_camera::{WASDCamera, WASDCameraInput, WASDCameraPlugin, WASDCameraSet},
     debug::DebugPlugin,
+    hexmap::map::{GeneratorKind, HexCoord, HexDiscoverEvent, HexMapPlugin, HexMapSet, HexNoise},
 };
 
 #[derive(Actionlike, Clone, Debug, Copy, PartialEq, Eq, Hash, Reflect)]
 enum CameraMovement {
-    #[actionlike(Axis)]
-    Zoom,
     #[actionlike(DualAxis)]
     Pan,
+    #[actionlike(DualAxis)]
+    Wasd,
+    #[actionlike(Axis)]
+    Vertical,
     HoldPan,
-    HoldOrbit,
 }
 
 const CHUNK_RADIUS: u32 = 4;
@@ -48,36 +49,59 @@ const HEIGHTS: [f32; 6] = [
     -0.5, // Deep Water
 ];
 
+#[derive(Component, Clone, Debug)]
+struct HexProbe;
+
+fn hexagonal_column(hex_layout: &HexLayout) -> Mesh {
+    let mesh_info = ColumnMeshBuilder::new(hex_layout, COLUMN_HEIGHT)
+        .without_bottom_face()
+        .center_aligned()
+        .build();
+    Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::RENDER_WORLD,
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, mesh_info.vertices)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_info.normals)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, mesh_info.uvs)
+    .with_inserted_indices(Indices::U16(mesh_info.indices))
+}
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(HexMapPerlinPlugin::new(
-            SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs() as u32,
+        .add_plugins(HexMapPlugin::new(
+            GeneratorKind::Perlin(
+                SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs() as u32,
+            ),
             HEX_SIZE,
             CHUNK_RADIUS,
         ))
-        .add_plugins(RTSCameraPlugin)
+        .add_plugins(WASDCameraPlugin)
         .add_plugins(InputManagerPlugin::<CameraMovement>::default())
         .add_plugins(DebugPlugin)
         .add_systems(Startup, setup)
-        .add_systems(Update, (input, handle_hex))
-        .configure_sets(Update, RTSCameraSet)
-        .configure_sets(Update, HexMapPerlinSet)
+        .add_systems(Update, (input, handle_hex, discover_hex))
+        .configure_sets(Update, WASDCameraSet)
+        .configure_sets(Update, HexMapSet)
         .run();
 }
 
 fn setup(mut commands: Commands) {
     commands.spawn((
-        RTSCamera::default(),
-        RTSCameraInput::default(),
+        WASDCamera::default(),
+        WASDCameraInput::default(),
         InputMap::default()
-            .with_axis(CameraMovement::Zoom, MouseScrollAxis::Y)
             .with_dual_axis(CameraMovement::Pan, MouseMove::default())
-            .with(CameraMovement::HoldOrbit, MouseButton::Right)
-            .with(CameraMovement::HoldPan, MouseButton::Middle),
+            .with_dual_axis(CameraMovement::Wasd, VirtualDPad::wasd())
+            .with_axis(
+                CameraMovement::Vertical,
+                VirtualAxis::new(KeyCode::ShiftLeft, KeyCode::Space),
+            )
+            .with(CameraMovement::HoldPan, MouseButton::Right),
         Camera3d::default(),
         Transform::from_xyz(60.0, 60.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
         Name::new("RTS Camera"),
@@ -96,33 +120,16 @@ fn setup(mut commands: Commands) {
     ));
 }
 
-fn hexagonal_column(hex_layout: &HexLayout) -> Mesh {
-    let mesh_info = ColumnMeshBuilder::new(hex_layout, COLUMN_HEIGHT)
-        .without_bottom_face()
-        .center_aligned()
-        .build();
-    Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::RENDER_WORLD,
-    )
-    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, mesh_info.vertices)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_info.normals)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, mesh_info.uvs)
-    .with_inserted_indices(Indices::U16(mesh_info.indices))
-}
-
-fn input(mut q_camera: Query<(&mut RTSCameraInput, &ActionState<CameraMovement>)>) {
+fn input(mut q_camera: Query<(&mut WASDCameraInput, &ActionState<CameraMovement>)>) {
     for (mut input, action) in q_camera.iter_mut() {
         input.pan = Vec2::ZERO;
-        input.orbit = Vec2::ZERO;
 
-        if action.pressed(&CameraMovement::HoldOrbit) {
-            input.orbit = action.axis_pair(&CameraMovement::Pan);
-        } else if action.pressed(&CameraMovement::HoldPan) {
+        if action.pressed(&CameraMovement::HoldPan) {
             input.pan = action.axis_pair(&CameraMovement::Pan);
         }
 
-        input.zoom = action.value(&CameraMovement::Zoom);
+        input.wasd = action.axis_pair(&CameraMovement::Wasd);
+        input.vertical = action.value(&CameraMovement::Vertical);
     }
 }
 
@@ -157,5 +164,14 @@ fn handle_hex(
                 ..default()
             })),
         ));
+    }
+}
+
+fn discover_hex(
+    q_probe: Query<&Transform, With<HexProbe>>,
+    mut ev_discover: EventWriter<HexDiscoverEvent>,
+) {
+    for transform in q_probe.iter() {
+        ev_discover.write(HexDiscoverEvent(transform.translation.xz()));
     }
 }

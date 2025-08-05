@@ -1,3 +1,3 @@
 //! TODO: documentation for hexmap module
 
-pub mod perlin;
+pub mod map;

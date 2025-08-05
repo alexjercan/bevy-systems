@@ -1,7 +1,5 @@
 //! Debugging tools for the game
 
-use std::f32::consts::PI;
-
 use bevy::prelude::*;
 use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 use iyes_perf_ui::prelude::*;
@@ -50,9 +48,9 @@ fn toggle(
     mut show_axes: ResMut<ShowAxes>,
 ) {
     if kbd.just_pressed(KeyCode::F12) {
-        if let Ok(e) = q_root.get_single() {
+        if let Ok(e) = q_root.single() {
             // despawn the existing Perf UI
-            commands.entity(e).despawn_recursive();
+            commands.entity(e).despawn();
         } else {
             // create a simple Perf UI with default settings
             // and all entries provided by the crate:
@@ -81,7 +79,7 @@ fn draw_cursor(
     windows: Query<&Window>,
     mut gizmos: Gizmos,
 ) {
-    let Ok((camera, camera_transform)) = q_camera.get_single() else {
+    let Ok((camera, camera_transform)) = q_camera.single() else {
         return;
     };
 

@@ -72,6 +72,17 @@ category = "Camera"
 wasm = true
 
 [[example]]
+name = "camera_wasd"
+path = "examples/02-camera/wasd_camera.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.camera_wasd]
+name = "WASD Camera"
+description = "Simple WASD Camera Example."
+category = "Camera"
+wasm = true
+
+[[example]]
 name = "hexmap_perlin"
 path = "examples/03-hexmap/perlin.rs"
 doc-scrape-examples = true
