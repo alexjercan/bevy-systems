@@ -61,7 +61,14 @@ impl Plugin for WASDCameraPlugin {
 
 fn initialize(
     mut commands: Commands,
-    q_camera: Query<(Entity, &Transform), (With<WASDCamera>, Without<WASDCameraTarget>, Without<WASDCameraState>)>,
+    q_camera: Query<
+        (Entity, &Transform),
+        (
+            With<WASDCamera>,
+            Without<WASDCameraTarget>,
+            Without<WASDCameraState>,
+        ),
+    >,
 ) {
     for (entity, transform) in q_camera.iter() {
         let translation = transform.translation;
@@ -92,9 +99,8 @@ fn update_target(mut q_camera: Query<(&WASDCamera, &WASDCameraInput, &mut WASDCa
         let forward = rotation * Vec3::NEG_Z;
         let right = Quat::from_rotation_y(target.yaw) * Vec3::X;
 
-        target.position +=
-            forward * input.wasd.y * camera.wasd_sensitivity +
-            right * input.wasd.x * camera.wasd_sensitivity;
+        target.position += forward * input.wasd.y * camera.wasd_sensitivity
+            + right * input.wasd.x * camera.wasd_sensitivity;
 
         target.position += Vec3::Y * input.vertical * camera.wasd_sensitivity;
     }

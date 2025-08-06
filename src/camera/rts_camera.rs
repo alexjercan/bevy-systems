@@ -98,8 +98,18 @@ fn initialize(
 
         commands
             .entity(entity)
-            .insert(RTSCameraTarget { focus, yaw, pitch, radius })
-            .insert(RTSCameraState { focus, yaw, pitch, radius });
+            .insert(RTSCameraTarget {
+                focus,
+                yaw,
+                pitch,
+                radius,
+            })
+            .insert(RTSCameraState {
+                focus,
+                yaw,
+                pitch,
+                radius,
+            });
     }
 }
 
@@ -113,7 +123,8 @@ fn update_target(mut q_camera: Query<(&RTSCamera, &RTSCameraInput, &mut RTSCamer
 
         let zoom_factor = (target.radius - camera.min_zoom) / (camera.max_zoom - camera.min_zoom);
         let rotation = Quat::from_rotation_y(target.yaw);
-        target.focus -= rotation * input.pan.extend(0.0).xzy() * camera.pan_sensitivity * zoom_factor;
+        target.focus -=
+            rotation * input.pan.extend(0.0).xzy() * camera.pan_sensitivity * zoom_factor;
     }
 }
 
@@ -133,9 +144,10 @@ fn update_state(
         }
 
         if state.pitch != target.pitch {
-            state.pitch = state
-                .pitch
-                .lerp_and_snap(target.pitch, camera.orbit_smooth, time.delta_secs());
+            state.pitch =
+                state
+                    .pitch
+                    .lerp_and_snap(target.pitch, camera.orbit_smooth, time.delta_secs());
         }
 
         if state.radius != target.radius {

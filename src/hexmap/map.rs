@@ -69,15 +69,15 @@ impl HexMapStorage {
 pub struct HexMapSet;
 
 pub struct HexMapPlugin {
-    hex_size: f32,
+    layout: HexLayout,
     chunk_radius: u32,
     discover_radius: u32,
 }
 
 impl HexMapPlugin {
-    pub fn new(hex_size: f32, chunk_radius: u32, discover_radius: u32) -> Self {
+    pub fn new(layout: HexLayout, chunk_radius: u32, discover_radius: u32) -> Self {
         Self {
-            hex_size,
+            layout,
             chunk_radius,
             discover_radius,
         }
@@ -94,10 +94,7 @@ impl Plugin for HexMapPlugin {
         app.add_event::<HexDiscoverEvent>();
 
         app.insert_resource(HexMapStorage {
-            layout: HexLayout {
-                scale: Vec2::splat(self.hex_size),
-                ..default()
-            },
+            layout: self.layout.clone(),
             chunk_radius: self.chunk_radius,
             discover_radius: self.discover_radius,
             chunks: HashMap::default(),
@@ -177,9 +174,7 @@ impl<F: NoiseFn<f64, 3> + Copy + Send + Sync + 'static, C: FromNoise + Send + Sy
     for HexMapNoisePlugin<F, C>
 {
     fn build(&self, app: &mut App) {
-        app.insert_resource(HexMapGenerator {
-            func: self.func,
-        });
+        app.insert_resource(HexMapGenerator { func: self.func });
 
         app.add_systems(
             Update,

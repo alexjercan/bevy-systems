@@ -1,6 +1,7 @@
 //! TODO: Hexmap coordinates docs
 
 use bevy::prelude::*;
+use hexx::*;
 use leafwing_input_manager::prelude::*;
 
 use systems::{
@@ -29,7 +30,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(HexMapPlugin::new(
-            HEX_SIZE,
+            HexLayout::flat().with_hex_size(HEX_SIZE),
             CHUNK_RADIUS,
             DISCOVER_RADIUS,
         ))
