@@ -8,7 +8,7 @@ Check examples.
 
 ### Tasks
 
-- [ ] hexmap_overlay.rs - Visualize terrain data overlays (e.g. height, temperature, noise values) on a hexagonal grid.
+- [x] hexmap_overlay.rs - Visualize terrain data overlays (e.g. height, temperature, noise values) on a hexagonal grid.
     - Color tiles by their noise value (height: grayscale, temperature: blue to red gradient).
     - Switch between different overlays (height, temperature, etc.) using `UP` and `DOWN` keys.
 - [ ] hexmap_coordinates.rs - Display the coordinates of a hex in the tile grid.

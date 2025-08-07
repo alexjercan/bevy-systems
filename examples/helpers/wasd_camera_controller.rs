@@ -49,12 +49,7 @@ impl Plugin for WASDCameraControllerPlugin {
     }
 }
 
-fn input(
-    mut q_camera: Query<(
-        &mut WASDCameraInput,
-        &ActionState<CameraMovement>,
-    )>,
-) {
+fn input(mut q_camera: Query<(&mut WASDCameraInput, &ActionState<CameraMovement>)>) {
     for (mut input, action) in q_camera.iter_mut() {
         input.pan = Vec2::ZERO;
 

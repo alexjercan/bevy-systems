@@ -6,7 +6,10 @@ mod wasd_camera_controller;
 use bevy::{
     asset::RenderAssetUsages,
     prelude::*,
-    render::{mesh::{Indices, PrimitiveTopology}, render_resource::{AsBindGroup, ShaderRef}},
+    render::{
+        mesh::{Indices, PrimitiveTopology},
+        render_resource::{AsBindGroup, ShaderRef},
+    },
 };
 use hexx::*;
 
@@ -18,7 +21,7 @@ use systems::{
     },
 };
 
-use wasd_camera_controller::{WASDCameraControllerPlugin, WASDCameraControllerBundle};
+use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
 
 const HEX_SIZE: f32 = 1.0;
 const CHUNK_RADIUS: u32 = 4;
@@ -124,9 +127,15 @@ fn main() {
             CHUNK_RADIUS,
             DISCOVER_RADIUS,
         ))
-        .add_plugins(HexMapNoisePlugin::<_, HexNoiseHeight>::new(Planet::default().with_seed(seed)))
-        .add_plugins(HexMapNoisePlugin::<_, HexNoiseTemperature>::new(PlanetTemperature::default().with_seed(seed + 1)))
-        .add_plugins(HexMapNoisePlugin::<_, HexNoiseHumidity>::new(PlanetHumidity::default().with_seed(seed + 2)))
+        .add_plugins(HexMapNoisePlugin::<_, HexNoiseHeight>::new(
+            Planet::default().with_seed(seed),
+        ))
+        .add_plugins(HexMapNoisePlugin::<_, HexNoiseTemperature>::new(
+            PlanetTemperature::default().with_seed(seed + 1),
+        ))
+        .add_plugins(HexMapNoisePlugin::<_, HexNoiseHumidity>::new(
+            PlanetHumidity::default().with_seed(seed + 2),
+        ))
         .add_plugins(WASDCameraControllerPlugin)
         .add_plugins(DebugPlugin)
         .insert_resource(AssetsCache {
@@ -135,7 +144,10 @@ fn main() {
         })
         .insert_resource(OverlayState::default())
         .add_systems(Startup, setup)
-        .add_systems(Update, (mouse_click_discover, input_switch_overlay, handle_hex))
+        .add_systems(
+            Update,
+            (mouse_click_discover, input_switch_overlay, handle_hex),
+        )
         .configure_sets(Update, HexMapSet)
         .run();
 }
@@ -163,10 +175,7 @@ fn setup(
 
 fn mouse_click_discover(
     windows: Query<&Window>,
-    q_camera: Single<(
-        &Camera,
-        &GlobalTransform,
-    )>,
+    q_camera: Single<(&Camera, &GlobalTransform)>,
     mut ev_discover: EventWriter<HexDiscoverEvent>,
     buttons: Res<ButtonInput<MouseButton>>,
 ) {
@@ -184,8 +193,7 @@ fn mouse_click_discover(
         return;
     };
 
-    let Some(distance) = ray.intersect_plane(Vec3::ZERO, InfinitePlane3d::new(Vec3::Y))
-    else {
+    let Some(distance) = ray.intersect_plane(Vec3::ZERO, InfinitePlane3d::new(Vec3::Y)) else {
         return;
     };
     let point = ray.get_point(distance);
@@ -228,26 +236,40 @@ fn input_switch_overlay(
 
 fn handle_hex(
     mut commands: Commands,
-    mut q_hex: Query<(Entity, &HexNoiseHeight, &HexNoiseTemperature, &HexNoiseHumidity, &mut Transform), (With<HexCoord>, Without<Mesh3d>)>,
+    mut q_hex: Query<
+        (
+            Entity,
+            &HexNoiseHeight,
+            &HexNoiseTemperature,
+            &HexNoiseHumidity,
+            &mut Transform,
+        ),
+        (With<HexCoord>, Without<Mesh3d>),
+    >,
     assets_cache: Res<AssetsCache>,
     mut materials: ResMut<Assets<HexMaterial>>,
     overlay_state: Res<OverlayState>,
 ) {
-    for (entity, HexNoiseHeight(height), HexNoiseTemperature(temperature), HexNoiseHumidity(humidity), mut transform) in q_hex.iter_mut() {
+    for (
+        entity,
+        HexNoiseHeight(height),
+        HexNoiseTemperature(temperature),
+        HexNoiseHumidity(humidity),
+        mut transform,
+    ) in q_hex.iter_mut()
+    {
         let temperature = (temperature * 10.0 - height * 2.0).clamp(-1.0, 1.0);
         let humidity = (humidity * 10.0 - height * 2.0).clamp(-1.0, 1.0);
 
         commands.entity(entity).insert((
             Mesh3d(assets_cache.mesh.clone()),
-            MeshMaterial3d(
-                materials.add(HexMaterial {
-                    mode: overlay_state.kind as u32,
-                    height: *height,
-                    temperature: temperature,
-                    humidity: humidity,
-                    alpha_mode: AlphaMode::Opaque,
-                }),
-            ),
+            MeshMaterial3d(materials.add(HexMaterial {
+                mode: overlay_state.kind as u32,
+                height: *height,
+                temperature: temperature,
+                humidity: humidity,
+                alpha_mode: AlphaMode::Opaque,
+            })),
         ));
 
         transform.translation.y = *height * 2.0;

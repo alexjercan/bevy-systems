@@ -19,7 +19,7 @@ use systems::{
     },
 };
 
-use wasd_camera_controller::{WASDCameraControllerPlugin, WASDCameraControllerBundle};
+use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
 
 const HEX_SIZE: f32 = 1.0;
 const CHUNK_RADIUS: u32 = 4;
@@ -110,7 +110,9 @@ fn main() {
             CHUNK_RADIUS,
             DISCOVER_RADIUS,
         ))
-        .add_plugins(HexMapNoisePlugin::<_, HexNoise>::new(Planet::default().with_seed(CURRENT_SEED)))
+        .add_plugins(HexMapNoisePlugin::<_, HexNoise>::new(
+            Planet::default().with_seed(CURRENT_SEED),
+        ))
         .add_plugins(WASDCameraControllerPlugin)
         .add_plugins(DebugPlugin)
         .insert_resource(AssetsCache {
@@ -165,10 +167,7 @@ fn setup(
 
 fn input(
     windows: Query<&Window>,
-    q_camera: Single<(
-        &Camera,
-        &GlobalTransform,
-    )>,
+    q_camera: Single<(&Camera, &GlobalTransform)>,
     mut ev_discover: EventWriter<HexDiscoverEvent>,
     buttons: Res<ButtonInput<MouseButton>>,
 ) {
@@ -186,8 +185,7 @@ fn input(
         return;
     };
 
-    let Some(distance) = ray.intersect_plane(Vec3::ZERO, InfinitePlane3d::new(Vec3::Y))
-    else {
+    let Some(distance) = ray.intersect_plane(Vec3::ZERO, InfinitePlane3d::new(Vec3::Y)) else {
         return;
     };
     let point = ray.get_point(distance);
