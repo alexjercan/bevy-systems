@@ -102,3 +102,13 @@ doc-scrape-examples = true
 name = "Hexmap Mesh"
 description = "Hexmap with Mesh Example."
 category = "Hexmap"
+
+[[example]]
+name = "hexmap_overlay"
+path = "examples/03-hexmap/overlay.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.hexmap_overlay]
+name = "Hexmap Overlay"
+description = "Hexmap with Overlay Example."
+category = "Hexmap"
