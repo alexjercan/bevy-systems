@@ -22,7 +22,7 @@ use systems::{
 use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
 
 const HEX_SIZE: f32 = 1.0;
-const CHUNK_RADIUS: u32 = 4;
+const CHUNK_RADIUS: u32 = 15;
 const DISCOVER_RADIUS: u32 = 3;
 
 #[derive(Component, Debug, Clone, Copy)]

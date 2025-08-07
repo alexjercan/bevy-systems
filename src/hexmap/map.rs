@@ -13,55 +13,63 @@ pub struct HexDiscoverEvent(pub Vec2);
 #[derive(Component, Clone, Debug, Deref, DerefMut)]
 pub struct HexCoord(pub Hex);
 
-#[derive(Debug, Clone)]
-struct Chunk {
-    center: Hex,
-    hexes: Vec<Hex>,
-}
+#[derive(Component, Clone, Debug, Deref, DerefMut)]
+pub struct ChunkCoord(pub Hex);
 
 #[derive(Resource, Debug, Clone)]
-struct HexMapStorage {
+pub struct HexMapStorage {
     layout: HexLayout,
     chunk_radius: u32,
     discover_radius: u32,
-    chunks: HashMap<Hex, Chunk>,
+    chunks: HashMap<Hex, Entity>,
+    hexes: HashMap<Hex, Entity>,
 }
 
 impl HexMapStorage {
-    fn discover(&self, center: Hex) -> Vec<Hex> {
+    /// Discover chunks in a hexagonal pattern around the center hex
+    fn discover_chunks(&self, center: Hex) -> Vec<Hex> {
         shapes::hexagon(Hex::ZERO, self.discover_radius)
             .map(|hex| hex.to_higher_res(self.chunk_radius))
             .map(|hex| center + hex)
             .collect()
     }
 
-    fn chunk(&self, center: Hex) -> Chunk {
-        let hexes = shapes::hexagon(Hex::ZERO, self.chunk_radius)
+    /// Get the hexes in a chunk centered at the given hex
+    fn chunk_hexes(&self, center: Hex) -> Vec<Hex> {
+        shapes::hexagon(Hex::ZERO, self.chunk_radius)
             .map(move |hex| center + hex)
-            .collect();
-
-        Chunk { center, hexes }
+            .collect()
     }
 
-    fn center(&self, hex: &Hex) -> Hex {
+    /// Convert a hex to a center hex of the chunk it belongs to
+    fn hex_to_center(&self, hex: &Hex) -> Hex {
         hex.to_lower_res(self.chunk_radius)
             .to_higher_res(self.chunk_radius)
     }
 
-    fn world_pos_to_hex(&self, position: Vec2) -> Hex {
+    pub fn world_pos_to_hex(&self, position: Vec2) -> Hex {
         self.layout.world_pos_to_hex(position)
     }
 
-    fn hex_to_world_pos(&self, hex: Hex) -> Vec2 {
+    pub fn hex_to_world_pos(&self, hex: Hex) -> Vec2 {
         self.layout.hex_to_world_pos(hex)
     }
 
-    fn get_chunk(&self, hex: Hex) -> Option<&Chunk> {
+    fn get_chunk(&self, hex: Hex) -> Option<&Entity> {
         self.chunks.get(&hex)
     }
 
-    fn insert_chunk(&mut self, chunk: Chunk) {
-        self.chunks.insert(chunk.center, chunk);
+    fn insert_chunk(&mut self, center: Hex, chunk: Entity) {
+        self.chunks.insert(center, chunk);
+    }
+
+    /// Get the hex entity of a given hex
+    pub fn get_hex(&self, hex: Hex) -> Option<&Entity> {
+        self.hexes.get(&hex)
+    }
+
+    fn insert_hex(&mut self, hex: Hex, entity: Entity) {
+        self.hexes.insert(hex, entity);
     }
 }
 
@@ -98,6 +106,7 @@ impl Plugin for HexMapPlugin {
             chunk_radius: self.chunk_radius,
             discover_radius: self.discover_radius,
             chunks: HashMap::default(),
+            hexes: HashMap::default(),
         });
 
         app.add_systems(Update, (generate_chunks).in_set(HexMapSet).chain());
@@ -111,28 +120,42 @@ fn generate_chunks(
 ) {
     for HexDiscoverEvent(pos) in ev_discover.read() {
         let hex = storage.world_pos_to_hex(*pos);
-        let center = storage.center(&hex);
+        let center = storage.hex_to_center(&hex);
 
-        for center in storage.discover(center) {
+        for center in storage.discover_chunks(center) {
             if let Some(_) = storage.get_chunk(center) {
                 continue;
             }
 
-            let chunk = storage.chunk(center);
-            storage.insert_chunk(chunk.clone());
+            let chunk_entity = commands
+                .spawn((
+                    ChunkCoord(center),
+                    Transform::default(),
+                    Visibility::default(),
+                    Name::new("HexChunk"),
+                ))
+                .id();
+            storage.insert_chunk(center, chunk_entity);
 
-            for hex in chunk.hexes {
+            let hexes = storage.chunk_hexes(center);
+            for hex in hexes {
                 let pos = storage.hex_to_world_pos(hex).extend(0.0).xzy();
 
-                commands.spawn((
-                    HexCoord(hex),
-                    Transform::from_translation(pos),
-                    Name::new("Hex"),
-                ));
+                let hex_entity = commands
+                    .spawn((
+                        HexCoord(hex),
+                        Transform::from_translation(pos),
+                        Name::new("Hex"),
+                    ))
+                    .id();
+                commands.entity(chunk_entity).add_child(hex_entity);
+                storage.insert_hex(hex, hex_entity);
             }
         }
     }
 }
+
+// TODO: move v to a separate module
 
 pub trait FromNoise: Component {
     fn from_noise(value: f32) -> Self;

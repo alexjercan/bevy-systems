@@ -5,6 +5,7 @@ mod wasd_camera_controller;
 
 use bevy::{
     asset::RenderAssetUsages,
+    platform::collections::HashMap,
     prelude::*,
     render::{
         mesh::{Indices, PrimitiveTopology},
@@ -22,6 +23,9 @@ use systems::{
 };
 
 use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
+
+#[derive(Component, Debug, Clone, Copy)]
+struct RenderedHex;
 
 const HEX_SIZE: f32 = 1.0;
 const CHUNK_RADIUS: u32 = 4;
@@ -77,12 +81,19 @@ impl Material for HexMaterial {
     }
 }
 
+#[derive(Component, Debug, Clone, Copy)]
+struct TileMesh;
+
+#[derive(Component, Debug, Clone, Copy)]
+struct OverlayMesh;
+
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Reflect, Default)]
 enum OverlayKind {
-    #[default]
     Height,
     Temperature,
     Humidity,
+    #[default]
+    Tile,
 }
 
 #[derive(Resource, Debug, Clone, Default)]
@@ -90,9 +101,51 @@ struct OverlayState {
     kind: OverlayKind,
 }
 
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Reflect)]
+enum TileKind {
+    Mountains,
+    Hills,
+    Plains,
+    Sand,
+    Water,
+    DeepWater,
+}
+
+impl Into<Color> for TileKind {
+    fn into(self) -> Color {
+        match self {
+            TileKind::Mountains => Color::srgb_u8(255, 255, 255),
+            TileKind::Hills => Color::srgb_u8(139, 69, 19),
+            TileKind::Plains => Color::srgb_u8(0, 128, 0),
+            TileKind::Sand => Color::srgb_u8(255, 255, 0),
+            TileKind::Water => Color::srgb_u8(0, 0, 255),
+            TileKind::DeepWater => Color::srgb_u8(0, 0, 139),
+        }
+    }
+}
+
+impl From<f32> for TileKind {
+    fn from(value: f32) -> Self {
+        if value <= -0.5 {
+            TileKind::DeepWater
+        } else if value <= 0.0 {
+            TileKind::Water
+        } else if value <= 0.1 {
+            TileKind::Sand
+        } else if value <= 0.3 {
+            TileKind::Plains
+        } else if value <= 0.6 {
+            TileKind::Hills
+        } else {
+            TileKind::Mountains
+        }
+    }
+}
+
 #[derive(Resource, Debug, Clone, Default)]
 struct AssetsCache {
     mesh: Handle<Mesh>,
+    materials: HashMap<TileKind, Handle<StandardMaterial>>,
     layout: HexLayout,
 }
 
@@ -155,6 +208,7 @@ fn main() {
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     mut assets_cache: ResMut<AssetsCache>,
 ) {
     commands.spawn((
@@ -171,6 +225,24 @@ fn setup(
     ));
 
     assets_cache.mesh = meshes.add(assets_cache.hexagonal_column());
+    for tile in [
+        TileKind::Mountains,
+        TileKind::Hills,
+        TileKind::Plains,
+        TileKind::Sand,
+        TileKind::Water,
+        TileKind::DeepWater,
+    ] {
+        assets_cache.materials.insert(
+            tile,
+            materials.add(StandardMaterial {
+                base_color: tile.into(),
+                perceptual_roughness: 1.0,
+                metallic: 0.0,
+                ..default()
+            }),
+        );
+    }
 }
 
 fn mouse_click_discover(
@@ -203,7 +275,8 @@ fn mouse_click_discover(
 
 fn input_switch_overlay(
     keys: Res<ButtonInput<KeyCode>>,
-    q_hex: Query<&MeshMaterial3d<HexMaterial>>,
+    mut q_overlay: Query<(&mut Visibility, &MeshMaterial3d<HexMaterial>), With<OverlayMesh>>,
+    mut q_tile: Query<&mut Visibility, (With<TileMesh>, Without<OverlayMesh>)>,
     mut materials: ResMut<Assets<HexMaterial>>,
     mut overlay_state: ResMut<OverlayState>,
 ) {
@@ -211,24 +284,52 @@ fn input_switch_overlay(
         overlay_state.kind = match overlay_state.kind {
             OverlayKind::Height => OverlayKind::Temperature,
             OverlayKind::Temperature => OverlayKind::Humidity,
-            OverlayKind::Humidity => OverlayKind::Height,
+            OverlayKind::Humidity => OverlayKind::Tile,
+            OverlayKind::Tile => OverlayKind::Height,
         };
 
-        for material in q_hex.iter() {
-            if let Some(material) = materials.get_mut(material) {
-                material.mode = overlay_state.kind as u32;
+        if overlay_state.kind == OverlayKind::Tile {
+            for (mut visibility, _) in q_overlay.iter_mut() {
+                *visibility = Visibility::Hidden;
+            }
+            for mut visibility in q_tile.iter_mut() {
+                *visibility = Visibility::Visible;
+            }
+        } else {
+            for (mut visibility, material) in q_overlay.iter_mut() {
+                if let Some(material) = materials.get_mut(material) {
+                    material.mode = overlay_state.kind as u32;
+                }
+                *visibility = Visibility::Visible;
+            }
+            for mut visibility in q_tile.iter_mut() {
+                *visibility = Visibility::Hidden;
             }
         }
     } else if keys.just_pressed(KeyCode::ArrowDown) {
         overlay_state.kind = match overlay_state.kind {
-            OverlayKind::Height => OverlayKind::Humidity,
+            OverlayKind::Height => OverlayKind::Tile,
             OverlayKind::Temperature => OverlayKind::Height,
             OverlayKind::Humidity => OverlayKind::Temperature,
+            OverlayKind::Tile => OverlayKind::Humidity,
         };
 
-        for material in q_hex.iter() {
-            if let Some(material) = materials.get_mut(material) {
-                material.mode = overlay_state.kind as u32;
+        if overlay_state.kind == OverlayKind::Tile {
+            for (mut visibility, _) in q_overlay.iter_mut() {
+                *visibility = Visibility::Hidden;
+            }
+            for mut visibility in q_tile.iter_mut() {
+                *visibility = Visibility::Visible;
+            }
+        } else {
+            for (mut visibility, material) in q_overlay.iter_mut() {
+                if let Some(material) = materials.get_mut(material) {
+                    material.mode = overlay_state.kind as u32;
+                }
+                *visibility = Visibility::Visible;
+            }
+            for mut visibility in q_tile.iter_mut() {
+                *visibility = Visibility::Hidden;
             }
         }
     }
@@ -244,7 +345,7 @@ fn handle_hex(
             &HexNoiseHumidity,
             &mut Transform,
         ),
-        (With<HexCoord>, Without<Mesh3d>),
+        (With<HexCoord>, Without<RenderedHex>),
     >,
     assets_cache: Res<AssetsCache>,
     mut materials: ResMut<Assets<HexMaterial>>,
@@ -258,21 +359,47 @@ fn handle_hex(
         mut transform,
     ) in q_hex.iter_mut()
     {
+        let tile = TileKind::from(*height);
         let temperature = (temperature * 10.0 - height * 2.0).clamp(-1.0, 1.0);
         let humidity = (humidity * 10.0 - height * 2.0).clamp(-1.0, 1.0);
 
-        commands.entity(entity).insert((
-            Mesh3d(assets_cache.mesh.clone()),
-            MeshMaterial3d(materials.add(HexMaterial {
-                mode: overlay_state.kind as u32,
-                height: *height,
-                temperature: temperature,
-                humidity: humidity,
-                alpha_mode: AlphaMode::Opaque,
-            })),
-        ));
+        commands
+            .entity(entity)
+            .insert((Visibility::default(), RenderedHex))
+            .with_children(|parent| {
+                parent.spawn((
+                    Name::new("Hex Overlay"),
+                    Mesh3d(assets_cache.mesh.clone()),
+                    MeshMaterial3d(materials.add(HexMaterial {
+                        mode: overlay_state.kind as u32,
+                        height: *height,
+                        temperature: temperature,
+                        humidity: humidity,
+                        alpha_mode: AlphaMode::Opaque,
+                    })),
+                    OverlayMesh,
+                    Visibility::Hidden,
+                ));
 
-        transform.translation.y = *height * 2.0;
+                parent.spawn((
+                    Name::new("Hex Tile"),
+                    Mesh3d(assets_cache.mesh.clone()),
+                    MeshMaterial3d(
+                        assets_cache
+                            .materials
+                            .get(&tile)
+                            .cloned()
+                            .unwrap_or_default(),
+                    ),
+                    TileMesh,
+                    Visibility::Visible,
+                ));
+            });
+
+        transform.translation.y = *height * 5.0;
+        if transform.translation.y < SEA_LEVEL as f32 {
+            transform.translation.y = SEA_LEVEL as f32;
+        }
     }
 }
 

@@ -62,7 +62,7 @@ fn toggle(
 }
 
 fn draw_cursor(
-    q_camera: Query<(&Camera, &GlobalTransform)>,
+    q_camera: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
     windows: Query<&Window>,
     mut gizmos: Gizmos,
 ) {

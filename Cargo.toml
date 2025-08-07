@@ -112,3 +112,13 @@ doc-scrape-examples = true
 name = "Hexmap Overlay"
 description = "Hexmap with Overlay Example."
 category = "Hexmap"
+
+[[example]]
+name = "hexmap_coordinates"
+path = "examples/03-hexmap/coordinates.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.hexmap_coordinates]
+name = "Hexmap Coordinates"
+description = "Hexmap with Coordinates Example."
+category = "Hexmap"
