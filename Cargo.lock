@@ -422,6 +422,7 @@ dependencies = [
  "bevy_asset_loader",
  "embed-resource",
  "hexx",
+ "itertools 0.14.0",
  "iyes_perf_ui",
  "leafwing-input-manager",
  "noise",

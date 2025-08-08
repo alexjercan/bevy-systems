@@ -358,6 +358,17 @@ fn handle_hex(
         let temperature = (temperature * 10.0 - height * 2.0).clamp(-1.0, 1.0);
         let humidity = (humidity * 10.0 - height * 2.0).clamp(-1.0, 1.0);
 
+        let tile_visibility = if overlay_state.kind == OverlayKind::Tile {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+        let overlay_visibility = if overlay_state.kind == OverlayKind::Tile {
+            Visibility::Hidden
+        } else {
+            Visibility::Visible
+        };
+
         commands
             .entity(entity)
             .insert((Visibility::default(), RenderedHex))
@@ -373,7 +384,7 @@ fn handle_hex(
                         alpha_mode: AlphaMode::Opaque,
                     })),
                     OverlayMesh,
-                    Visibility::Hidden,
+                    overlay_visibility,
                 ));
 
                 parent.spawn((
@@ -387,7 +398,7 @@ fn handle_hex(
                             .unwrap_or_default(),
                     ),
                     TileMesh,
-                    Visibility::Visible,
+                    tile_visibility,
                 ));
             });
 

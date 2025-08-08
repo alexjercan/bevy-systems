@@ -5,7 +5,7 @@ use hexx::*;
 
 pub mod prelude {
     pub use super::{
-        ChunkCoord, HexCoord, HexDiscoverEvent, HexMapPlugin, HexMapSet, HexMapStorage,
+        HexCoord, HexDiscoverEvent, HexMapPlugin, HexMapSet,
     };
 }
 
@@ -19,10 +19,10 @@ pub struct HexDiscoverEvent(pub Vec2);
 pub struct HexCoord(pub Hex);
 
 #[derive(Component, Clone, Debug, Deref, DerefMut)]
-pub struct ChunkCoord(pub Hex);
+struct ChunkCoord(pub Hex);
 
 #[derive(Resource, Debug, Clone)]
-pub struct HexMapStorage {
+struct HexMapStorage {
     layout: HexLayout,
     chunk_radius: u32,
     discover_radius: u32,
@@ -31,7 +31,6 @@ pub struct HexMapStorage {
 }
 
 impl HexMapStorage {
-    /// Discover chunks in a hexagonal pattern around the center hex
     fn discover_chunks(&self, center: Hex) -> Vec<Hex> {
         shapes::hexagon(Hex::ZERO, self.discover_radius)
             .map(|hex| hex.to_higher_res(self.chunk_radius))
@@ -39,14 +38,12 @@ impl HexMapStorage {
             .collect()
     }
 
-    /// Get the hexes in a chunk centered at the given hex
     fn chunk_hexes(&self, center: Hex) -> Vec<Hex> {
         shapes::hexagon(Hex::ZERO, self.chunk_radius)
             .map(move |hex| center + hex)
             .collect()
     }
 
-    /// Convert a hex to a center hex of the chunk it belongs to
     fn hex_to_center(&self, hex: &Hex) -> Hex {
         hex.to_lower_res(self.chunk_radius)
             .to_higher_res(self.chunk_radius)
@@ -66,11 +63,6 @@ impl HexMapStorage {
 
     fn insert_chunk(&mut self, center: Hex, chunk: Entity) {
         self.chunks.insert(center, chunk);
-    }
-
-    /// Get the hex entity of a given hex
-    pub fn get_hex(&self, hex: Hex) -> Option<&Entity> {
-        self.hexes.get(&hex)
     }
 
     fn insert_hex(&mut self, hex: Hex, entity: Entity) {
@@ -132,19 +124,19 @@ fn generate_chunks(
                 continue;
             }
 
+            let pos = storage.hex_to_world_pos(center).extend(0.0).xzy();
             let chunk_entity = commands
                 .spawn((
                     ChunkCoord(center),
-                    Transform::default(),
+                    Transform::from_translation(pos),
                     Visibility::default(),
                     Name::new("HexChunk"),
                 ))
                 .id();
             storage.insert_chunk(center, chunk_entity);
 
-            let hexes = storage.chunk_hexes(center);
-            for hex in hexes {
-                let pos = storage.hex_to_world_pos(hex).extend(0.0).xzy();
+            for hex in storage.chunk_hexes(center) {
+                let pos = storage.hex_to_world_pos(hex - center).extend(0.0).xzy();
 
                 let hex_entity = commands
                     .spawn((
@@ -161,7 +153,7 @@ fn generate_chunks(
 }
 
 mod debug {
-    use super::{HexCoord, HexMapStorage};
+    use super::{HexMapStorage, ChunkCoord};
     use bevy::prelude::*;
 
     #[derive(Debug, Resource, Default, Clone, Deref, DerefMut)]
@@ -187,7 +179,7 @@ mod debug {
 
     fn draw_grid(
         mut gizmos: Gizmos,
-        q_hex: Query<&HexCoord>,
+        q_chunk: Query<&ChunkCoord>,
         show_grid: Res<ShowGrid>,
         storage: Res<HexMapStorage>,
     ) {
@@ -195,18 +187,25 @@ mod debug {
             return;
         }
 
-        for hex in q_hex.iter() {
-            let pos = storage.hex_to_world_pos(**hex).extend(0.0).xzy();
-            let size = storage.layout.scale.x;
-
-            let mut direction = Vec3::new(-size, 0.0, 0.0);
-            let rotation = Quat::from_rotation_y(std::f32::consts::PI / 3.0);
-            for _ in 0..6 {
-                let prev = pos + direction;
-                direction = rotation.mul_vec3(direction);
-                let next = pos + direction;
-                gizmos.line(prev, next, Color::WHITE);
+        for chunk in q_chunk.iter() {
+            for hex in storage.chunk_hexes(**chunk) {
+                let pos = storage.hex_to_world_pos(hex).extend(0.0).xzy();
+                draw_hex(&mut gizmos, pos, storage.layout.scale.x, Color::WHITE);
             }
+
+            let pos = storage.hex_to_world_pos(**chunk).extend(0.0).xzy();
+            draw_hex(&mut gizmos, pos, storage.layout.scale.x * 0.5, Color::srgb_u8(255, 255, 0));
+        }
+    }
+
+    fn draw_hex(gizmos: &mut Gizmos, pos: Vec3, size: f32, color: Color) {
+        let mut direction = Vec3::new(-size, 0.0, 0.0);
+        let rotation = Quat::from_rotation_y(std::f32::consts::PI / 3.0);
+        for _ in 0..6 {
+            let prev = pos + direction;
+            direction = rotation.mul_vec3(direction);
+            let next = pos + direction;
+            gizmos.line(prev, next, color);
         }
     }
 }
