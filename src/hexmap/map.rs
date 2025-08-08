@@ -5,7 +5,7 @@ use hexx::*;
 
 pub mod prelude {
     pub use super::{
-        HexCoord, HexDiscoverEvent, HexMapPlugin, HexMapSet,
+        FromHex, HexDiscoverEvent, HexMapPlugin, HexMapSet,
     };
 }
 
@@ -13,10 +13,23 @@ pub mod prelude {
 use self::debug::{DebugPlugin, DebugSet};
 
 #[derive(Event, Clone, Debug)]
-pub struct HexDiscoverEvent(pub Vec2);
+pub struct HexDiscoverEvent<C: FromHex> {
+    pub pos: Vec2,
+    _marker: std::marker::PhantomData<C>,
+}
 
-#[derive(Component, Clone, Debug, Deref, DerefMut)]
-pub struct HexCoord(pub Hex);
+impl<C: FromHex> HexDiscoverEvent<C> {
+    pub fn new(pos: Vec2) -> Self {
+        Self {
+            pos,
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
+pub trait FromHex {
+    fn from_hex(hex: Hex) -> Self;
+}
 
 #[derive(Component, Clone, Debug, Deref, DerefMut)]
 struct ChunkCoord(pub Hex);
@@ -73,30 +86,32 @@ impl HexMapStorage {
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct HexMapSet;
 
-pub struct HexMapPlugin {
+pub struct HexMapPlugin<C: FromHex> {
     layout: HexLayout,
     chunk_radius: u32,
     discover_radius: u32,
+    _marker: std::marker::PhantomData<C>,
 }
 
-impl HexMapPlugin {
+impl<C: FromHex> HexMapPlugin<C> {
     pub fn new(layout: HexLayout, chunk_radius: u32, discover_radius: u32) -> Self {
         Self {
             layout,
             chunk_radius,
             discover_radius,
+            _marker: std::marker::PhantomData,
         }
     }
 }
 
-impl Plugin for HexMapPlugin {
+impl<C: Component + FromHex + Send + Sync + 'static> Plugin for HexMapPlugin<C> {
     fn build(&self, app: &mut App) {
         #[cfg(feature = "debug")]
         app.add_plugins(DebugPlugin);
         #[cfg(feature = "debug")]
         app.configure_sets(Update, DebugSet.in_set(HexMapSet));
 
-        app.add_event::<HexDiscoverEvent>();
+        app.add_event::<HexDiscoverEvent<C>>();
 
         app.insert_resource(HexMapStorage {
             layout: self.layout.clone(),
@@ -106,17 +121,17 @@ impl Plugin for HexMapPlugin {
             hexes: HashMap::default(),
         });
 
-        app.add_systems(Update, (generate_chunks).in_set(HexMapSet).chain());
+        app.add_systems(Update, (generate_chunks::<C>).in_set(HexMapSet).chain());
     }
 }
 
-fn generate_chunks(
+fn generate_chunks<C: Component + FromHex + Send + Sync + 'static>(
     mut commands: Commands,
     mut storage: ResMut<HexMapStorage>,
-    mut ev_discover: EventReader<HexDiscoverEvent>,
+    mut ev_discover: EventReader<HexDiscoverEvent<C>>,
 ) {
-    for HexDiscoverEvent(pos) in ev_discover.read() {
-        let hex = storage.world_pos_to_hex(*pos);
+    for ev in ev_discover.read() {
+        let hex = storage.world_pos_to_hex(ev.pos);
         let center = storage.hex_to_center(&hex);
 
         for center in storage.discover_chunks(center) {
@@ -140,7 +155,7 @@ fn generate_chunks(
 
                 let hex_entity = commands
                     .spawn((
-                        HexCoord(hex),
+                        C::from_hex(hex),
                         Transform::from_translation(pos),
                         Name::new("Hex"),
                     ))

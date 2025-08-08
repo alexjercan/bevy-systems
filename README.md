@@ -8,7 +8,7 @@ Check examples.
 
 ### Tasks
 
-- [ ] async hexmap generation - Implement async hexmap generation in lib.rs
+- [x] async hexmap generation - Implement async hexmap generation in lib.rs
 
 ### Examples
 

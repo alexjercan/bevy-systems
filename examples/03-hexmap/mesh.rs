@@ -3,6 +3,9 @@
 #[path = "../helpers/wasd_camera_controller.rs"]
 mod wasd_camera_controller;
 
+#[path = "common.rs"]
+mod common;
+
 use bevy::{
     asset::RenderAssetUsages,
     platform::collections::HashMap,
@@ -15,6 +18,7 @@ use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
 use systems::{debug::DebugPlugin, hexmap::prelude::*, noise::prelude::*};
 
 use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
+use common::HexCoord;
 
 const HEX_SIZE: f32 = 1.0;
 const CHUNK_RADIUS: u32 = 15;
@@ -101,7 +105,7 @@ fn main() {
 
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(HexMapPlugin::new(
+        .add_plugins(HexMapPlugin::<HexCoord>::new(
             layout.clone(),
             CHUNK_RADIUS,
             DISCOVER_RADIUS,
@@ -164,7 +168,7 @@ fn setup(
 fn input(
     windows: Query<&Window>,
     q_camera: Single<(&Camera, &GlobalTransform)>,
-    mut ev_discover: EventWriter<HexDiscoverEvent>,
+    mut ev_discover: EventWriter<HexDiscoverEvent<HexCoord>>,
     buttons: Res<ButtonInput<MouseButton>>,
 ) {
     if !buttons.just_pressed(MouseButton::Left) {
@@ -186,7 +190,7 @@ fn input(
     };
     let point = ray.get_point(distance);
 
-    ev_discover.write(HexDiscoverEvent(point.xz()));
+    ev_discover.write(HexDiscoverEvent::new(point.xz()));
 }
 
 fn handle_hex(

@@ -3,12 +3,16 @@
 #[path = "../helpers/wasd_camera_controller.rs"]
 mod wasd_camera_controller;
 
+#[path = "common.rs"]
+mod common;
+
 use bevy::prelude::*;
 use hexx::*;
 
 use systems::{debug::DebugPlugin, hexmap::prelude::*};
 
 use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
+use common::HexCoord;
 
 const HEX_SIZE: f32 = 1.0;
 const CHUNK_RADIUS: u32 = 4;
@@ -17,7 +21,7 @@ const DISCOVER_RADIUS: u32 = 3;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(HexMapPlugin::new(
+        .add_plugins(HexMapPlugin::<HexCoord>::new(
             HexLayout::flat().with_hex_size(HEX_SIZE),
             CHUNK_RADIUS,
             DISCOVER_RADIUS,
@@ -48,7 +52,7 @@ fn setup(mut commands: Commands) {
 fn input(
     windows: Query<&Window>,
     q_camera: Single<(&Camera, &GlobalTransform)>,
-    mut ev_discover: EventWriter<HexDiscoverEvent>,
+    mut ev_discover: EventWriter<HexDiscoverEvent<HexCoord>>,
     buttons: Res<ButtonInput<MouseButton>>,
 ) {
     if !buttons.just_pressed(MouseButton::Left) {
@@ -70,5 +74,5 @@ fn input(
     };
     let point = ray.get_point(distance);
 
-    ev_discover.write(HexDiscoverEvent(point.xz()));
+    ev_discover.write(HexDiscoverEvent::new(point.xz()));
 }

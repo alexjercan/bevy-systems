@@ -3,6 +3,9 @@
 #[path = "../helpers/wasd_camera_controller.rs"]
 mod wasd_camera_controller;
 
+#[path = "common.rs"]
+mod common;
+
 use bevy::{
     asset::RenderAssetUsages,
     color::palettes::css::GOLD,
@@ -18,6 +21,7 @@ use hexx::*;
 use systems::{debug::DebugPlugin, hexmap::prelude::*};
 
 use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
+use common::HexCoord;
 
 #[derive(Component, Debug, Clone, Copy, Hash, PartialEq, Eq, Reflect, Default)]
 enum OverlayKind {
@@ -68,7 +72,7 @@ fn main() {
 
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(HexMapPlugin::new(
+        .add_plugins(HexMapPlugin::<HexCoord>::new(
             layout.clone(),
             CHUNK_RADIUS,
             DISCOVER_RADIUS,
@@ -110,7 +114,7 @@ fn setup(
 fn input(
     windows: Query<&Window>,
     q_camera: Single<(&Camera, &GlobalTransform), With<Camera3d>>,
-    mut ev_discover: EventWriter<HexDiscoverEvent>,
+    mut ev_discover: EventWriter<HexDiscoverEvent::<HexCoord>>,
     buttons: Res<ButtonInput<MouseButton>>,
 ) {
     if !buttons.just_pressed(MouseButton::Left) {
@@ -132,7 +136,7 @@ fn input(
     };
     let point = ray.get_point(distance);
 
-    ev_discover.write(HexDiscoverEvent(point.xz()));
+    ev_discover.write(HexDiscoverEvent::new(point.xz()));
 }
 
 fn input_switch_overlay(
