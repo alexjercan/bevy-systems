@@ -2,7 +2,12 @@
 
 use bevy::{platform::collections::HashMap, prelude::*};
 use hexx::*;
-use noise::NoiseFn;
+
+pub mod prelude {
+    pub use super::{
+        ChunkCoord, HexCoord, HexDiscoverEvent, HexMapPlugin, HexMapSet, HexMapStorage,
+    };
+}
 
 #[cfg(feature = "debug")]
 use self::debug::{DebugPlugin, DebugSet};
@@ -152,72 +157,6 @@ fn generate_chunks(
                 storage.insert_hex(hex, hex_entity);
             }
         }
-    }
-}
-
-// TODO: move v to a separate module
-
-pub trait FromNoise: Component {
-    fn from_noise(value: f32) -> Self;
-}
-
-#[derive(Resource, Debug, Clone)]
-struct HexMapGenerator<F: NoiseFn<f64, 3>> {
-    func: F,
-}
-
-impl<F: NoiseFn<f64, 3>> HexMapGenerator<F> {
-    fn noise(&self, hex: Hex) -> f32 {
-        let q = hex.x as f64;
-        let r = hex.y as f64;
-        let s = -(q + r);
-
-        self.func.get([q, r, s]) as f32
-    }
-}
-
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct HexMapNoiseSet;
-
-pub struct HexMapNoisePlugin<F: NoiseFn<f64, 3>, C: FromNoise> {
-    func: F,
-    _marker: std::marker::PhantomData<C>,
-}
-
-impl<F: NoiseFn<f64, 3>, C: FromNoise> HexMapNoisePlugin<F, C> {
-    pub fn new(func: F) -> Self {
-        Self {
-            func,
-            _marker: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<F: NoiseFn<f64, 3> + Copy + Send + Sync + 'static, C: FromNoise + Send + Sync + 'static> Plugin
-    for HexMapNoisePlugin<F, C>
-{
-    fn build(&self, app: &mut App) {
-        app.insert_resource(HexMapGenerator { func: self.func });
-
-        app.add_systems(
-            Update,
-            (generate_noise::<F, C>).in_set(HexMapNoiseSet).chain(),
-        );
-    }
-}
-
-fn generate_noise<
-    F: NoiseFn<f64, 3> + Send + Sync + 'static,
-    C: FromNoise + Send + Sync + 'static,
->(
-    mut commands: Commands,
-    generator: Res<HexMapGenerator<F>>,
-    q_hex: Query<(Entity, &HexCoord), Without<C>>,
-) {
-    for (entity, coord) in q_hex.iter() {
-        let noise = generator.noise(**coord);
-
-        commands.entity(entity).insert(C::from_noise(noise));
     }
 }
 

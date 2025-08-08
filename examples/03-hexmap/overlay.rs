@@ -15,12 +15,7 @@ use bevy::{
 use hexx::*;
 
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
-use systems::{
-    debug::DebugPlugin,
-    hexmap::map::{
-        FromNoise, HexCoord, HexDiscoverEvent, HexMapNoisePlugin, HexMapPlugin, HexMapSet,
-    },
-};
+use systems::{debug::DebugPlugin, hexmap::prelude::*, noise::prelude::*};
 
 use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
 
@@ -32,28 +27,28 @@ const CHUNK_RADIUS: u32 = 4;
 const DISCOVER_RADIUS: u32 = 3;
 
 #[derive(Component, Debug, Clone, Copy)]
-struct HexNoiseHeight(f32);
+struct HexNoiseHeight(f64);
 
 impl FromNoise for HexNoiseHeight {
-    fn from_noise(noise: f32) -> Self {
+    fn from_noise(noise: f64) -> Self {
         Self(noise)
     }
 }
 
 #[derive(Component, Debug, Clone, Copy)]
-struct HexNoiseTemperature(f32);
+struct HexNoiseTemperature(f64);
 
 impl FromNoise for HexNoiseTemperature {
-    fn from_noise(noise: f32) -> Self {
+    fn from_noise(noise: f64) -> Self {
         Self(noise)
     }
 }
 
 #[derive(Component, Debug, Clone, Copy)]
-struct HexNoiseHumidity(f32);
+struct HexNoiseHumidity(f64);
 
 impl FromNoise for HexNoiseHumidity {
-    fn from_noise(noise: f32) -> Self {
+    fn from_noise(noise: f64) -> Self {
         Self(noise)
     }
 }
@@ -124,8 +119,8 @@ impl Into<Color> for TileKind {
     }
 }
 
-impl From<f32> for TileKind {
-    fn from(value: f32) -> Self {
+impl From<f64> for TileKind {
+    fn from(value: f64) -> Self {
         if value <= -0.5 {
             TileKind::DeepWater
         } else if value <= 0.0 {
@@ -180,13 +175,13 @@ fn main() {
             CHUNK_RADIUS,
             DISCOVER_RADIUS,
         ))
-        .add_plugins(HexMapNoisePlugin::<_, HexNoiseHeight>::new(
+        .add_plugins(NoisePlugin::<3, HexCoord, _, HexNoiseHeight>::new(
             Planet::default().with_seed(seed),
         ))
-        .add_plugins(HexMapNoisePlugin::<_, HexNoiseTemperature>::new(
+        .add_plugins(NoisePlugin::<3, HexCoord, _, HexNoiseTemperature>::new(
             PlanetTemperature::default().with_seed(seed + 1),
         ))
-        .add_plugins(HexMapNoisePlugin::<_, HexNoiseHumidity>::new(
+        .add_plugins(NoisePlugin::<3, HexCoord, _, HexNoiseHumidity>::new(
             PlanetHumidity::default().with_seed(seed + 2),
         ))
         .add_plugins(WASDCameraControllerPlugin)
@@ -372,9 +367,9 @@ fn handle_hex(
                     Mesh3d(assets_cache.mesh.clone()),
                     MeshMaterial3d(materials.add(HexMaterial {
                         mode: overlay_state.kind as u32,
-                        height: *height,
-                        temperature: temperature,
-                        humidity: humidity,
+                        height: *height as f32,
+                        temperature: temperature as f32,
+                        humidity: humidity as f32,
                         alpha_mode: AlphaMode::Opaque,
                     })),
                     OverlayMesh,
@@ -396,7 +391,7 @@ fn handle_hex(
                 ));
             });
 
-        transform.translation.y = *height * 5.0;
+        transform.translation.y = *height as f32 * 5.0;
         if transform.translation.y < SEA_LEVEL as f32 {
             transform.translation.y = SEA_LEVEL as f32;
         }

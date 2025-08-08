@@ -12,12 +12,7 @@ use bevy::{
 use hexx::*;
 
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
-use systems::{
-    debug::DebugPlugin,
-    hexmap::map::{
-        FromNoise, HexCoord, HexDiscoverEvent, HexMapNoisePlugin, HexMapPlugin, HexMapSet,
-    },
-};
+use systems::{debug::DebugPlugin, hexmap::prelude::*, noise::prelude::*};
 
 use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
 
@@ -26,10 +21,10 @@ const CHUNK_RADIUS: u32 = 15;
 const DISCOVER_RADIUS: u32 = 3;
 
 #[derive(Component, Debug, Clone, Copy)]
-struct HexNoise(f32);
+struct HexNoise(f64);
 
 impl FromNoise for HexNoise {
-    fn from_noise(noise: f32) -> Self {
+    fn from_noise(noise: f64) -> Self {
         Self(noise)
     }
 }
@@ -57,8 +52,8 @@ impl Into<Color> for TileKind {
     }
 }
 
-impl From<f32> for TileKind {
-    fn from(value: f32) -> Self {
+impl From<f64> for TileKind {
+    fn from(value: f64) -> Self {
         if value <= -0.5 {
             TileKind::DeepWater
         } else if value <= 0.0 {
@@ -103,6 +98,7 @@ impl AssetsCache {
 
 fn main() {
     let layout = HexLayout::flat().with_hex_size(HEX_SIZE);
+
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(HexMapPlugin::new(
@@ -110,7 +106,7 @@ fn main() {
             CHUNK_RADIUS,
             DISCOVER_RADIUS,
         ))
-        .add_plugins(HexMapNoisePlugin::<_, HexNoise>::new(
+        .add_plugins(NoisePlugin::<3, HexCoord, _, HexNoise>::new(
             Planet::default().with_seed(CURRENT_SEED),
         ))
         .add_plugins(WASDCameraControllerPlugin)

@@ -15,10 +15,7 @@ use bevy::{
 };
 use hexx::*;
 
-use systems::{
-    debug::DebugPlugin,
-    hexmap::map::{HexCoord, HexDiscoverEvent, HexMapPlugin, HexMapSet},
-};
+use systems::{debug::DebugPlugin, hexmap::prelude::*};
 
 use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
 

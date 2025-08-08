@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 
-use systems::camera::rts_camera::{RTSCamera, RTSCameraInput, RTSCameraPlugin, RTSCameraSet};
+use systems::camera::rts_camera::prelude::*;
 
 #[derive(Actionlike, Clone, Debug, Copy, PartialEq, Eq, Hash, Reflect)]
 enum CameraMovement {

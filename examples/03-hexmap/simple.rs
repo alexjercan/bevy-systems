@@ -6,10 +6,7 @@ mod wasd_camera_controller;
 use bevy::prelude::*;
 use hexx::*;
 
-use systems::{
-    debug::DebugPlugin,
-    hexmap::map::{HexDiscoverEvent, HexMapPlugin, HexMapSet},
-};
+use systems::{debug::DebugPlugin, hexmap::prelude::*};
 
 use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
 
