@@ -1,12 +1,23 @@
-#import bevy_pbr::forward_io::VertexOutput
+#import bevy_pbr::{
+    forward_io::{VertexOutput, FragmentOutput},
+    pbr_fragment::pbr_input_from_standard_material,
+    pbr_functions::{alpha_discard, apply_pbr_lighting, main_pass_post_lighting_processing},
+}
 
-@group(2) @binding(0) var<uniform> chunk_radius: u32;
-@group(2) @binding(1) var<uniform> hex_size: f32;
-@group(2) @binding(2) var<uniform> chunk_center: vec2<i32>;
-@group(2) @binding(3) var<storage, read> noise: array<f32>;
+@group(2) @binding(100) var<uniform> chunk_radius: u32;
+@group(2) @binding(101) var<uniform> hex_size: f32;
+@group(2) @binding(102) var<uniform> chunk_center: vec2<i32>;
+@group(2) @binding(103) var<storage, read> noise: array<f32>;
 
 @fragment
-fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
+fn fragment(
+    in: VertexOutput,
+    @builtin(front_facing) is_front: bool,
+) -> FragmentOutput {
+    // generate a PbrInput struct from the StandardMaterial bindings
+    var pbr_input = pbr_input_from_standard_material(in, is_front);
+
+    // calculate the hex color
     var pos = in.world_position.xz;
     {
         // Kind of meh, but it works (wish I could have used `in.world_normal`
@@ -15,12 +26,23 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         let direction = vec2<f32>(sign(hex - chunk_center));
         pos = pos + vec2<f32>(0.1, 0.1) * (-direction);
     }
-
     let hex = world_to_hex(pos, hex_size);
     let hex_offset = hex - chunk_center;
     let index = hex_to_index(hex_offset, chunk_radius);
+    pbr_input.material.base_color = noise_to_color(noise[index]);
 
-    return noise_to_color(noise[index]);
+    // alpha discard
+    pbr_input.material.base_color = alpha_discard(pbr_input.material, pbr_input.material.base_color);
+
+    var out: FragmentOutput;
+    // apply lighting
+    out.color = apply_pbr_lighting(pbr_input);
+
+    // apply in-shader post processing (fog, alpha-premultiply, and also tonemapping, debanding if the camera is non-hdr)
+    // note this does not include fullscreen postprocessing effects like bloom.
+    out.color = main_pass_post_lighting_processing(pbr_input, out.color);
+
+    return out;
 }
 
 fn noise_to_color(noise: f32) -> vec4<f32> {

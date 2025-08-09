@@ -1,5 +1,6 @@
 use bevy::{
     asset::RenderAssetUsages,
+    pbr::{ExtendedMaterial, MaterialExtension},
     platform::collections::HashMap,
     prelude::*,
     render::{
@@ -52,7 +53,9 @@ where
     for<'a> &'a C: Into<f64>,
 {
     fn build(&self, app: &mut App) {
-        app.add_plugins(MaterialPlugin::<ChunkMaterial>::default());
+        app.add_plugins(MaterialPlugin::<
+            ExtendedMaterial<StandardMaterial, ChunkMaterial>,
+        >::default());
 
         app.insert_resource(Layout {
             layout: self.layout.clone(),
@@ -88,7 +91,7 @@ struct RenderHex;
 fn handle_hex<T: Component + Send + Sync + 'static, C: Component + Send + Sync + 'static>(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ChunkMaterial>>,
+    mut materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, ChunkMaterial>>>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
     layout: Res<Layout>,
     q_hex: Query<(Entity, &T, &C, &ChildOf), Without<RenderHex>>,
@@ -130,12 +133,18 @@ fn handle_hex<T: Component + Send + Sync + 'static, C: Component + Send + Sync +
 
             commands.entity(chunk_entity).insert((
                 Mesh3d(meshes.add(mesh)),
-                MeshMaterial3d(materials.add(ChunkMaterial {
-                    chunk_radius: layout.chunk_radius,
-                    hex_size: layout.layout.scale.x,
-                    chunk_center: IVec2::new(center.x, center.y),
-                    noise: buffers.add(ShaderStorageBuffer::from(noise_data)),
-                    alpha_mode: AlphaMode::Opaque,
+                MeshMaterial3d(materials.add(ExtendedMaterial {
+                    base: StandardMaterial {
+                        perceptual_roughness: 1.0,
+                        metallic: 0.0,
+                        ..default()
+                    },
+                    extension: ChunkMaterial {
+                        chunk_radius: layout.chunk_radius,
+                        hex_size: layout.layout.scale.x,
+                        chunk_center: IVec2::new(center.x, center.y),
+                        noise: buffers.add(ShaderStorageBuffer::from(noise_data)),
+                    },
                 })),
             ));
         }
@@ -144,24 +153,18 @@ fn handle_hex<T: Component + Send + Sync + 'static, C: Component + Send + Sync +
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct ChunkMaterial {
-    #[uniform(0)]
+    #[uniform(100)]
     pub chunk_radius: u32,
-    #[uniform(1)]
+    #[uniform(101)]
     pub hex_size: f32,
-    #[uniform(2)]
+    #[uniform(102)]
     pub chunk_center: IVec2,
-    #[storage(3, read_only)]
+    #[storage(103, read_only)]
     pub noise: Handle<ShaderStorageBuffer>,
-
-    alpha_mode: AlphaMode,
 }
 
-impl Material for ChunkMaterial {
+impl MaterialExtension for ChunkMaterial {
     fn fragment_shader() -> ShaderRef {
         "shaders/chunk.wgsl".into()
-    }
-
-    fn alpha_mode(&self) -> AlphaMode {
-        self.alpha_mode
     }
 }
