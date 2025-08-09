@@ -7,15 +7,7 @@ use itertools::Itertools;
 use noise::NoiseFn;
 
 pub mod prelude {
-    pub use super::{FromNoise, NoisePlugin, NoiseSet, ToNoisePoint};
-}
-
-pub trait FromNoise {
-    fn from_noise(value: f64) -> Self;
-}
-
-pub trait ToNoisePoint<const DIM: usize> {
-    fn to_point(&self) -> [f64; DIM];
+    pub use super::{NoisePlugin, NoiseSet};
 }
 
 #[derive(Resource, Debug, Clone, Deref, DerefMut)]
@@ -24,15 +16,13 @@ struct NoiseGenerator<const DIM: usize, F: NoiseFn<f64, DIM> + Clone>(F);
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NoiseSet;
 
-pub struct NoisePlugin<const DIM: usize, T: ToNoisePoint<DIM>, F: NoiseFn<f64, DIM>, C: FromNoise> {
+pub struct NoisePlugin<const DIM: usize, T, F, C> {
     func: F,
     _marker_in: std::marker::PhantomData<T>,
     _marker_out: std::marker::PhantomData<C>,
 }
 
-impl<const DIM: usize, T: ToNoisePoint<DIM>, F: NoiseFn<f64, DIM>, C: FromNoise>
-    NoisePlugin<DIM, T, F, C>
-{
+impl<const DIM: usize, T, F, C> NoisePlugin<DIM, T, F, C> {
     pub fn new(func: F) -> Self {
         Self {
             func,
@@ -44,10 +34,12 @@ impl<const DIM: usize, T: ToNoisePoint<DIM>, F: NoiseFn<f64, DIM>, C: FromNoise>
 
 impl<
         const DIM: usize,
-        T: Component + ToNoisePoint<DIM> + Send + Sync + 'static,
+        T: Component + Send + Sync + 'static,
         F: NoiseFn<f64, DIM> + Copy + Send + Sync + 'static,
-        C: Component + FromNoise + Send + Sync + 'static,
+        C: Component + From<f64> + Send + Sync + 'static,
     > Plugin for NoisePlugin<DIM, T, F, C>
+where
+    for<'a> &'a T: Into<[f64; DIM]>,
 {
     fn build(&self, app: &mut App) {
         app.insert_resource(NoiseGenerator(self.func));
@@ -60,12 +52,12 @@ impl<
 }
 
 #[derive(Component)]
-struct ComputeNoise<C: FromNoise> {
+struct ComputeNoise<C: From<f64>> {
     task: Task<CommandQueue>,
     _marker: std::marker::PhantomData<C>,
 }
 
-impl<C: FromNoise> ComputeNoise<C> {
+impl<C: From<f64>> ComputeNoise<C> {
     fn new(task: Task<CommandQueue>) -> Self {
         Self {
             task,
@@ -79,18 +71,20 @@ struct ComputePoint;
 
 fn generate_noise<
     const DIM: usize,
-    T: Component + ToNoisePoint<DIM> + Send + Sync + 'static,
+    T: Component + Send + Sync + 'static,
     F: NoiseFn<f64, DIM> + Clone + Send + Sync + 'static,
-    C: Component + FromNoise + Send + Sync + 'static,
+    C: Component + From<f64> + Send + Sync + 'static,
 >(
     mut commands: Commands,
     generator: Res<NoiseGenerator<DIM, F>>,
     q_point: Query<(Entity, &T, &ChildOf), (Without<C>, Without<ComputePoint>)>,
-) {
+) where
+    for<'a> &'a T: Into<[f64; DIM]>,
+{
     let thread_pool = AsyncComputeTaskPool::get();
-    for (&entity, chunk) in q_point.iter().chunk_by(|(_, _, ChildOf(e))| e).into_iter() {
+    for (&chunk_entity, chunk) in q_point.iter().chunk_by(|(_, _, ChildOf(e))| e).into_iter() {
         let chunk = chunk
-            .map(|(child_entity, point, _)| (child_entity, point.to_point()))
+            .map(|(child_entity, point, _)| (child_entity, point.into()))
             .collect_vec();
 
         for (child_entity, _) in chunk.iter() {
@@ -103,21 +97,21 @@ fn generate_noise<
             for (child_entity, point) in chunk {
                 let noise = generator.get(point);
                 command_queue.push(move |world: &mut World| {
-                    world.entity_mut(child_entity).insert(C::from_noise(noise));
+                    world.entity_mut(child_entity).insert(C::from(noise));
                 });
             }
 
             command_queue.push(move |world: &mut World| {
-                world.entity_mut(entity).remove::<ComputeNoise<C>>();
+                world.entity_mut(chunk_entity).remove::<ComputeNoise<C>>();
             });
             command_queue
         });
 
-        commands.entity(entity).insert(ComputeNoise::<C>::new(task));
+        commands.entity(chunk_entity).insert(ComputeNoise::<C>::new(task));
     }
 }
 
-fn handle_generate_noise<C: Component + FromNoise + Send + Sync + 'static>(
+fn handle_generate_noise<C: Component + From<f64> + Send + Sync + 'static>(
     mut commands: Commands,
     mut tasks: Query<&mut ComputeNoise<C>>,
 ) {

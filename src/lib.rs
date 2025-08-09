@@ -7,5 +7,6 @@ pub mod debug;
 pub mod hexmap;
 pub mod meth;
 pub mod noise;
+pub mod render;
 
 mod glue;

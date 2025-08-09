@@ -105,6 +105,16 @@ description = "Hexmap with Mesh Example."
 category = "Hexmap"
 
 [[example]]
+name = "hexmap_planet"
+path = "examples/03-hexmap/planet.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.hexmap_planet]
+name = "Hexmap Planet"
+description = "Hexmap with Planet Example."
+category = "Hexmap"
+
+[[example]]
 name = "hexmap_overlay"
 path = "examples/03-hexmap/overlay.rs"
 doc-scrape-examples = true

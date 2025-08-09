@@ -5,7 +5,7 @@ use hexx::*;
 
 pub mod prelude {
     pub use super::{
-        FromHex, HexDiscoverEvent, HexMapPlugin, HexMapSet,
+        HexDiscoverEvent, HexMapPlugin, HexMapSet,
     };
 }
 
@@ -13,22 +13,18 @@ pub mod prelude {
 use self::debug::{DebugPlugin, DebugSet};
 
 #[derive(Event, Clone, Debug)]
-pub struct HexDiscoverEvent<C: FromHex> {
+pub struct HexDiscoverEvent<C: From<Hex>> {
     pub pos: Vec2,
     _marker: std::marker::PhantomData<C>,
 }
 
-impl<C: FromHex> HexDiscoverEvent<C> {
+impl<C: From<Hex>> HexDiscoverEvent<C> {
     pub fn new(pos: Vec2) -> Self {
         Self {
             pos,
             _marker: std::marker::PhantomData,
         }
     }
-}
-
-pub trait FromHex {
-    fn from_hex(hex: Hex) -> Self;
 }
 
 #[derive(Component, Clone, Debug, Deref, DerefMut)]
@@ -86,14 +82,14 @@ impl HexMapStorage {
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct HexMapSet;
 
-pub struct HexMapPlugin<C: FromHex> {
+pub struct HexMapPlugin<C: From<Hex>> {
     layout: HexLayout,
     chunk_radius: u32,
     discover_radius: u32,
     _marker: std::marker::PhantomData<C>,
 }
 
-impl<C: FromHex> HexMapPlugin<C> {
+impl<C: From<Hex>> HexMapPlugin<C> {
     pub fn new(layout: HexLayout, chunk_radius: u32, discover_radius: u32) -> Self {
         Self {
             layout,
@@ -104,7 +100,7 @@ impl<C: FromHex> HexMapPlugin<C> {
     }
 }
 
-impl<C: Component + FromHex + Send + Sync + 'static> Plugin for HexMapPlugin<C> {
+impl<C: Component + From<Hex> + Send + Sync + 'static> Plugin for HexMapPlugin<C> {
     fn build(&self, app: &mut App) {
         #[cfg(feature = "debug")]
         app.add_plugins(DebugPlugin);
@@ -125,7 +121,7 @@ impl<C: Component + FromHex + Send + Sync + 'static> Plugin for HexMapPlugin<C> 
     }
 }
 
-fn generate_chunks<C: Component + FromHex + Send + Sync + 'static>(
+fn generate_chunks<C: Component + From<Hex> + Send + Sync + 'static>(
     mut commands: Commands,
     mut storage: ResMut<HexMapStorage>,
     mut ev_discover: EventReader<HexDiscoverEvent<C>>,
@@ -155,7 +151,7 @@ fn generate_chunks<C: Component + FromHex + Send + Sync + 'static>(
 
                 let hex_entity = commands
                     .spawn((
-                        C::from_hex(hex),
+                        C::from(hex),
                         Transform::from_translation(pos),
                         Name::new("Hex"),
                     ))

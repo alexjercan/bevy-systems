@@ -47,7 +47,7 @@ fn toggle(
     kbd: Res<ButtonInput<KeyCode>>,
     mut show_axes: ResMut<ShowAxes>,
 ) {
-    if kbd.just_pressed(KeyCode::F12) {
+    if kbd.just_pressed(KeyCode::F11) {
         if let Ok(e) = q_root.single() {
             // despawn the existing Perf UI
             commands.entity(e).despawn();
