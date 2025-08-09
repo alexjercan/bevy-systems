@@ -10,7 +10,9 @@ use bevy::prelude::*;
 use hexx::*;
 
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
-use systems::{debug::DebugPlugin, hexmap::prelude::*, noise::prelude::*, render::prelude::*};
+use systems::{
+    debug::DebugPlugin, hexmap::prelude::*, mesh::prelude::*, noise::prelude::*, render::prelude::*,
+};
 
 use common::HexCoord;
 use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
@@ -67,16 +69,23 @@ fn main() {
         .add_plugins(NoisePlugin::<3, HexCoord, _, HexNoise>::new(
             Planet::default().with_seed(CURRENT_SEED),
         ))
-        .add_plugins(RenderPlugin::<HexCoord, HexNoise>::new(
-            layout,
+        .add_plugins(HexMapMeshPlugin::<HexCoord, HexNoise>::new(
+            layout.clone(),
             CHUNK_RADIUS,
             COLUMN_HEIGHT,
+        ))
+        .add_plugins(HexMapMaterialPlugin::<HexCoord, HexNoise>::new(
+            layout.clone(),
+            CHUNK_RADIUS,
         ))
         .add_plugins(WASDCameraControllerPlugin)
         .add_plugins(DebugPlugin)
         .add_systems(Startup, setup)
         .add_systems(Update, input)
         .configure_sets(Update, HexMapSet)
+        .configure_sets(Update, NoiseSet)
+        .configure_sets(Update, HexMapMeshSet)
+        .configure_sets(Update, HexMapMaterialSet)
         .run();
 }
 

@@ -8,5 +8,6 @@ pub mod hexmap;
 pub mod meth;
 pub mod noise;
 pub mod render;
+pub mod mesh;
 
 mod glue;

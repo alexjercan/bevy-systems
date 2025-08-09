@@ -1,10 +1,7 @@
 use bevy::{
-    asset::RenderAssetUsages,
     pbr::{ExtendedMaterial, MaterialExtension},
-    platform::collections::HashMap,
     prelude::*,
     render::{
-        mesh::{Indices, PrimitiveTopology},
         render_resource::{AsBindGroup, ShaderRef},
         storage::ShaderStorageBuffer,
     },
@@ -13,33 +10,30 @@ use hexx::*;
 use itertools::Itertools;
 
 pub mod prelude {
-    pub use super::{RenderPlugin, RenderSet};
+    pub use super::{HexMapMaterialPlugin, HexMapMaterialSet};
 }
 
 #[derive(Resource, Debug, Clone, Default)]
 struct Layout {
     layout: HexLayout,
     chunk_radius: u32,
-    max_height: f32,
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RenderSet;
+pub struct HexMapMaterialSet;
 
-pub struct RenderPlugin<T, C> {
+pub struct HexMapMaterialPlugin<T, C> {
     layout: HexLayout,
     chunk_radius: u32,
-    max_height: f32,
     _marker_in: std::marker::PhantomData<T>,
     _marker_out: std::marker::PhantomData<C>,
 }
 
-impl<T, C> RenderPlugin<T, C> {
-    pub fn new(layout: HexLayout, chunk_radius: u32, max_height: f32) -> Self {
+impl<T, C> HexMapMaterialPlugin<T, C> {
+    pub fn new(layout: HexLayout, chunk_radius: u32) -> Self {
         Self {
             layout,
             chunk_radius,
-            max_height,
             _marker_in: std::marker::PhantomData,
             _marker_out: std::marker::PhantomData,
         }
@@ -47,10 +41,10 @@ impl<T, C> RenderPlugin<T, C> {
 }
 
 impl<T: Component + Send + Sync + 'static, C: Component + Send + Sync + 'static> Plugin
-    for RenderPlugin<T, C>
+    for HexMapMaterialPlugin<T, C>
 where
     for<'a> &'a T: Into<Hex>,
-    for<'a> &'a C: Into<f64> + Into<LinearRgba>,
+    for<'a> &'a C: Into<LinearRgba>,
 {
     fn build(&self, app: &mut App) {
         app.add_plugins(MaterialPlugin::<
@@ -60,55 +54,33 @@ where
         app.insert_resource(Layout {
             layout: self.layout.clone(),
             chunk_radius: self.chunk_radius,
-            max_height: self.max_height,
         });
 
-        app.add_systems(Update, (handle_hex::<T, C>).in_set(RenderSet));
-    }
-}
-
-impl Layout {
-    fn hexmap(&self, chunk: HashMap<Hex, f32>) -> Mesh {
-        let mesh_info = HeightMapMeshBuilder::new(&self.layout, &chunk)
-            .with_height_range(0.0..=self.max_height)
-            .with_default_height(0.0)
-            .center_aligned()
-            .build();
-        Mesh::new(
-            PrimitiveTopology::TriangleList,
-            RenderAssetUsages::RENDER_WORLD,
-        )
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, mesh_info.vertices)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_info.normals)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, mesh_info.uvs)
-        .with_inserted_indices(Indices::U16(mesh_info.indices))
+        app.add_systems(Update, (handle_hex::<T, C>).in_set(HexMapMaterialSet));
     }
 }
 
 #[derive(Component)]
-struct RenderHex;
+struct ChunkMaterialReady;
 
 fn handle_hex<T: Component + Send + Sync + 'static, C: Component + Send + Sync + 'static>(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, ChunkMaterial>>>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
     layout: Res<Layout>,
-    q_hex: Query<(Entity, &T, &C, &ChildOf), Without<RenderHex>>,
+    q_hex: Query<(Entity, &T, &C, &ChildOf), Without<ChunkMaterialReady>>,
 ) where
     for<'a> &'a T: Into<Hex>,
-    for<'a> &'a C: Into<f64> + Into<LinearRgba>,
+    for<'a> &'a C: Into<LinearRgba>,
 {
     for (&chunk_entity, chunk) in q_hex.iter().chunk_by(|(_, _, _, ChildOf(e))| e).into_iter() {
-        let mut storage = HashMap::default();
-
         let mut center: Option<Hex> = None;
         let size = layout.chunk_radius * 2 + 1;
         let mut color_data = vec![LinearRgba::NONE; (size * size) as usize];
 
         for (entity, hex, noise, _) in chunk {
-            commands.entity(entity).insert(RenderHex);
-            let hex = hex.into();
+            commands.entity(entity).insert(ChunkMaterialReady);
+            let hex: Hex = hex.into();
             if center.is_none() {
                 center = Some(
                     hex.to_lower_res(layout.chunk_radius)
@@ -117,12 +89,6 @@ fn handle_hex<T: Component + Send + Sync + 'static, C: Component + Send + Sync +
             }
             let hex = hex - center.unwrap();
 
-            let noise_value: f64 = noise.into();
-            storage.insert(
-                hex,
-                noise_value.clamp(0.0, 1.0) as f32 * layout.max_height,
-            );
-
             let q_offset = hex.x + layout.chunk_radius as i32;
             let r_offset = hex.y + layout.chunk_radius as i32;
             let index = (r_offset * size as i32 + q_offset) as usize;
@@ -130,11 +96,9 @@ fn handle_hex<T: Component + Send + Sync + 'static, C: Component + Send + Sync +
         }
 
         if let Some(center) = center {
-            let mesh = layout.hexmap(storage);
-
-            commands.entity(chunk_entity).insert((
-                Mesh3d(meshes.add(mesh)),
-                MeshMaterial3d(materials.add(ExtendedMaterial {
+            commands
+                .entity(chunk_entity)
+                .insert((MeshMaterial3d(materials.add(ExtendedMaterial {
                     base: StandardMaterial {
                         perceptual_roughness: 1.0,
                         metallic: 0.0,
@@ -146,8 +110,7 @@ fn handle_hex<T: Component + Send + Sync + 'static, C: Component + Send + Sync +
                         chunk_center: IVec2::new(center.x, center.y),
                         noise: buffers.add(ShaderStorageBuffer::from(color_data)),
                     },
-                })),
-            ));
+                })),));
         }
     }
 }
