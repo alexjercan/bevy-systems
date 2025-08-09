@@ -35,6 +35,25 @@ impl Into<f64> for &HexNoise {
     }
 }
 
+impl Into<LinearRgba> for &HexNoise {
+    fn into(self) -> LinearRgba {
+        let value = self.0.clamp(-1.0, 1.0) as f32;
+        if value <= -0.5 {
+            LinearRgba::new(0.0, 0.0, 139.0 / 255.0, 1.0) // Deep Water
+        } else if value <= 0.0 {
+            LinearRgba::new(0.0, 0.0, 1.0, 1.0) // Water
+        } else if value <= 0.1 {
+            LinearRgba::new(1.0, 1.0, 0.0, 1.0) // Sand
+        } else if value <= 0.3 {
+            LinearRgba::new(0.0, 128.0 / 255.0, 0.0, 1.0) // Grass
+        } else if value <= 0.6 {
+            LinearRgba::new(139.0 / 255.0, 69.0 / 255.0, 19.0 / 255.0, 1.0) // Hills
+        } else {
+            LinearRgba::new(1.0, 1.0, 1.0, 1.0) // Mountains
+        }
+    }
+}
+
 fn main() {
     let layout = HexLayout::flat().with_hex_size(HEX_SIZE);
 

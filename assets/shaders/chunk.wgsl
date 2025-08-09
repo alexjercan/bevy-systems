@@ -7,7 +7,7 @@
 @group(2) @binding(100) var<uniform> chunk_radius: u32;
 @group(2) @binding(101) var<uniform> hex_size: f32;
 @group(2) @binding(102) var<uniform> chunk_center: vec2<i32>;
-@group(2) @binding(103) var<storage, read> noise: array<f32>;
+@group(2) @binding(103) var<storage, read> colors: array<vec4<f32>>;
 
 @fragment
 fn fragment(
@@ -19,17 +19,19 @@ fn fragment(
 
     // calculate the hex color
     var pos = in.world_position.xz;
-    {
-        // Kind of meh, but it works (wish I could have used `in.world_normal`
-        // here, but edges don't work with that)
-        let hex = world_to_hex(pos, hex_size);
-        let direction = vec2<f32>(sign(hex - chunk_center));
-        pos = pos + vec2<f32>(0.1, 0.1) * (-direction);
+    let N = normalize(in.world_normal.xyz);
+    let is_vertical = abs(N.y) < 0.9;
+    if is_vertical {
+        pos = pos - vec2<f32>(0.1, 0.1) * sign(N.xz);
     }
+
     let hex = world_to_hex(pos, hex_size);
     let hex_offset = hex - chunk_center;
     let index = hex_to_index(hex_offset, chunk_radius);
-    pbr_input.material.base_color = noise_to_color(noise[index]);
+    pbr_input.material.base_color = colors[index];
+
+    // alpha discard
+    pbr_input.material.base_color = alpha_discard(pbr_input.material, pbr_input.material.base_color);
 
     // alpha discard
     pbr_input.material.base_color = alpha_discard(pbr_input.material, pbr_input.material.base_color);
@@ -43,22 +45,6 @@ fn fragment(
     out.color = main_pass_post_lighting_processing(pbr_input, out.color);
 
     return out;
-}
-
-fn noise_to_color(noise: f32) -> vec4<f32> {
-    if (noise <= -0.5) {
-        return vec4<f32>(0.0, 0.0, 139.0 / 255.0, 1.0); // Deep Water
-    } else if (noise <= 0.0) {
-        return vec4<f32>(0.0, 0.0, 1.0, 1.0); // Water
-    } else if (noise <= 0.1) {
-        return vec4<f32>(1.0, 1.0, 0.0, 1.0); // Sand
-    } else if (noise <= 0.3) {
-        return vec4<f32>(0.0, 128.0 / 255.0, 0.0, 1.0); // Grass
-    } else if (noise <= 0.6) {
-        return vec4<f32>(139.0 / 255.0, 69.0 / 255.0, 19.0 / 255.0, 1.0); // Hills
-    } else {
-        return vec4<f32>(1.0, 1.0, 1.0, 1.0); // Mountains
-    }
 }
 
 fn world_to_hex(position: vec2<f32>, size: f32) -> vec2<i32> {
@@ -102,7 +88,10 @@ fn hex_to_index(hex: vec2<i32>, radius: u32) -> u32 {
     let size = radius * 2 + 1u;
 
     let q_clamped = clamp(hex.x, -i32(radius), i32(radius));
-    let r_clamped = clamp(hex.y, -i32(radius), i32(radius));
+    let s = -q_clamped - hex.y;
+    let s_clamped = clamp(s, -i32(radius), i32(radius));
+    let r = -q_clamped - s_clamped;
+    let r_clamped = clamp(r, -i32(radius), i32(radius));
 
     let q_offset = q_clamped + i32(radius);
     let r_offset = r_clamped + i32(radius);
