@@ -1,4 +1,14 @@
-//! TODO: Document this module
+//! Hexagonal map plugin for Bevy.
+//!
+//! This plugin provides a hexagonal map system that allows for the discovery and management of
+//! hexagonal tiles in a Bevy application. The hex tiles are organized into chunks, and the plugin
+//! allows for the dynamic discovery of hexes based on a specified layout and radius.
+//!
+//! This plugin uses ECS style architecture to manage hexagonal tiles, where each hexagon is
+//! represented by an entity with a component that can be constructed from a `Hex` coordinate.
+//! The chunks are also entities that contain all the hexes within a certain radius.
+//!
+//! You can use the `debug` feature to enable debug visualization of the hexagonal grid.
 
 use bevy::{platform::collections::HashMap, prelude::*};
 use hexx::*;
@@ -12,13 +22,18 @@ pub mod prelude {
 #[cfg(feature = "debug")]
 use self::debug::{DebugPlugin, DebugSet};
 
+/// The HexDiscoverEvent is used to trigger the discovery of hexagonal tiles in the map.
+/// The position is given in world coordinates, and the event is generic over a component type `C`
+/// that can be constructed from a `Hex` coordinate.
 #[derive(Event, Clone, Debug)]
 pub struct HexDiscoverEvent<C: From<Hex>> {
+    /// The position in world coordinates where the discovery event occurs.
     pub pos: Vec2,
     _marker: std::marker::PhantomData<C>,
 }
 
 impl<C: From<Hex>> HexDiscoverEvent<C> {
+    /// Creates a new HexDiscoverEvent with the specified position.
     pub fn new(pos: Vec2) -> Self {
         Self {
             pos,
@@ -79,9 +94,17 @@ impl HexMapStorage {
     }
 }
 
+/// The HexMapSet is a system set used to group hex map related systems together.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct HexMapSet;
 
+/// The HexMapPlugin is a Bevy plugin that sets up the hexagonal map system.
+/// The plugin requires a component type `C` that can be constructed from a `Hex` coordinate.
+/// The plugin will generate a hexagonal grid based on the specified layout, chunk radius, and
+/// discover radius. It will spawn a new entity for each hexagon in the discovered chunks and
+/// it will add the `C` component to each hexagon entity.
+/// The hexagons will be grouped into chunks, and each chunk will be represented by a `ChunkCoord`
+/// component. Each tile in the chunk will be parented to the chunk entity.
 pub struct HexMapPlugin<C: From<Hex>> {
     layout: HexLayout,
     chunk_radius: u32,

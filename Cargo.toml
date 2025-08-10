@@ -95,13 +95,13 @@ description = "Simple Hexmap Example."
 category = "Hexmap"
 
 [[example]]
-name = "hexmap_mesh"
-path = "examples/03-hexmap/mesh.rs"
+name = "hexmap_coordinates"
+path = "examples/03-hexmap/coordinates.rs"
 doc-scrape-examples = true
 
-[package.metadata.example.hexmap_mesh]
-name = "Hexmap Mesh"
-description = "Hexmap with Mesh Example."
+[package.metadata.example.hexmap_coordinates]
+name = "Hexmap Coordinates"
+description = "Hexmap with Coordinates Example."
 category = "Hexmap"
 
 [[example]]
@@ -122,14 +122,4 @@ doc-scrape-examples = true
 [package.metadata.example.hexmap_overlay]
 name = "Hexmap Overlay"
 description = "Hexmap with Overlay Example."
-category = "Hexmap"
-
-[[example]]
-name = "hexmap_coordinates"
-path = "examples/03-hexmap/coordinates.rs"
-doc-scrape-examples = true
-
-[package.metadata.example.hexmap_coordinates]
-name = "Hexmap Coordinates"
-description = "Hexmap with Coordinates Example."
 category = "Hexmap"

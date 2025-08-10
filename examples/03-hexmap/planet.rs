@@ -8,23 +8,30 @@ mod common;
 
 use bevy::{
     asset::RenderAssetUsages,
+    pbr::{ExtendedMaterial, MaterialExtension},
     platform::collections::HashMap,
     prelude::*,
-    render::mesh::{Indices, PrimitiveTopology},
+    render::{
+        mesh::{Indices, PrimitiveTopology},
+        render_resource::{AsBindGroup, ShaderRef},
+        storage::ShaderStorageBuffer,
+    },
 };
 use hexx::*;
 
+use itertools::Itertools;
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
 use systems::{debug::DebugPlugin, hexmap::prelude::*, noise::prelude::*};
 
-use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
 use common::HexCoord;
+use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
 
 const HEX_SIZE: f32 = 1.0;
 const CHUNK_RADIUS: u32 = 15;
 const DISCOVER_RADIUS: u32 = 3;
+const COLUMN_HEIGHT: f32 = 5.0;
 
-#[derive(Component, Debug, Clone, Copy)]
+#[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
 struct HexNoise(f64);
 
 impl From<f64> for HexNoise {
@@ -33,70 +40,22 @@ impl From<f64> for HexNoise {
     }
 }
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Reflect)]
-enum TileKind {
-    Mountains,
-    Hills,
-    Plains,
-    Sand,
-    Water,
-    DeepWater,
-}
-
-impl Into<Color> for TileKind {
-    fn into(self) -> Color {
-        match self {
-            TileKind::Mountains => Color::srgb_u8(255, 255, 255),
-            TileKind::Hills => Color::srgb_u8(139, 69, 19),
-            TileKind::Plains => Color::srgb_u8(0, 128, 0),
-            TileKind::Sand => Color::srgb_u8(255, 255, 0),
-            TileKind::Water => Color::srgb_u8(0, 0, 255),
-            TileKind::DeepWater => Color::srgb_u8(0, 0, 139),
-        }
-    }
-}
-
-impl From<f64> for TileKind {
-    fn from(value: f64) -> Self {
+impl Into<LinearRgba> for &HexNoise {
+    fn into(self) -> LinearRgba {
+        let value = self.0.clamp(-1.0, 1.0) as f32;
         if value <= -0.5 {
-            TileKind::DeepWater
+            LinearRgba::new(0.0, 0.0, 139.0 / 255.0, 1.0) // Deep Water
         } else if value <= 0.0 {
-            TileKind::Water
+            LinearRgba::new(0.0, 0.0, 1.0, 1.0) // Water
         } else if value <= 0.1 {
-            TileKind::Sand
+            LinearRgba::new(1.0, 1.0, 0.0, 1.0) // Sand
         } else if value <= 0.3 {
-            TileKind::Plains
+            LinearRgba::new(0.0, 128.0 / 255.0, 0.0, 1.0) // Grass
         } else if value <= 0.6 {
-            TileKind::Hills
+            LinearRgba::new(139.0 / 255.0, 69.0 / 255.0, 19.0 / 255.0, 1.0) // Hills
         } else {
-            TileKind::Mountains
+            LinearRgba::new(1.0, 1.0, 1.0, 1.0) // Mountains
         }
-    }
-}
-
-#[derive(Resource, Debug, Clone, Default)]
-struct AssetsCache {
-    mesh: Handle<Mesh>,
-    materials: HashMap<TileKind, Handle<StandardMaterial>>,
-    layout: HexLayout,
-}
-
-impl AssetsCache {
-    fn hexagonal_column(&self) -> Mesh {
-        const COLUMN_HEIGHT: f32 = 5.0;
-
-        let mesh_info = ColumnMeshBuilder::new(&self.layout, COLUMN_HEIGHT)
-            .without_bottom_face()
-            .center_aligned()
-            .build();
-        Mesh::new(
-            PrimitiveTopology::TriangleList,
-            RenderAssetUsages::RENDER_WORLD,
-        )
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, mesh_info.vertices)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_info.normals)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, mesh_info.uvs)
-        .with_inserted_indices(Indices::U16(mesh_info.indices))
     }
 }
 
@@ -111,25 +70,25 @@ fn main() {
             DISCOVER_RADIUS,
         ))
         .add_plugins(NoisePlugin::<3, HexCoord, _, HexNoise>::new(
-            Planet::default().with_seed(CURRENT_SEED),
+            PlanetHeight::default().with_seed(CURRENT_SEED),
+        ))
+        .add_plugins(HeightMapMeshPlugin::new(
+            layout.clone(),
+            CHUNK_RADIUS,
+            COLUMN_HEIGHT,
         ))
         .add_plugins(WASDCameraControllerPlugin)
         .add_plugins(DebugPlugin)
-        .insert_resource(AssetsCache {
-            layout,
-            ..default()
-        })
-        .add_systems(Startup, setup)
-        .add_systems(Update, (input, handle_hex))
         .configure_sets(Update, HexMapSet)
+        .configure_sets(Update, NoiseSet)
+        .configure_sets(Update, HeightMapMeshSet)
+        .add_systems(Startup, setup)
+        .add_systems(Update, mouse_click_discover)
         .run();
 }
 
 fn setup(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut assets_cache: ResMut<AssetsCache>,
 ) {
     commands.spawn((
         WASDCameraControllerBundle::default(),
@@ -143,29 +102,9 @@ fn setup(
         Transform::from_xyz(60.0, 60.0, 00.0).looking_at(Vec3::ZERO, Vec3::Y),
         Name::new("Directional Light"),
     ));
-
-    assets_cache.mesh = meshes.add(assets_cache.hexagonal_column());
-    for tile in [
-        TileKind::Mountains,
-        TileKind::Hills,
-        TileKind::Plains,
-        TileKind::Sand,
-        TileKind::Water,
-        TileKind::DeepWater,
-    ] {
-        assets_cache.materials.insert(
-            tile,
-            materials.add(StandardMaterial {
-                base_color: tile.into(),
-                perceptual_roughness: 1.0,
-                metallic: 0.0,
-                ..default()
-            }),
-        );
-    }
 }
 
-fn input(
+fn mouse_click_discover(
     windows: Query<&Window>,
     q_camera: Single<(&Camera, &GlobalTransform)>,
     mut ev_discover: EventWriter<HexDiscoverEvent<HexCoord>>,
@@ -191,31 +130,6 @@ fn input(
     let point = ray.get_point(distance);
 
     ev_discover.write(HexDiscoverEvent::new(point.xz()));
-}
-
-fn handle_hex(
-    mut commands: Commands,
-    mut q_hex: Query<(Entity, &HexNoise, &mut Transform), (With<HexCoord>, Without<Mesh3d>)>,
-    assets_cache: Res<AssetsCache>,
-) {
-    for (entity, HexNoise(height), mut transform) in q_hex.iter_mut() {
-        let tile = TileKind::from(*height);
-        let height_value = height.clamp(0.0, 1.0);
-        let height_value = height_value as f32 * 2.0;
-
-        commands.entity(entity).insert((
-            Mesh3d(assets_cache.mesh.clone()),
-            MeshMaterial3d(
-                assets_cache
-                    .materials
-                    .get(&tile)
-                    .cloned()
-                    .unwrap_or_default(),
-            ),
-        ));
-
-        transform.translation.y = height_value;
-    }
 }
 
 /// Planet seed. Change this to generate a different planet.
@@ -310,7 +224,7 @@ const CONTINENT_HEIGHT_SCALE: f64 = (1.0 - SEA_LEVEL) / 4.0;
 const RIVER_DEPTH: f64 = 0.0234375;
 
 #[derive(Clone, Copy, Debug)]
-struct Planet {
+struct PlanetHeight {
     seed: u32,
     zoom_scale: f64,
     continent_frequency: f64,
@@ -333,9 +247,9 @@ struct Planet {
     river_depth: f64,
 }
 
-impl Default for Planet {
+impl Default for PlanetHeight {
     fn default() -> Self {
-        Planet {
+        PlanetHeight {
             seed: CURRENT_SEED,
             zoom_scale: ZOOM_SCALE,
             continent_frequency: CONTINENT_FREQUENCY,
@@ -360,14 +274,14 @@ impl Default for Planet {
     }
 }
 
-impl Planet {
+impl PlanetHeight {
     fn with_seed(mut self, seed: u32) -> Self {
         self.seed = seed;
         self
     }
 }
 
-impl NoiseFn<f64, 3> for Planet {
+impl NoiseFn<f64, 3> for PlanetHeight {
     fn get(&self, point: [f64; 3]) -> f64 {
         _ = self.mountain_lacunarity; // Silence unused warning
         _ = self.hills_lacunarity; // Silence unused warning
@@ -455,5 +369,150 @@ impl NoiseFn<f64, 3> for Planet {
         let z = point[2] * self.zoom_scale;
 
         base_continent_def.get([x, y, z])
+    }
+}
+
+#[derive(Resource, Debug, Clone, Default)]
+struct HeightMapLayout {
+    layout: HexLayout,
+    chunk_radius: u32,
+    max_height: f32,
+}
+
+impl HeightMapLayout {
+    fn new(layout: HexLayout, chunk_radius: u32, max_height: f32) -> Self {
+        Self {
+            layout,
+            chunk_radius,
+            max_height,
+        }
+    }
+
+    fn hexmap(&self, chunk: HashMap<Hex, f32>) -> Mesh {
+        let mesh_info = HeightMapMeshBuilder::new(&self.layout, &chunk)
+            .with_height_range(0.0..=self.max_height)
+            .with_default_height(0.0)
+            .center_aligned()
+            .build();
+        Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::RENDER_WORLD,
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, mesh_info.vertices)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_info.normals)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, mesh_info.uvs)
+        .with_inserted_indices(Indices::U16(mesh_info.indices))
+    }
+}
+
+#[derive(Component)]
+struct ChunkMeshReady;
+
+fn handle_heightmap_chunk(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, ChunkMaterial>>>,
+    mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
+    layout: Res<HeightMapLayout>,
+    q_hex: Query<(Entity, &HexCoord, &HexNoise, &ChildOf), Without<ChunkMeshReady>>,
+) {
+    let size = layout.chunk_radius * 2 + 1;
+    for (&chunk_entity, chunk) in q_hex.iter().chunk_by(|(_, _, _, ChildOf(e))| e).into_iter() {
+        let mut center: Option<Hex> = None;
+        let mut storage = HashMap::default();
+        let mut color_data = vec![LinearRgba::NONE; (size * size) as usize];
+
+        for (entity, hex, noise, _) in chunk {
+            commands.entity(entity).insert(ChunkMeshReady);
+            let hex: Hex = hex.into();
+            if center.is_none() {
+                center = Some(
+                    hex.to_lower_res(layout.chunk_radius)
+                        .to_higher_res(layout.chunk_radius),
+                );
+            }
+            let hex = hex - center.unwrap();
+
+            storage.insert(hex, (**noise).clamp(0.0, 1.0) as f32 * layout.max_height);
+
+            let q_offset = hex.x + layout.chunk_radius as i32;
+            let r_offset = hex.y + layout.chunk_radius as i32;
+            let index = (r_offset * size as i32 + q_offset) as usize;
+            color_data[index] = noise.into();
+        }
+
+        if let Some(center) = center {
+            let mesh = layout.hexmap(storage);
+
+            commands
+                .entity(chunk_entity)
+                .insert(Mesh3d(meshes.add(mesh)))
+                .insert((MeshMaterial3d(materials.add(ExtendedMaterial {
+                    base: StandardMaterial {
+                        perceptual_roughness: 1.0,
+                        metallic: 0.0,
+                        ..default()
+                    },
+                    extension: ChunkMaterial {
+                        chunk_radius: layout.chunk_radius,
+                        hex_size: layout.layout.scale.x,
+                        chunk_center: IVec2::new(center.x, center.y),
+                        noise: buffers.add(ShaderStorageBuffer::from(color_data)),
+                    },
+                })),));
+        }
+    }
+}
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+struct HeightMapMeshSet;
+
+struct HeightMapMeshPlugin {
+    layout: HexLayout,
+    chunk_radius: u32,
+    max_height: f32,
+}
+
+impl HeightMapMeshPlugin {
+    pub fn new(layout: HexLayout, chunk_radius: u32, max_height: f32) -> Self {
+        Self {
+            layout,
+            chunk_radius,
+            max_height,
+        }
+    }
+}
+
+impl Plugin for HeightMapMeshPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins(MaterialPlugin::<
+            ExtendedMaterial<StandardMaterial, ChunkMaterial>,
+        >::default());
+
+        app.insert_resource(HeightMapLayout::new(
+            self.layout.clone(),
+            self.chunk_radius,
+            self.max_height,
+        ));
+
+        app.add_systems(Update, (handle_heightmap_chunk).in_set(HeightMapMeshSet));
+    }
+}
+
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+pub struct ChunkMaterial {
+    #[uniform(100)]
+    pub chunk_radius: u32,
+    #[uniform(101)]
+    pub hex_size: f32,
+    #[uniform(102)]
+    pub chunk_center: IVec2,
+    #[storage(103, read_only)]
+    pub noise: Handle<ShaderStorageBuffer>,
+}
+
+impl MaterialExtension for ChunkMaterial {
+    fn fragment_shader() -> ShaderRef {
+        "shaders/chunk.wgsl".into()
     }
 }
