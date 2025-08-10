@@ -40,25 +40,6 @@ impl From<f64> for HexNoiseHeight {
     }
 }
 
-impl Into<LinearRgba> for &HexNoiseHeight {
-    fn into(self) -> LinearRgba {
-        let value = self.0.clamp(-1.0, 1.0) as f32;
-        if value <= -0.5 {
-            LinearRgba::new(0.0, 0.0, 139.0 / 255.0, 1.0) // Deep Water
-        } else if value <= 0.0 {
-            LinearRgba::new(0.0, 0.0, 1.0, 1.0) // Water
-        } else if value <= 0.1 {
-            LinearRgba::new(1.0, 1.0, 0.0, 1.0) // Sand
-        } else if value <= 0.3 {
-            LinearRgba::new(0.0, 128.0 / 255.0, 0.0, 1.0) // Grass
-        } else if value <= 0.6 {
-            LinearRgba::new(139.0 / 255.0, 69.0 / 255.0, 19.0 / 255.0, 1.0) // Hills
-        } else {
-            LinearRgba::new(1.0, 1.0, 1.0, 1.0) // Mountains
-        }
-    }
-}
-
 #[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
 struct HexNoiseTemperature(f64);
 
@@ -74,6 +55,56 @@ struct HexNoiseHumidity(f64);
 impl From<f64> for HexNoiseHumidity {
     fn from(noise: f64) -> Self {
         Self(noise)
+    }
+}
+
+#[derive(Component, Debug, Clone, Copy, Hash, PartialEq, Eq, Reflect)]
+enum BiomeKind {
+    DeepOcean,
+    Ocean,
+    Desert,
+    Grassland,
+    SnowyPlains,
+    Barren,
+    Forest,
+    SnowyHills,
+    SnowyForest,
+    Mountains,
+    SnowyMountains,
+}
+
+impl BiomeKind {
+    fn from_noise(elevation: f64, temperature: f64, humidity: f64) -> Self {
+        match (elevation, temperature, humidity) {
+            (e, _, _) if e < -0.5 => BiomeKind::DeepOcean,
+            (e, _, _) if e < 0.0 => BiomeKind::Ocean,
+            (e, t, _) if e < 0.3 && t >= 0.7 => BiomeKind::Desert,
+            (e, t, _) if e < 0.3 && t >= 0.2 && t < 0.7 => BiomeKind::Grassland,
+            (e, t, _) if e < 0.3 && t < 0.2 => BiomeKind::SnowyPlains,
+            (e, t, h) if e < 0.8 && t >= 0.3 && h < 0.5 => BiomeKind::Barren,
+            (e, t, h) if e < 0.8 && t >= 0.3 && h >= 0.5 => BiomeKind::Forest,
+            (e, t, h) if e < 0.8 && t < 0.3 && h < 0.5 => BiomeKind::SnowyHills,
+            (e, t, h) if e < 0.8 && t < 0.3 && h >= 0.5 => BiomeKind::SnowyForest,
+            (e, t, _) if e >= 0.8 && t >= 0.5 => BiomeKind::Mountains,
+            (e, t, _) if e >= 0.8 && t < 0.5 => BiomeKind::SnowyMountains,
+            _ => unreachable!(),
+        }
+    }
+
+    fn to_color(self) -> LinearRgba {
+        match self {
+            BiomeKind::DeepOcean => LinearRgba::new(0.0, 0.18, 0.35, 1.0), // very dark blue-green
+            BiomeKind::Ocean => LinearRgba::new(0.0, 0.3, 0.5, 1.0),       // deep blue-green ocean
+            BiomeKind::Desert => LinearRgba::new(0.85, 0.73, 0.5, 1.0),    // warm sandy tan
+            BiomeKind::Grassland => LinearRgba::new(0.4, 0.65, 0.3, 1.0),  // muted grassy green
+            BiomeKind::SnowyPlains => LinearRgba::new(0.95, 0.95, 0.96, 1.0), // bright snow with a hint of blue
+            BiomeKind::Barren => LinearRgba::new(0.45, 0.4, 0.35, 1.0),       // rocky brown-gray
+            BiomeKind::Forest => LinearRgba::new(0.15, 0.35, 0.15, 1.0),      // dark evergreen
+            BiomeKind::SnowyHills => LinearRgba::new(0.9, 0.92, 0.94, 1.0), // snowy but slightly shaded
+            BiomeKind::SnowyForest => LinearRgba::new(0.75, 0.8, 0.78, 1.0), // snow-dusted trees
+            BiomeKind::Mountains => LinearRgba::new(0.45, 0.45, 0.45, 1.0), // rocky gray
+            BiomeKind::SnowyMountains => LinearRgba::new(0.92, 0.92, 0.94, 1.0), // snow-capped peaks
+        }
     }
 }
 
@@ -554,11 +585,25 @@ fn handle_overlay_chunk(
     mut gradient_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, GradientMaterial>>>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
     layout: Res<HeightMapLayout>,
-    q_hex: Query<(Entity, &HexCoord, &HexNoiseHeight, &HexNoiseTemperature, &HexNoiseHumidity, &ChildOf), Without<ChunkMeshReady>>,
+    q_hex: Query<
+        (
+            Entity,
+            &HexCoord,
+            &HexNoiseHeight,
+            &HexNoiseTemperature,
+            &HexNoiseHumidity,
+            &ChildOf,
+        ),
+        Without<ChunkMeshReady>,
+    >,
     overlay_state: Res<OverlayState>,
 ) {
     let size = layout.chunk_radius * 2 + 1;
-    for (&chunk_entity, chunk) in q_hex.iter().chunk_by(|(_, _, _, _, _, ChildOf(e))| e).into_iter() {
+    for (&chunk_entity, chunk) in q_hex
+        .iter()
+        .chunk_by(|(_, _, _, _, _, ChildOf(e))| e)
+        .into_iter()
+    {
         let mut center: Option<Hex> = None;
         let mut storage = HashMap::default();
         let mut color_data = vec![LinearRgba::NONE; (size * size) as usize];
@@ -577,16 +622,24 @@ fn handle_overlay_chunk(
             }
             let hex = hex - center.unwrap();
 
+            let height = **noise;
+            let temperature = **temperature;
+            let humidity = **humidity;
+
             let height_value = (**noise).clamp(0.0, 1.0);
-            let temperature_value = ((((**temperature) * 10.0 - height_value * 2.0) + 1.0) / 2.0).clamp(0.0, 1.0);
-            let humidity_value = ((((**humidity) * 10.0 - height_value * 2.0) + 1.0) / 2.0).clamp(0.0, 1.0);
+            let temperature_value = ((temperature + 1.0) / 2.0).clamp(0.0, 1.0);
+            let temperature_value = (temperature_value - height_value * 0.2).clamp(0.0, 1.0);
+            let humidity_value = ((humidity + 1.0) / 2.0).clamp(0.0, 1.0);
+            let humidity_value = (humidity_value - height_value * 0.2).clamp(0.0, 1.0);
+
+            let biome = BiomeKind::from_noise(height, temperature_value, humidity_value);
 
             storage.insert(hex, height_value as f32 * layout.max_height);
 
             let q_offset = hex.x + layout.chunk_radius as i32;
             let r_offset = hex.y + layout.chunk_radius as i32;
             let index = (r_offset * size as i32 + q_offset) as usize;
-            color_data[index] = noise.into();
+            color_data[index] = biome.to_color();
             height_data[index] = height_value as f32;
             temperature_data[index] = temperature_value as f32;
             humidity_data[index] = humidity_value as f32;
@@ -597,7 +650,11 @@ fn handle_overlay_chunk(
 
             commands.entity(chunk_entity).with_children(|parent| {
                 parent.spawn((
-                    if overlay_state.kind == OverlayKind::Tile { Visibility::Visible } else { Visibility::Hidden },
+                    if overlay_state.kind == OverlayKind::Tile {
+                        Visibility::Visible
+                    } else {
+                        Visibility::Hidden
+                    },
                     OverlayKind::Tile,
                     Mesh3d(meshes.add(mesh.clone())),
                     MeshMaterial3d(chunk_materials.add(ExtendedMaterial {
@@ -617,7 +674,11 @@ fn handle_overlay_chunk(
                 ));
 
                 parent.spawn((
-                    if overlay_state.kind == OverlayKind::Height { Visibility::Visible } else { Visibility::Hidden },
+                    if overlay_state.kind == OverlayKind::Height {
+                        Visibility::Visible
+                    } else {
+                        Visibility::Hidden
+                    },
                     OverlayKind::Height,
                     Mesh3d(meshes.add(mesh.clone())),
                     MeshMaterial3d(gradient_materials.add(ExtendedMaterial {
@@ -639,7 +700,11 @@ fn handle_overlay_chunk(
                 ));
 
                 parent.spawn((
-                    if overlay_state.kind == OverlayKind::Temperature { Visibility::Visible } else { Visibility::Hidden },
+                    if overlay_state.kind == OverlayKind::Temperature {
+                        Visibility::Visible
+                    } else {
+                        Visibility::Hidden
+                    },
                     OverlayKind::Temperature,
                     Mesh3d(meshes.add(mesh.clone())),
                     MeshMaterial3d(gradient_materials.add(ExtendedMaterial {
@@ -661,9 +726,13 @@ fn handle_overlay_chunk(
                 ));
 
                 parent.spawn((
-                    if overlay_state.kind == OverlayKind::Humidity { Visibility::Visible } else { Visibility::Hidden },
+                    if overlay_state.kind == OverlayKind::Humidity {
+                        Visibility::Visible
+                    } else {
+                        Visibility::Hidden
+                    },
                     OverlayKind::Humidity,
-                    Mesh3d(meshes.add(mesh)),
+                    Mesh3d(meshes.add(mesh.clone())),
                     MeshMaterial3d(gradient_materials.add(ExtendedMaterial {
                         base: StandardMaterial {
                             perceptual_roughness: 1.0,
@@ -733,7 +802,10 @@ impl Plugin for OverlayMapMeshPlugin {
             self.max_height,
         ));
 
-        app.add_systems(Update, (handle_overlay_chunk, handle_overlay_update).in_set(OverlayMapMeshSet));
+        app.add_systems(
+            Update,
+            (handle_overlay_chunk, handle_overlay_update).in_set(OverlayMapMeshSet),
+        );
     }
 }
 
