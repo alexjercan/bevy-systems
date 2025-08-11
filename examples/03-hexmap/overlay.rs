@@ -31,97 +31,6 @@ const CHUNK_RADIUS: u32 = 15;
 const DISCOVER_RADIUS: u32 = 3;
 const COLUMN_HEIGHT: f32 = 5.0;
 
-#[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
-struct HexNoiseHeight(f64);
-
-impl From<f64> for HexNoiseHeight {
-    fn from(noise: f64) -> Self {
-        Self(noise)
-    }
-}
-
-#[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
-struct HexNoiseTemperature(f64);
-
-impl From<f64> for HexNoiseTemperature {
-    fn from(noise: f64) -> Self {
-        Self(noise)
-    }
-}
-
-#[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
-struct HexNoiseHumidity(f64);
-
-impl From<f64> for HexNoiseHumidity {
-    fn from(noise: f64) -> Self {
-        Self(noise)
-    }
-}
-
-#[derive(Component, Debug, Clone, Copy, Hash, PartialEq, Eq, Reflect)]
-enum BiomeKind {
-    DeepOcean,
-    Ocean,
-    Desert,
-    Grassland,
-    SnowyPlains,
-    Barren,
-    Forest,
-    SnowyHills,
-    SnowyForest,
-    Mountains,
-    SnowyMountains,
-}
-
-impl BiomeKind {
-    fn from_noise(elevation: f64, temperature: f64, humidity: f64) -> Self {
-        match (elevation, temperature, humidity) {
-            (e, _, _) if e < -0.5 => BiomeKind::DeepOcean,
-            (e, _, _) if e < 0.0 => BiomeKind::Ocean,
-            (e, t, _) if e < 0.3 && t >= 0.7 => BiomeKind::Desert,
-            (e, t, _) if e < 0.3 && t >= 0.2 && t < 0.7 => BiomeKind::Grassland,
-            (e, t, _) if e < 0.3 && t < 0.2 => BiomeKind::SnowyPlains,
-            (e, t, h) if e < 0.8 && t >= 0.3 && h < 0.5 => BiomeKind::Barren,
-            (e, t, h) if e < 0.8 && t >= 0.3 && h >= 0.5 => BiomeKind::Forest,
-            (e, t, h) if e < 0.8 && t < 0.3 && h < 0.5 => BiomeKind::SnowyHills,
-            (e, t, h) if e < 0.8 && t < 0.3 && h >= 0.5 => BiomeKind::SnowyForest,
-            (e, t, _) if e >= 0.8 && t >= 0.5 => BiomeKind::Mountains,
-            (e, t, _) if e >= 0.8 && t < 0.5 => BiomeKind::SnowyMountains,
-            _ => unreachable!(),
-        }
-    }
-
-    fn to_color(self) -> LinearRgba {
-        match self {
-            BiomeKind::DeepOcean => LinearRgba::new(0.0, 0.18, 0.35, 1.0), // very dark blue-green
-            BiomeKind::Ocean => LinearRgba::new(0.0, 0.3, 0.5, 1.0),       // deep blue-green ocean
-            BiomeKind::Desert => LinearRgba::new(0.85, 0.73, 0.5, 1.0),    // warm sandy tan
-            BiomeKind::Grassland => LinearRgba::new(0.4, 0.65, 0.3, 1.0),  // muted grassy green
-            BiomeKind::SnowyPlains => LinearRgba::new(0.95, 0.95, 0.96, 1.0), // bright snow with a hint of blue
-            BiomeKind::Barren => LinearRgba::new(0.45, 0.4, 0.35, 1.0),       // rocky brown-gray
-            BiomeKind::Forest => LinearRgba::new(0.15, 0.35, 0.15, 1.0),      // dark evergreen
-            BiomeKind::SnowyHills => LinearRgba::new(0.9, 0.92, 0.94, 1.0), // snowy but slightly shaded
-            BiomeKind::SnowyForest => LinearRgba::new(0.75, 0.8, 0.78, 1.0), // snow-dusted trees
-            BiomeKind::Mountains => LinearRgba::new(0.45, 0.45, 0.45, 1.0), // rocky gray
-            BiomeKind::SnowyMountains => LinearRgba::new(0.92, 0.92, 0.94, 1.0), // snow-capped peaks
-        }
-    }
-}
-
-#[derive(Component, Debug, Clone, Copy, Hash, PartialEq, Eq, Reflect, Default)]
-enum OverlayKind {
-    Height,
-    Temperature,
-    Humidity,
-    #[default]
-    Tile,
-}
-
-#[derive(Resource, Debug, Clone, Default)]
-struct OverlayState {
-    kind: OverlayKind,
-}
-
 fn main() {
     let layout = HexLayout::flat().with_hex_size(HEX_SIZE);
     let seed = CURRENT_SEED;
@@ -141,6 +50,9 @@ fn main() {
         ))
         .add_plugins(NoisePlugin::<3, HexCoord, _, HexNoiseHumidity>::new(
             PlanetHumidity::default().with_seed(seed + 2),
+        ))
+        .add_plugins(NoisePlugin::<3, HexCoord, _, HexNoiseTrees>::new(
+            PlanetTrees::default().with_seed(seed + 3).with_zoom_scale(ZOOM_SCALE * 50.0),
         ))
         .add_plugins(OverlayMapMeshPlugin::new(
             layout.clone(),
@@ -203,19 +115,122 @@ fn mouse_click_discover(
 fn input_switch_overlay(keys: Res<ButtonInput<KeyCode>>, mut overlay_state: ResMut<OverlayState>) {
     if keys.just_pressed(KeyCode::ArrowUp) {
         overlay_state.kind = match overlay_state.kind {
+            OverlayKind::Tile => OverlayKind::Height,
             OverlayKind::Height => OverlayKind::Temperature,
             OverlayKind::Temperature => OverlayKind::Humidity,
-            OverlayKind::Humidity => OverlayKind::Tile,
-            OverlayKind::Tile => OverlayKind::Height,
+            OverlayKind::Humidity => OverlayKind::Trees,
+            OverlayKind::Trees => OverlayKind::Tile,
         };
     } else if keys.just_pressed(KeyCode::ArrowDown) {
         overlay_state.kind = match overlay_state.kind {
+            OverlayKind::Tile => OverlayKind::Trees,
             OverlayKind::Height => OverlayKind::Tile,
             OverlayKind::Temperature => OverlayKind::Height,
             OverlayKind::Humidity => OverlayKind::Temperature,
-            OverlayKind::Tile => OverlayKind::Humidity,
+            OverlayKind::Trees => OverlayKind::Humidity,
         };
     }
+}
+
+#[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
+struct HexNoiseHeight(f64);
+
+impl From<f64> for HexNoiseHeight {
+    fn from(noise: f64) -> Self {
+        Self(noise)
+    }
+}
+
+#[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
+struct HexNoiseTemperature(f64);
+
+impl From<f64> for HexNoiseTemperature {
+    fn from(noise: f64) -> Self {
+        Self(noise)
+    }
+}
+
+#[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
+struct HexNoiseHumidity(f64);
+
+impl From<f64> for HexNoiseHumidity {
+    fn from(noise: f64) -> Self {
+        Self(noise)
+    }
+}
+
+#[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
+struct HexNoiseTrees(f64);
+
+impl From<f64> for HexNoiseTrees {
+    fn from(noise: f64) -> Self {
+        Self(noise)
+    }
+}
+
+#[derive(Component, Debug, Clone, Copy, Hash, PartialEq, Eq, Reflect)]
+#[repr(u8)]
+enum BiomeKind {
+    DeepOcean,
+    Ocean,
+    Desert,
+    Grassland,
+    SnowyPlains,
+    Barren,
+    Forest,
+    SnowyHills,
+    SnowyForest,
+    Mountains,
+    SnowyMountains,
+}
+
+impl BiomeKind {
+    fn from_noise(elevation: f64, temperature: f64, humidity: f64) -> Self {
+        match (elevation, temperature, humidity) {
+            (e, _, _) if e < -0.5 => BiomeKind::DeepOcean,
+            (e, _, _) if e < 0.0 => BiomeKind::Ocean,
+            (e, t, _) if e < 0.3 && t >= 0.7 => BiomeKind::Desert,
+            (e, t, _) if e < 0.3 && t >= 0.2 && t < 0.7 => BiomeKind::Grassland,
+            (e, t, _) if e < 0.3 && t < 0.2 => BiomeKind::SnowyPlains,
+            (e, t, h) if e < 0.8 && t >= 0.3 && h < 0.5 => BiomeKind::Barren,
+            (e, t, h) if e < 0.8 && t >= 0.3 && h >= 0.5 => BiomeKind::Forest,
+            (e, t, h) if e < 0.8 && t < 0.3 && h < 0.5 => BiomeKind::SnowyHills,
+            (e, t, h) if e < 0.8 && t < 0.3 && h >= 0.5 => BiomeKind::SnowyForest,
+            (e, t, _) if e >= 0.8 && t >= 0.5 => BiomeKind::Mountains,
+            (e, t, _) if e >= 0.8 && t < 0.5 => BiomeKind::SnowyMountains,
+            _ => unreachable!(),
+        }
+    }
+
+    fn has_tree(self, noise: f64) -> bool {
+        match self {
+            BiomeKind::DeepOcean | BiomeKind::Ocean => false,
+            BiomeKind::Desert => noise < 0.2,
+            BiomeKind::Grassland => noise < 0.5,
+            BiomeKind::SnowyPlains => noise < 0.3,
+            BiomeKind::Barren => noise < 0.1,
+            BiomeKind::Forest => noise < 0.8,
+            BiomeKind::SnowyHills => noise < 0.5,
+            BiomeKind::SnowyForest => noise < 0.7,
+            BiomeKind::Mountains => noise < 0.3,
+            BiomeKind::SnowyMountains => noise < 0.2,
+        }
+    }
+}
+
+#[derive(Component, Debug, Clone, Copy, Hash, PartialEq, Eq, Reflect, Default)]
+enum OverlayKind {
+    #[default]
+    Tile,
+    Height,
+    Temperature,
+    Humidity,
+    Trees,
+}
+
+#[derive(Resource, Debug, Clone, Default)]
+struct OverlayState {
+    kind: OverlayKind,
 }
 
 /// Planet seed. Change this to generate a different planet.
@@ -308,6 +323,14 @@ const CONTINENT_HEIGHT_SCALE: f64 = (1.0 - SEA_LEVEL) / 4.0;
 
 /// Maximum depth of the rivers, in planetary elevation units.
 const RIVER_DEPTH: f64 = 0.0234375;
+
+/// Frequency of trees on the planet. Higher frequency produces
+/// more trees.
+const TREE_FREQUENCY: f64 = 0.5;
+
+/// Lacunarity of the trees. Changing this value produces
+/// slightly different tree distributions.
+const TREE_LACUNARITY: f64 = 2.0;
 
 #[derive(Clone, Copy, Debug)]
 struct PlanetHeight {
@@ -542,6 +565,53 @@ impl NoiseFn<f64, 3> for PlanetHumidity {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+struct PlanetTrees {
+    seed: u32,
+    zoom_scale: f64,
+    tree_frequency: f64,
+    tree_lacunarity: f64,
+}
+
+impl PlanetTrees {
+    fn with_seed(mut self, seed: u32) -> Self {
+        self.seed = seed;
+        self
+    }
+
+    fn with_zoom_scale(mut self, zoom_scale: f64) -> Self {
+        self.zoom_scale = zoom_scale;
+        self
+    }
+}
+
+impl Default for PlanetTrees {
+    fn default() -> Self {
+        PlanetTrees {
+            seed: CURRENT_SEED,
+            zoom_scale: ZOOM_SCALE,
+            tree_frequency: TREE_FREQUENCY,
+            tree_lacunarity: TREE_LACUNARITY,
+        }
+    }
+}
+
+impl NoiseFn<f64, 3> for PlanetTrees {
+    fn get(&self, point: [f64; 3]) -> f64 {
+        let base_trees_fb = Fbm::<Perlin>::new(self.seed)
+            .set_frequency(self.tree_frequency)
+            .set_persistence(0.5)
+            .set_lacunarity(self.tree_lacunarity)
+            .set_octaves(8);
+
+        let x = point[0] * self.zoom_scale;
+        let y = point[1] * self.zoom_scale;
+        let z = point[2] * self.zoom_scale;
+
+        base_trees_fb.get([x, y, z])
+    }
+}
+
 #[derive(Resource, Debug, Clone, Default)]
 struct HeightMapLayout {
     layout: HexLayout,
@@ -592,6 +662,7 @@ fn handle_overlay_chunk(
             &HexNoiseHeight,
             &HexNoiseTemperature,
             &HexNoiseHumidity,
+            &HexNoiseTrees,
             &ChildOf,
         ),
         Without<ChunkMeshReady>,
@@ -601,17 +672,18 @@ fn handle_overlay_chunk(
     let size = layout.chunk_radius * 2 + 1;
     for (&chunk_entity, chunk) in q_hex
         .iter()
-        .chunk_by(|(_, _, _, _, _, ChildOf(e))| e)
+        .chunk_by(|(_, _, _, _, _, _, ChildOf(e))| e)
         .into_iter()
     {
         let mut center: Option<Hex> = None;
         let mut storage = HashMap::default();
-        let mut color_data = vec![LinearRgba::NONE; (size * size) as usize];
+        let mut biome_data = vec![-1; (size * size) as usize];
         let mut height_data = vec![0.0; (size * size) as usize];
         let mut temperature_data = vec![0.0; (size * size) as usize];
         let mut humidity_data = vec![0.0; (size * size) as usize];
+        let mut tree_noise_data = vec![0.0; (size * size) as usize];
 
-        for (entity, hex, noise, temperature, humidity, _) in chunk {
+        for (entity, hex, noise, temperature, humidity, tree_noise, _) in chunk {
             commands.entity(entity).insert(ChunkMeshReady);
             let hex: Hex = hex.into();
             if center.is_none() {
@@ -625,12 +697,14 @@ fn handle_overlay_chunk(
             let height = **noise;
             let temperature = **temperature;
             let humidity = **humidity;
+            let tree_noise = **tree_noise;
 
             let height_value = (**noise).clamp(0.0, 1.0);
             let temperature_value = ((temperature + 1.0) / 2.0).clamp(0.0, 1.0);
             let temperature_value = (temperature_value - height_value * 0.2).clamp(0.0, 1.0);
             let humidity_value = ((humidity + 1.0) / 2.0).clamp(0.0, 1.0);
             let humidity_value = (humidity_value - height_value * 0.2).clamp(0.0, 1.0);
+            let tree_value = 1.0 - ((tree_noise + 1.0) / 2.0).clamp(0.0, 1.0);
 
             let biome = BiomeKind::from_noise(height, temperature_value, humidity_value);
 
@@ -639,10 +713,14 @@ fn handle_overlay_chunk(
             let q_offset = hex.x + layout.chunk_radius as i32;
             let r_offset = hex.y + layout.chunk_radius as i32;
             let index = (r_offset * size as i32 + q_offset) as usize;
-            color_data[index] = biome.to_color();
+            if biome.has_tree(tree_value) {
+                // TODO: might want to add a tree mesh here somehow
+            }
+            biome_data[index] = biome as i32;
             height_data[index] = height_value as f32;
             temperature_data[index] = temperature_value as f32;
             humidity_data[index] = humidity_value as f32;
+            tree_noise_data[index] = tree_value as f32;
         }
 
         if let Some(center) = center {
@@ -667,7 +745,7 @@ fn handle_overlay_chunk(
                             chunk_radius: layout.chunk_radius,
                             hex_size: layout.layout.scale.x,
                             chunk_center: IVec2::new(center.x, center.y),
-                            colors: buffers.add(ShaderStorageBuffer::from(color_data)),
+                            tiles: buffers.add(ShaderStorageBuffer::from(biome_data)),
                         },
                     })),
                     Name::new("Overlay Height Mesh"),
@@ -750,6 +828,32 @@ fn handle_overlay_chunk(
                     })),
                     Name::new("Overlay Humidity Gradient Mesh"),
                 ));
+
+                parent.spawn((
+                    if overlay_state.kind == OverlayKind::Trees {
+                        Visibility::Visible
+                    } else {
+                        Visibility::Hidden
+                    },
+                    OverlayKind::Trees,
+                    Mesh3d(meshes.add(mesh.clone())),
+                    MeshMaterial3d(gradient_materials.add(ExtendedMaterial {
+                        base: StandardMaterial {
+                            perceptual_roughness: 1.0,
+                            metallic: 0.0,
+                            ..default()
+                        },
+                        extension: GradientMaterial {
+                            chunk_radius: layout.chunk_radius,
+                            hex_size: layout.layout.scale.x,
+                            chunk_center: IVec2::new(center.x, center.y),
+                            start_color: LinearRgba::new(0.0, 0.5, 0.0, 1.0), // Dark green
+                            end_color: LinearRgba::new(0.5, 1.0, 0.5, 1.0), // Light green
+                            values: buffers.add(ShaderStorageBuffer::from(tree_noise_data)),
+                        },
+                    })),
+                    Name::new("Overlay Trees Gradient Mesh"),
+                ));
             });
         }
     }
@@ -818,7 +922,7 @@ pub struct ChunkMaterial {
     #[uniform(102)]
     pub chunk_center: IVec2,
     #[storage(103, read_only)]
-    pub colors: Handle<ShaderStorageBuffer>,
+    pub tiles: Handle<ShaderStorageBuffer>,
 }
 
 impl MaterialExtension for ChunkMaterial {

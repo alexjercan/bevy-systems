@@ -18,7 +18,7 @@ Check examples.
 - [x] hexmap_coordinates.rs - Display the coordinates of a hex in the tile grid.
     - Show coordinates on top of each hex tile.
     - Switch between different coordinate systems (e.g. axial, offset) using `UP` and `DOWN` keys.
-- [ ] biome_classification.rs - Classify hex tiles into biomes based on noise values.
+- [x] biome_classification.rs - Classify hex tiles into biomes based on noise values.
     - Use a simple classification algorithm to assign biomes (e.g. grassland, desert, forest) based on height and temperature.
     - Display hex tiles with different colors based on their biome (e.g yellow for desert, green for grassland, dark green for forest).
 - [ ] hexmap_resources.rs - Generate resources on hex tiles based on noise values.
@@ -28,6 +28,13 @@ Check examples.
     - Switch between different resource types using `UP` and `DOWN` keys.
     - Add a threshold metter to filter out low-density resources and display only high-density resources.
     - Maybe add a noisemap for resources, to add more randomness to the resource distribution.
+- [ ] water shader - Add a water shader to the hex map.
+- [ ] vegetation shader - Add a vegetation shader to the hex map. (grass for grassland, dust for desert, leaves for forest: cute small details)
+- [ ] hexmap_2d.rs - Render a 2D preview of the hex map.
+    - Use a simple 2D rendering to display the hex map.
+    - Display hex tiles with different colors based on their type (e.g. grass, water, mountain).
+    - Add a simple camera movement to navigate the hex map.
+    - Use `UP` and `DOWN` keys to zoom in and out of the hex map.
 - [ ] hexmap_buildings.rs - Place buildings on hex tiles by clicking on them.
     - Use mouse input to place buildings on hex tiles.
     - Display buildings with different colors based on their type (e.g. red for houses, blue for factories).
@@ -44,3 +51,7 @@ Check examples.
     - Use a simple file format (e.g. JSON, YAML) to save hex map data.
     - Implement loading and saving of hex map data (e.g. height, temperature, resources, buildings).
     - Add a simple UI to save and load hex map data (e.g. buttons for save/load).
+- [ ] hexmap_config.rs - Add a way to configure the settings for the hex map generation.
+    - Figure out a few parameters that can be configured with nice names - the ones from Planet, but with better names and intuitive.
+    - Add a simple UI to configure the settings (e.g. sliders, dropdowns).
+    - Save and load the configuration to/from a file.
