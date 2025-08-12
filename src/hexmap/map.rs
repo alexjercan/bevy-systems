@@ -14,9 +14,7 @@ use bevy::{platform::collections::HashMap, prelude::*};
 use hexx::*;
 
 pub mod prelude {
-    pub use super::{
-        HexDiscoverEvent, HexMapPlugin, HexMapSet,
-    };
+    pub use super::{HexDiscoverEvent, HexMapPlugin, HexMapSet};
 }
 
 #[cfg(feature = "debug")]
@@ -176,6 +174,7 @@ fn generate_chunks<C: Component + From<Hex> + Send + Sync + 'static>(
                     .spawn((
                         C::from(hex),
                         Transform::from_translation(pos),
+                        Visibility::default(),
                         Name::new("Hex"),
                     ))
                     .id();
@@ -187,7 +186,7 @@ fn generate_chunks<C: Component + From<Hex> + Send + Sync + 'static>(
 }
 
 mod debug {
-    use super::{HexMapStorage, ChunkCoord};
+    use super::{ChunkCoord, HexMapStorage};
     use bevy::prelude::*;
 
     #[derive(Debug, Resource, Default, Clone, Deref, DerefMut)]
@@ -228,7 +227,12 @@ mod debug {
             }
 
             let pos = storage.hex_to_world_pos(**chunk).extend(0.0).xzy();
-            draw_hex(&mut gizmos, pos, storage.layout.scale.x * 0.5, Color::srgb_u8(255, 255, 0));
+            draw_hex(
+                &mut gizmos,
+                pos,
+                storage.layout.scale.x * 0.5,
+                Color::srgb_u8(255, 255, 0),
+            );
         }
     }
 

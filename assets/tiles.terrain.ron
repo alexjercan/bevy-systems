@@ -1,0 +1,46 @@
+({
+    "terrain": TerrainDynamicAsset ([
+        TileDynamicAsset (
+            id: "deep-water",
+            name: "Deep Water",
+            elevation: Some(Vec2(-1.0, -0.5)),
+            humidity: None,
+            temperature: None,
+        ),
+        TileDynamicAsset (
+            id: "shallow-water",
+            name: "Shallow Water",
+            elevation: Some(Vec2(-0.5, 0.0)),
+            humidity: None,
+            temperature: None,
+        ),
+        TileDynamicAsset (
+            id: "desert",
+            name: "Desert",
+            elevation: Some(Vec2(0.0, 0.6)),
+            humidity: Some(Vec2(-1.0, 0.0)),
+            temperature: None,
+        ),
+        TileDynamicAsset (
+            id: "grassland",
+            name: "Grassland",
+            elevation: Some(Vec2(0.0, 0.6)),
+            humidity: Some(Vec2(0.0, 1.0)),
+            temperature: None,
+        ),
+        TileDynamicAsset (
+            id: "hills",
+            name: "Hills",
+            elevation: Some(Vec2(0.6, 0.8)),
+            humidity: None,
+            temperature: None,
+        ),
+        TileDynamicAsset (
+            id: "mountains",
+            name: "Mountains",
+            elevation: Some(Vec2(0.8, 1.0)),
+            humidity: None,
+            temperature: None,
+        ),
+    ])
+})

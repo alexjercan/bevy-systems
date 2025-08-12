@@ -17,6 +17,7 @@ use bevy::{
         storage::ShaderStorageBuffer,
     },
 };
+use bevy_asset_loader::prelude::*;
 use hexx::*;
 
 use itertools::Itertools;
@@ -26,10 +27,21 @@ use systems::{debug::DebugPlugin, hexmap::prelude::*, noise::prelude::*};
 use common::HexCoord;
 use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
 
-const HEX_SIZE: f32 = 1.0;
+// This is included for const, but it is unstable...
+const FRAC_1_SQRT_3: f32 = 0.577350269189625764509148780501957456_f32;
+
+const HEX_SIZE: f32 = 2.0 * FRAC_1_SQRT_3;
 const CHUNK_RADIUS: u32 = 15;
 const DISCOVER_RADIUS: u32 = 3;
-const COLUMN_HEIGHT: f32 = 5.0;
+const COLUMN_HEIGHT: f32 = 10.0;
+const HEX_HEIGHT: f32 = 1.0;
+
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
+pub enum GameStates {
+    #[default]
+    AssetLoading,
+    Playing,
+}
 
 fn main() {
     let layout = HexLayout::flat().with_hex_size(HEX_SIZE);
@@ -52,7 +64,14 @@ fn main() {
             PlanetHumidity::default().with_seed(seed + 2),
         ))
         .add_plugins(NoisePlugin::<3, HexCoord, _, HexNoiseTrees>::new(
-            PlanetTrees::default().with_seed(seed + 3).with_zoom_scale(ZOOM_SCALE * 50.0),
+            PlanetResource::default()
+                .with_seed(seed + 3)
+                .with_zoom_scale(ZOOM_SCALE * 50.0),
+        ))
+        .add_plugins(NoisePlugin::<3, HexCoord, _, HexNoiseOre>::new(
+            PlanetResource::default()
+                .with_seed(seed + 4)
+                .with_zoom_scale(ZOOM_SCALE * 50.0),
         ))
         .add_plugins(OverlayMapMeshPlugin::new(
             layout.clone(),
@@ -61,11 +80,24 @@ fn main() {
         ))
         .add_plugins(WASDCameraControllerPlugin)
         .add_plugins(DebugPlugin)
-        .configure_sets(Update, HexMapSet)
-        .configure_sets(Update, NoiseSet)
+        .init_state::<GameStates>()
+        .add_loading_state(
+            LoadingState::new(GameStates::AssetLoading)
+                .continue_to_state(GameStates::Playing)
+                .load_collection::<GameAssets>(),
+        )
+        .configure_sets(Update, HexMapSet.run_if(in_state(GameStates::Playing)))
+        .configure_sets(Update, NoiseSet.run_if(in_state(GameStates::Playing)))
+        .configure_sets(
+            Update,
+            OverlayMapMeshSet.run_if(in_state(GameStates::Playing)),
+        )
         .insert_resource(OverlayState::default())
-        .add_systems(Startup, setup)
-        .add_systems(Update, (mouse_click_discover, input_switch_overlay))
+        .add_systems(OnEnter(GameStates::Playing), setup)
+        .add_systems(
+            Update,
+            (mouse_click_discover, input_switch_overlay).run_if(in_state(GameStates::Playing)),
+        )
         .run();
 }
 
@@ -132,6 +164,14 @@ fn input_switch_overlay(keys: Res<ButtonInput<KeyCode>>, mut overlay_state: ResM
     }
 }
 
+#[derive(AssetCollection, Resource)]
+struct GameAssets {
+    #[asset(path = "gltf/decoration/nature/trees_A_large.gltf#Scene0")]
+    trees_a_large: Handle<Scene>,
+    #[asset(path = "gltf/decoration/nature/hills_C.gltf#Scene0")]
+    hills_c: Handle<Scene>,
+}
+
 #[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
 struct HexNoiseHeight(f64);
 
@@ -163,6 +203,15 @@ impl From<f64> for HexNoiseHumidity {
 struct HexNoiseTrees(f64);
 
 impl From<f64> for HexNoiseTrees {
+    fn from(noise: f64) -> Self {
+        Self(noise)
+    }
+}
+
+#[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
+struct HexNoiseOre(f64);
+
+impl From<f64> for HexNoiseOre {
     fn from(noise: f64) -> Self {
         Self(noise)
     }
@@ -214,6 +263,21 @@ impl BiomeKind {
             BiomeKind::SnowyForest => noise < 0.7,
             BiomeKind::Mountains => noise < 0.3,
             BiomeKind::SnowyMountains => noise < 0.2,
+        }
+    }
+
+    fn has_ore(self, noise: f64) -> bool {
+        match self {
+            BiomeKind::DeepOcean | BiomeKind::Ocean => false,
+            BiomeKind::Desert => noise < 0.1,
+            BiomeKind::Grassland => noise < 0.2,
+            BiomeKind::SnowyPlains => noise < 0.3,
+            BiomeKind::Barren => noise < 0.05,
+            BiomeKind::Forest => noise < 0.4,
+            BiomeKind::SnowyHills => noise < 0.5,
+            BiomeKind::SnowyForest => noise < 0.2,
+            BiomeKind::Mountains => noise < 0.7,
+            BiomeKind::SnowyMountains => noise < 0.4,
         }
     }
 }
@@ -566,14 +630,14 @@ impl NoiseFn<f64, 3> for PlanetHumidity {
 }
 
 #[derive(Clone, Copy, Debug)]
-struct PlanetTrees {
+struct PlanetResource {
     seed: u32,
     zoom_scale: f64,
-    tree_frequency: f64,
-    tree_lacunarity: f64,
+    resource_frequency: f64,
+    resource_lacunarity: f64,
 }
 
-impl PlanetTrees {
+impl PlanetResource {
     fn with_seed(mut self, seed: u32) -> Self {
         self.seed = seed;
         self
@@ -585,23 +649,23 @@ impl PlanetTrees {
     }
 }
 
-impl Default for PlanetTrees {
+impl Default for PlanetResource {
     fn default() -> Self {
-        PlanetTrees {
+        PlanetResource {
             seed: CURRENT_SEED,
             zoom_scale: ZOOM_SCALE,
-            tree_frequency: TREE_FREQUENCY,
-            tree_lacunarity: TREE_LACUNARITY,
+            resource_frequency: TREE_FREQUENCY,
+            resource_lacunarity: TREE_LACUNARITY,
         }
     }
 }
 
-impl NoiseFn<f64, 3> for PlanetTrees {
+impl NoiseFn<f64, 3> for PlanetResource {
     fn get(&self, point: [f64; 3]) -> f64 {
         let base_trees_fb = Fbm::<Perlin>::new(self.seed)
-            .set_frequency(self.tree_frequency)
+            .set_frequency(self.resource_frequency)
             .set_persistence(0.5)
-            .set_lacunarity(self.tree_lacunarity)
+            .set_lacunarity(self.resource_lacunarity)
             .set_octaves(8);
 
         let x = point[0] * self.zoom_scale;
@@ -663,16 +727,18 @@ fn handle_overlay_chunk(
             &HexNoiseTemperature,
             &HexNoiseHumidity,
             &HexNoiseTrees,
+            &HexNoiseOre,
             &ChildOf,
         ),
         Without<ChunkMeshReady>,
     >,
     overlay_state: Res<OverlayState>,
+    game_assets: Res<GameAssets>,
 ) {
     let size = layout.chunk_radius * 2 + 1;
     for (&chunk_entity, chunk) in q_hex
         .iter()
-        .chunk_by(|(_, _, _, _, _, _, ChildOf(e))| e)
+        .chunk_by(|(_, _, _, _, _, _, _, ChildOf(e))| e)
         .into_iter()
     {
         let mut center: Option<Hex> = None;
@@ -683,7 +749,7 @@ fn handle_overlay_chunk(
         let mut humidity_data = vec![0.0; (size * size) as usize];
         let mut tree_noise_data = vec![0.0; (size * size) as usize];
 
-        for (entity, hex, noise, temperature, humidity, tree_noise, _) in chunk {
+        for (entity, hex, noise, temperature, humidity, tree_noise, ore_noise, _) in chunk {
             commands.entity(entity).insert(ChunkMeshReady);
             let hex: Hex = hex.into();
             if center.is_none() {
@@ -698,6 +764,7 @@ fn handle_overlay_chunk(
             let temperature = **temperature;
             let humidity = **humidity;
             let tree_noise = **tree_noise;
+            let ore_noise = **ore_noise;
 
             let height_value = (**noise).clamp(0.0, 1.0);
             let temperature_value = ((temperature + 1.0) / 2.0).clamp(0.0, 1.0);
@@ -705,22 +772,42 @@ fn handle_overlay_chunk(
             let humidity_value = ((humidity + 1.0) / 2.0).clamp(0.0, 1.0);
             let humidity_value = (humidity_value - height_value * 0.2).clamp(0.0, 1.0);
             let tree_value = 1.0 - ((tree_noise + 1.0) / 2.0).clamp(0.0, 1.0);
+            let ore_value = 1.0 - ((ore_noise + 1.0) / 2.0).clamp(0.0, 1.0);
 
             let biome = BiomeKind::from_noise(height, temperature_value, humidity_value);
 
-            storage.insert(hex, height_value as f32 * layout.max_height);
+            let height_mesh =
+                (height_value as f32 * layout.max_height / HEX_HEIGHT).round() * HEX_HEIGHT;
+            storage.insert(hex, height_mesh);
 
             let q_offset = hex.x + layout.chunk_radius as i32;
             let r_offset = hex.y + layout.chunk_radius as i32;
             let index = (r_offset * size as i32 + q_offset) as usize;
-            if biome.has_tree(tree_value) {
-                // TODO: might want to add a tree mesh here somehow
-            }
             biome_data[index] = biome as i32;
             height_data[index] = height_value as f32;
             temperature_data[index] = temperature_value as f32;
             humidity_data[index] = humidity_value as f32;
             tree_noise_data[index] = tree_value as f32;
+
+            if biome.has_ore(ore_value) {
+                commands.entity(entity).with_children(|parent| {
+                    parent.spawn((
+                        SceneRoot(game_assets.hills_c.clone()),
+                        Transform::from_xyz(0.0, height_mesh, 0.0)
+                            .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
+                        Name::new("Ore"),
+                    ));
+                });
+            } else if biome.has_tree(tree_value) {
+                commands.entity(entity).with_children(|parent| {
+                    parent.spawn((
+                        SceneRoot(game_assets.trees_a_large.clone()),
+                        Transform::from_xyz(0.0, height_mesh, 0.0)
+                            .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
+                        Name::new("Tree"),
+                    ));
+                });
+            }
         }
 
         if let Some(center) = center {
@@ -848,7 +935,7 @@ fn handle_overlay_chunk(
                             hex_size: layout.layout.scale.x,
                             chunk_center: IVec2::new(center.x, center.y),
                             start_color: LinearRgba::new(0.0, 0.5, 0.0, 1.0), // Dark green
-                            end_color: LinearRgba::new(0.5, 1.0, 0.5, 1.0), // Light green
+                            end_color: LinearRgba::new(0.5, 1.0, 0.5, 1.0),   // Light green
                             values: buffers.add(ShaderStorageBuffer::from(tree_noise_data)),
                         },
                     })),

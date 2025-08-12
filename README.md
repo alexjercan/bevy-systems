@@ -21,13 +21,22 @@ Check examples.
 - [x] biome_classification.rs - Classify hex tiles into biomes based on noise values.
     - Use a simple classification algorithm to assign biomes (e.g. grassland, desert, forest) based on height and temperature.
     - Display hex tiles with different colors based on their biome (e.g yellow for desert, green for grassland, dark green for forest).
-- [ ] hexmap_resources.rs - Generate resources on hex tiles based on noise values.
+- [x] hexmap_resources.rs - Generate resources on hex tiles based on noise values.
     - Compute density of resources based on the noise values (temperature, height, moisture, etc.)
     - Use hexmap information to generate resource density maps (e.g. tree, ore, food).
     - Display resources on hex tiles with colors representing resource density (e.g. green for trees, gray for ore, yellow for food).
     - Switch between different resource types using `UP` and `DOWN` keys.
     - Add a threshold metter to filter out low-density resources and display only high-density resources.
     - Maybe add a noisemap for resources, to add more randomness to the resource distribution.
+- [ ] generic resources load them from a ron file as an asset
+    - Load resources from a RON file as an asset.
+    - Resources should have some settings for generation (e.g. density, size, type).
+    - Keep in mind that resources are just decoration for now
+- [ ] better biomes:
+    - I want to still have tile kinds like water and non-water (or maybe just land)
+    - Then I want the biome to be a property of the tile, not a kind of tile.
+    - For example we can color the tile based on the biome, e.g water that is in ocean biome is blue, water that is in river biome is light blue, water that is in lake biome is dark blue.
+    - Then we can even look at resources based on biome: e.g tree's in grasland are simple trees, tree's in forest are big trees, tree's in desert are palm trees or cacti.
 - [ ] water shader - Add a water shader to the hex map.
 - [ ] vegetation shader - Add a vegetation shader to the hex map. (grass for grassland, dust for desert, leaves for forest: cute small details)
 - [ ] hexmap_2d.rs - Render a 2D preview of the hex map.

@@ -11,8 +11,8 @@ use hexx::*;
 
 use systems::{debug::DebugPlugin, hexmap::prelude::*};
 
-use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
 use common::HexCoord;
+use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
 
 const HEX_SIZE: f32 = 1.0;
 const CHUNK_RADIUS: u32 = 4;

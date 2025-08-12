@@ -10,6 +10,13 @@
 @group(2) @binding(102) var<uniform> chunk_center: vec2<i32>;
 @group(2) @binding(103) var<storage, read> tiles: array<i32>;
 
+const DEEP_WATER: i32 = 0;
+const WATER: i32 = 1;
+const DESERT: i32 = 2;
+const GRASSLAND: i32 = 3;
+const HILLS: i32 = 4;
+const MOUNTAINS: i32 = 5;
+
 @fragment
 fn fragment(
     in: VertexOutput,
@@ -88,30 +95,20 @@ fn noise(p: vec2<f32>) -> f32 {
 }
 
 fn tile_kind_to_color(kind: i32) -> vec4<f32> {
-    if (kind == 0) {
-        return vec4<f32>(0.0, 0.18, 0.35, 1.0); // Deep Ocean
-    } else if (kind == 1) {
-        return vec4<f32>(0.0, 0.3, 0.5, 1.0); // Ocean
-    } else if (kind == 2) {
-        return vec4<f32>(0.85, 0.73, 0.5, 1.0); // Desert
-    } else if (kind == 3) {
-        return vec4<f32>(0.4, 0.65, 0.3, 1.0); // Grassland
-    } else if (kind == 4) {
-        return vec4<f32>(0.95, 0.95, 0.96, 1.0); // Snowy Plains
-    } else if (kind == 5) {
-        return vec4<f32>(0.45, 0.4, 0.35, 1.0); // Barren
-    } else if (kind == 6) {
-        return vec4<f32>(0.15, 0.35, 0.15, 1.0); // Forest
-    } else if (kind == 7) {
-        return vec4<f32>(0.9, 0.92, 0.94, 1.0); // Snowy Hills
-    } else if (kind == 8) {
-        return vec4<f32>(0.75, 0.8, 0.78, 1.0); // Snowy Forest
-    } else if (kind == 9) {
-        return vec4<f32>(0.45, 0.45, 0.45, 1.0); // Mountains
-    } else if (kind == 10) {
-        return vec4<f32>(0.92, 0.92, 0.94, 1.0); // Snowy Mountains
+    if (kind == DEEP_WATER) {
+        return vec4<f32>(0.0, 0.18, 0.35, 1.0);
+    } else if (kind == WATER) {
+        return vec4<f32>(0.0, 0.3, 0.5, 1.0);
+    } else if (kind == DESERT) {
+        return vec4<f32>(0.85, 0.73, 0.5, 1.0);
+    } else if (kind == GRASSLAND) {
+        return vec4<f32>(0.4, 0.65, 0.3, 1.0);
+    } else if (kind == HILLS) {
+        return vec4<f32>(0.45, 0.4, 0.35, 1.0);
+    } else if (kind == MOUNTAINS) {
+        return vec4<f32>(0.45, 0.45, 0.45, 1.0);
     } else {
-        return vec4<f32>(0.0, 0.0, 0.0, 1.0); // Default color (black)
+        return vec4<f32>(0.0, 0.0, 0.0, 1.0);
     }
 }
 

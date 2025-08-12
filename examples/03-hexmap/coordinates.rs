@@ -20,8 +20,8 @@ use hexx::*;
 
 use systems::{debug::DebugPlugin, hexmap::prelude::*};
 
-use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
 use common::HexCoord;
+use wasd_camera_controller::{WASDCameraControllerBundle, WASDCameraControllerPlugin};
 
 #[derive(Component, Debug, Clone, Copy, Hash, PartialEq, Eq, Reflect, Default)]
 enum OverlayKind {
@@ -114,7 +114,7 @@ fn setup(
 fn input(
     windows: Query<&Window>,
     q_camera: Single<(&Camera, &GlobalTransform), With<Camera3d>>,
-    mut ev_discover: EventWriter<HexDiscoverEvent::<HexCoord>>,
+    mut ev_discover: EventWriter<HexDiscoverEvent<HexCoord>>,
     buttons: Res<ButtonInput<MouseButton>>,
 ) {
     if !buttons.just_pressed(MouseButton::Left) {

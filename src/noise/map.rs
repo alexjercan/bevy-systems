@@ -107,7 +107,9 @@ fn generate_noise<
             command_queue
         });
 
-        commands.entity(chunk_entity).insert(ComputeNoise::<C>::new(task));
+        commands
+            .entity(chunk_entity)
+            .insert(ComputeNoise::<C>::new(task));
     }
 }
 
