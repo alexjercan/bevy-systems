@@ -131,7 +131,7 @@ fn handle_overlay_chunk(
             let humidity = **humidity as f32;
             let temperature = **temperature as f32;
 
-            let height_value = height.clamp(0.0, 1.0);
+            let height_value = (height * 2.0 - 1.0).clamp(0.0, 1.0);
             let height_mesh = (height_value * layout.max_height).round();
             storage.insert(hex, height_mesh);
 

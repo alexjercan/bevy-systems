@@ -1,3 +1,7 @@
+// TODO: Documentation for this module; rethink the name, it is more of a Chunked Multithreaded Map
+// system rather than a Noise system; maybe it can go into a `util` module and then this would be
+// called `util::chunked_map` or something similar.
+
 use bevy::{
     ecs::{query::{QueryData, QueryItem}, world::CommandQueue},
     prelude::*,

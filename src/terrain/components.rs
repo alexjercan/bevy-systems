@@ -2,8 +2,6 @@ use bevy::prelude::*;
 use hexx::*;
 use crate::noise::map::NoiseInput;
 
-use crate::assets::prelude::FeatureAsset;
-
 #[derive(Component, Clone, Debug, Deref, DerefMut)]
 pub struct HexCoord(pub Hex);
 
@@ -13,8 +11,14 @@ impl From<Hex> for HexCoord {
     }
 }
 
+pub type HexTileKind = i32;
+pub type HexFeatureKind = i32;
+
 #[derive(Component, Clone, Debug, Deref, DerefMut)]
-pub struct HexFeature(pub FeatureAsset);
+pub struct HexTile(pub HexTileKind);
+
+#[derive(Component, Clone, Debug, Deref, DerefMut)]
+pub struct HexFeature(pub HexFeatureKind);
 
 #[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
 pub struct HexNoiseHeight(pub f64);
@@ -24,6 +28,8 @@ pub struct HexNoiseTemperature(pub f64);
 
 #[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
 pub struct HexNoiseHumidity(pub f64);
+
+// Maybe I can implement these in the noise::map module instead?
 
 impl NoiseInput for HexCoord {
     type Query = (&'static HexCoord,);

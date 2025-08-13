@@ -1,7 +1,6 @@
-use crate::hexmap::map::HexDiscoverEvent;
 use crate::{
     assets::prelude::*, controller::prelude::*, debug::prelude::*, render::prelude::*,
-    states::GameStates, terrain::prelude::*,
+    states::GameStates, terrain::prelude::*, tilemap::prelude::*,
 };
 use bevy::prelude::*;
 use hexx::*;
@@ -10,12 +9,12 @@ mod assets;
 mod camera;
 mod controller;
 mod debug;
-mod hexmap;
 mod meth;
 mod noise;
 mod render;
 mod states;
 mod terrain;
+mod tilemap;
 
 // This is included for const, but it is unstable...
 const FRAC_1_SQRT_3: f32 = 0.577350269189625764509148780501957456_f32;

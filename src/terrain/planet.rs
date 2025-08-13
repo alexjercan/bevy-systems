@@ -240,7 +240,8 @@ impl NoiseFunction<HexCoord, HexNoiseHeight> for PlanetHeight {
         let y = point.y() as f64 * self.zoom_scale;
         let z = point.z() as f64 * self.zoom_scale;
 
-        HexNoiseHeight(base_continent_def.get([x, y, z]))
+        let noise = base_continent_def.get([x, y, z]);
+        HexNoiseHeight((noise + 1.0) / 2.0)
     }
 }
 
@@ -282,7 +283,8 @@ impl NoiseFunction<HexCoord, HexNoiseTemperature> for PlanetTemperature {
         let y = point.y() as f64 * self.zoom_scale;
         let z = point.z() as f64 * self.zoom_scale;
 
-        HexNoiseTemperature(base_temperature_fb.get([x, y, z]))
+        let noise = base_temperature_fb.get([x, y, z]);
+        HexNoiseTemperature((noise + 1.0) / 2.0)
     }
 }
 
@@ -324,7 +326,8 @@ impl NoiseFunction<HexCoord, HexNoiseHumidity> for PlanetHumidity {
         let y = point.y() as f64 * self.zoom_scale;
         let z = point.z() as f64 * self.zoom_scale;
 
-        HexNoiseHumidity(base_humidity_fb.get([x, y, z]))
+        let noise = base_humidity_fb.get([x, y, z]);
+        HexNoiseHumidity((noise + 1.0) / 2.0)
     }
 }
 
