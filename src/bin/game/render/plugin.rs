@@ -13,7 +13,7 @@ use hexx::*;
 use itertools::Itertools;
 
 use crate::{
-    assets::{GameAssets, TileAsset},
+    assets::prelude::*,
     terrain::prelude::*,
 };
 

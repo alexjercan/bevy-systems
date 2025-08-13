@@ -13,37 +13,6 @@ pub trait NoiseFunction<T, U, const DIM: usize> {
     fn get(&self, point: [T; DIM]) -> U;
 }
 
-#[derive(Resource, Debug, Clone)]
-struct NoiseGenerator<T, U, const DIM: usize, F>
-where
-    T: Clone,
-    U: Clone,
-    F: NoiseFunction<T, U, DIM> + Clone,
-{
-    func: F,
-    _marker_t: std::marker::PhantomData<T>,
-    _marker_u: std::marker::PhantomData<U>,
-}
-
-impl<T, U, const DIM: usize, F> NoiseGenerator<T, U, DIM, F>
-where
-    T: Clone,
-    U: Clone,
-    F: NoiseFunction<T, U, DIM> + Clone,
-{
-    pub fn new(func: F) -> Self {
-        Self {
-            func,
-            _marker_t: std::marker::PhantomData,
-            _marker_u: std::marker::PhantomData,
-        }
-    }
-
-    pub fn get(&self, point: [T; DIM]) -> U {
-        self.func.get(point)
-    }
-}
-
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NoiseSet;
 
@@ -81,13 +50,13 @@ impl<T, U, const DIM: usize, F, Coord, Noise> Plugin for NoisePlugin<T, U, DIM, 
 where
     T: Clone + Send + Sync + 'static,
     U: Clone + Send + Sync + 'static,
-    F: NoiseFunction<T, U, DIM> + Clone + Send + Sync + 'static,
+    F: Resource + NoiseFunction<T, U, DIM> + Clone + Send + Sync + 'static,
     for<'a> &'a Coord: Into<[T; DIM]>,
     Coord: Component + Send + Sync + 'static,
     Noise: Component + From<U> + Send + Sync + 'static,
 {
     fn build(&self, app: &mut App) {
-        app.insert_resource(NoiseGenerator::new(self.func.clone()));
+        app.insert_resource(self.func.clone());
 
         app.add_systems(
             Update,
@@ -122,12 +91,12 @@ struct ComputePoint;
 
 fn generate_noise<T, U, const DIM: usize, F, Coord, Noise>(
     mut commands: Commands,
-    generator: Res<NoiseGenerator<T, U, DIM, F>>,
+    func: Res<F>,
     q_point: Query<(Entity, &Coord, &ChildOf), (Without<Noise>, Without<ComputePoint>)>,
 ) where
     T: Clone + Send + Sync + 'static,
     U: Clone + Send + Sync + 'static,
-    F: NoiseFunction<T, U, DIM> + Clone + Send + Sync + 'static,
+    F: Resource + NoiseFunction<T, U, DIM> + Clone + Send + Sync + 'static,
     for<'a> &'a Coord: Into<[T; DIM]>,
     Coord: Component + Send + Sync + 'static,
     Noise: Component + From<U> + Send + Sync + 'static,
@@ -142,11 +111,11 @@ fn generate_noise<T, U, const DIM: usize, F, Coord, Noise>(
             commands.entity(*child_entity).insert(ComputePoint);
         }
 
-        let generator = generator.clone();
+        let func = func.clone();
         let task = thread_pool.spawn(async move {
             let mut command_queue = CommandQueue::default();
             for (child_entity, point) in chunk {
-                let noise = generator.get(point);
+                let noise = func.get(point);
                 command_queue.push(move |world: &mut World| {
                     world.entity_mut(child_entity).insert(Noise::from(noise));
                 });

@@ -1,3 +1,4 @@
+use bevy::prelude::*;
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
 use systems::noise::map::NoiseFunction;
 
@@ -92,7 +93,7 @@ const CONTINENT_HEIGHT_SCALE: f64 = (1.0 - SEA_LEVEL) / 4.0;
 /// Maximum depth of the rivers, in planetary elevation units.
 const RIVER_DEPTH: f64 = 0.0234375;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Resource, Clone, Copy, Debug)]
 pub struct PlanetHeight {
     seed: u32,
     zoom_scale: f64,
@@ -241,7 +242,7 @@ impl NoiseFunction<f64, f64, 3> for PlanetHeight {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Resource, Clone, Copy, Debug)]
 pub struct PlanetTemperature {
     seed: u32,
     zoom_scale: f64,
@@ -283,7 +284,7 @@ impl NoiseFunction<f64, f64, 3> for PlanetTemperature {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Resource, Clone, Copy, Debug)]
 pub struct PlanetHumidity {
     seed: u32,
     zoom_scale: f64,

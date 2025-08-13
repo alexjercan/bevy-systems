@@ -1,5 +1,5 @@
 ({
-    "terrain": TerrainDynamicAsset ([
+    "tiles": TilesDynamicAsset ([
         TileDynamicAsset (
             id: "deep-water",
             name: "Deep Water",

@@ -1,0 +1,10 @@
+({
+    "features": FeaturesDynamicAsset ([
+        FeatureDynamicAsset (
+            id: "tree",
+            name: "Tree",
+            frequency: 0.5,
+            threshold: 0.1,
+        ),
+    ]),
+})
