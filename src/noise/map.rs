@@ -1,5 +1,5 @@
 use bevy::{
-    ecs::world::CommandQueue,
+    ecs::{query::{QueryData, QueryItem}, world::CommandQueue},
     prelude::*,
     tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task},
 };
@@ -9,51 +9,45 @@ pub mod prelude {
     pub use super::{NoisePlugin, NoiseSet};
 }
 
-pub trait NoiseFunction<T, U, const DIM: usize> {
-    fn get(&self, point: [T; DIM]) -> U;
+pub trait NoiseInput {
+    type Query: bevy::ecs::query::QueryData;
+    fn from_query_item(item: QueryItem<<Self::Query as QueryData>::ReadOnly>) -> Self;
+}
+
+pub trait NoiseFunction<T, U> {
+    fn get(&self, point: T) -> U;
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NoiseSet;
 
-pub struct NoisePlugin<T, U, const DIM: usize, F, Coord, Noise>
+pub struct NoisePlugin<T, U, F>
 where
-    F: NoiseFunction<T, U, DIM>,
-    for<'a> &'a Coord: Into<[T; DIM]>,
-    Noise: From<U>,
+    F: NoiseFunction<T, U>,
 {
     func: F,
     _marker_t: std::marker::PhantomData<T>,
     _marker_u: std::marker::PhantomData<U>,
-    _marker_coord: std::marker::PhantomData<Coord>,
-    _marker_noise: std::marker::PhantomData<Noise>,
 }
 
-impl<T, U, const DIM: usize, F, Coord, Noise> NoisePlugin<T, U, DIM, F, Coord, Noise>
+impl<T, U, F> NoisePlugin<T, U, F>
 where
-    F: NoiseFunction<T, U, DIM>,
-    for<'a> &'a Coord: Into<[T; DIM]>,
-    Noise: From<U>,
+    F: NoiseFunction<T, U>,
 {
     pub fn new(func: F) -> Self {
         Self {
             func,
             _marker_t: std::marker::PhantomData,
             _marker_u: std::marker::PhantomData,
-            _marker_coord: std::marker::PhantomData,
-            _marker_noise: std::marker::PhantomData,
         }
     }
 }
 
-impl<T, U, const DIM: usize, F, Coord, Noise> Plugin for NoisePlugin<T, U, DIM, F, Coord, Noise>
+impl<T, U, F> Plugin for NoisePlugin<T, U, F>
 where
-    T: Clone + Send + Sync + 'static,
-    U: Clone + Send + Sync + 'static,
-    F: Resource + NoiseFunction<T, U, DIM> + Clone + Send + Sync + 'static,
-    for<'a> &'a Coord: Into<[T; DIM]>,
-    Coord: Component + Send + Sync + 'static,
-    Noise: Component + From<U> + Send + Sync + 'static,
+    T: NoiseInput + Clone + Send + Sync + 'static,
+    U: Component + Clone + Send + Sync + 'static,
+    F: Resource + NoiseFunction<T, U> + Clone + Send + Sync + 'static,
 {
     fn build(&self, app: &mut App) {
         app.insert_resource(self.func.clone());
@@ -61,8 +55,8 @@ where
         app.add_systems(
             Update,
             (
-                generate_noise::<T, U, DIM, F, Coord, Noise>,
-                handle_generate_noise::<U, Noise>,
+                generate_noise::<T, U, F>,
+                handle_generate_noise::<U>,
             )
                 .in_set(NoiseSet),
         );
@@ -70,87 +64,84 @@ where
 }
 
 #[derive(Component)]
-struct ComputeNoise<U, Noise: From<U>> {
+struct ComputeNoise<U> {
     task: Task<CommandQueue>,
     _maker_u: std::marker::PhantomData<U>,
-    _marker_noise: std::marker::PhantomData<Noise>,
 }
 
-impl<U, Noise: From<U>> ComputeNoise<U, Noise> {
+impl<U> ComputeNoise<U> {
     fn new(task: Task<CommandQueue>) -> Self {
         Self {
             task,
             _maker_u: std::marker::PhantomData,
-            _marker_noise: std::marker::PhantomData,
         }
     }
 }
 
 #[derive(Component)]
-struct ComputePoint<Noise> {
-    _marker_noise: std::marker::PhantomData<Noise>,
+struct ComputePoint<U> {
+    _marker_u: std::marker::PhantomData<U>,
 }
 
-impl<Noise> ComputePoint<Noise> {
+impl<U> ComputePoint<U> {
     fn new() -> Self {
         Self {
-            _marker_noise: std::marker::PhantomData,
+            _marker_u: std::marker::PhantomData,
         }
     }
 }
 
-fn generate_noise<T, U, const DIM: usize, F, Coord, Noise>(
+fn generate_noise<T, U, F>(
     mut commands: Commands,
     func: Res<F>,
-    q_point: Query<(Entity, &Coord, &ChildOf), (Without<Noise>, Without<ComputePoint<Noise>>)>,
+    q_point: Query<(Entity, <T as NoiseInput>::Query, &ChildOf), (Without<U>, Without<ComputePoint<U>>)>,
 ) where
-    T: Clone + Send + Sync + 'static,
-    U: Clone + Send + Sync + 'static,
-    F: Resource + NoiseFunction<T, U, DIM> + Clone + Send + Sync + 'static,
-    for<'a> &'a Coord: Into<[T; DIM]>,
-    Coord: Component + Send + Sync + 'static,
-    Noise: Component + From<U> + Send + Sync + 'static,
+    T: NoiseInput + Clone + Send + Sync + 'static,
+    U: Component + Clone + Send + Sync + 'static,
+    F: Resource + NoiseFunction<T, U> + Clone + Send + Sync + 'static,
 {
     let thread_pool = AsyncComputeTaskPool::get();
     for (&chunk_entity, chunk) in q_point.iter().chunk_by(|(_, _, ChildOf(e))| e).into_iter() {
         let chunk = chunk
-            .map(|(child_entity, point, _)| (child_entity, point.into()))
+            .map(|(child_entity, query_data, _)| {
+                let input = T::from_query_item(query_data);
+                (child_entity, input)
+            })
             .collect_vec();
 
         for (child_entity, _) in chunk.iter() {
-            commands.entity(*child_entity).insert(ComputePoint::<Noise>::new());
+            commands.entity(*child_entity).insert(ComputePoint::<U>::new());
         }
 
         let func = func.clone();
         let task = thread_pool.spawn(async move {
             let mut command_queue = CommandQueue::default();
-            for (child_entity, point) in chunk {
-                let noise = func.get(point);
+            for (child_entity, input) in chunk {
+                let noise = func.get(input);
                 command_queue.push(move |world: &mut World| {
-                    world.entity_mut(child_entity).insert(Noise::from(noise));
+                    world.entity_mut(child_entity).insert(U::from(noise));
                 });
             }
 
             command_queue.push(move |world: &mut World| {
                 world
                     .entity_mut(chunk_entity)
-                    .remove::<ComputeNoise<U, Noise>>();
+                    .remove::<ComputeNoise<U>>();
             });
             command_queue
         });
 
         commands
             .entity(chunk_entity)
-            .insert(ComputeNoise::<U, Noise>::new(task));
+            .insert(ComputeNoise::<U>::new(task));
     }
 }
 
-fn handle_generate_noise<U, Noise>(
+fn handle_generate_noise<U>(
     mut commands: Commands,
-    mut tasks: Query<&mut ComputeNoise<U, Noise>>,
+    mut tasks: Query<&mut ComputeNoise<U>>,
 ) where
     U: Send + Sync + 'static,
-    Noise: From<U> + Send + Sync + 'static,
 {
     for mut task in tasks.iter_mut() {
         if let Some(mut commands_queue) = block_on(future::poll_once(&mut task.task)) {

@@ -103,7 +103,7 @@ fn handle_overlay_chunk(
 
         for (entity, hex, noise, humidity, temperature, _) in chunk {
             commands.entity(entity).insert(ChunkMeshReady);
-            let hex: Hex = hex.into();
+            let hex: Hex = **hex;
             if center.is_none() {
                 center = Some(
                     hex.to_lower_res(layout.chunk_radius)

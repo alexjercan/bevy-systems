@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
 use systems::noise::map::NoiseFunction;
+use super::components::*;
 
 /// Planet seed. Change this to generate a different planet.
 const CURRENT_SEED: u32 = 0;
@@ -151,8 +152,8 @@ impl PlanetHeight {
     }
 }
 
-impl NoiseFunction<f64, f64, 3> for PlanetHeight {
-    fn get(&self, point: [f64; 3]) -> f64 {
+impl NoiseFunction<HexCoord, HexNoiseHeight> for PlanetHeight {
+    fn get(&self, point: HexCoord) -> HexNoiseHeight {
         _ = self.mountain_lacunarity; // Silence unused warning
         _ = self.hills_lacunarity; // Silence unused warning
         _ = self.plains_lacunarity; // Silence unused warning
@@ -234,11 +235,11 @@ impl NoiseFunction<f64, f64, 3> for PlanetHeight {
         // the clamped-continent module.
         let base_continent_def = noise::Cache::new(base_continent_def_cl);
 
-        let x = point[0] * self.zoom_scale;
-        let y = point[1] * self.zoom_scale;
-        let z = point[2] * self.zoom_scale;
+        let x = point.x() as f64 * self.zoom_scale;
+        let y = point.y() as f64 * self.zoom_scale;
+        let z = point.z() as f64 * self.zoom_scale;
 
-        base_continent_def.get([x, y, z])
+        HexNoiseHeight(base_continent_def.get([x, y, z]))
     }
 }
 
@@ -268,19 +269,19 @@ impl Default for PlanetTemperature {
     }
 }
 
-impl NoiseFunction<f64, f64, 3> for PlanetTemperature {
-    fn get(&self, point: [f64; 3]) -> f64 {
+impl NoiseFunction<HexCoord, HexNoiseTemperature> for PlanetTemperature {
+    fn get(&self, point: HexCoord) -> HexNoiseTemperature {
         let base_temperature_fb = Fbm::<Perlin>::new(self.seed)
             .set_frequency(self.continent_frequency * 0.5)
             .set_persistence(0.5)
             .set_lacunarity(self.continent_lacunarity)
             .set_octaves(8);
 
-        let x = point[0] * self.zoom_scale;
-        let y = point[1] * self.zoom_scale;
-        let z = point[2] * self.zoom_scale;
+        let x = point.x() as f64 * self.zoom_scale;
+        let y = point.y() as f64 * self.zoom_scale;
+        let z = point.z() as f64 * self.zoom_scale;
 
-        base_temperature_fb.get([x, y, z])
+        HexNoiseTemperature(base_temperature_fb.get([x, y, z]))
     }
 }
 
@@ -310,18 +311,18 @@ impl Default for PlanetHumidity {
     }
 }
 
-impl NoiseFunction<f64, f64, 3> for PlanetHumidity {
-    fn get(&self, point: [f64; 3]) -> f64 {
+impl NoiseFunction<HexCoord, HexNoiseHumidity> for PlanetHumidity {
+    fn get(&self, point: HexCoord) -> HexNoiseHumidity {
         let base_humidity_fb = Fbm::<Perlin>::new(self.seed)
             .set_frequency(self.continent_frequency * 0.5)
             .set_persistence(0.5)
             .set_lacunarity(self.continent_lacunarity)
             .set_octaves(8);
 
-        let x = point[0] * self.zoom_scale;
-        let y = point[1] * self.zoom_scale;
-        let z = point[2] * self.zoom_scale;
+        let x = point.x() as f64 * self.zoom_scale;
+        let y = point.y() as f64 * self.zoom_scale;
+        let z = point.z() as f64 * self.zoom_scale;
 
-        base_humidity_fb.get([x, y, z])
+        HexNoiseHumidity(base_humidity_fb.get([x, y, z]))
     }
 }
