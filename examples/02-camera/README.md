@@ -1,3 +1,0 @@
-# Camera
-
-Different camera examples.

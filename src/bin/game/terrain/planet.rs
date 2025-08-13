@@ -1,4 +1,5 @@
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
+use systems::noise::map::NoiseFunction;
 
 /// Planet seed. Change this to generate a different planet.
 const CURRENT_SEED: u32 = 0;
@@ -149,7 +150,7 @@ impl PlanetHeight {
     }
 }
 
-impl NoiseFn<f64, 3> for PlanetHeight {
+impl NoiseFunction<f64, f64, 3> for PlanetHeight {
     fn get(&self, point: [f64; 3]) -> f64 {
         _ = self.mountain_lacunarity; // Silence unused warning
         _ = self.hills_lacunarity; // Silence unused warning
@@ -266,7 +267,7 @@ impl Default for PlanetTemperature {
     }
 }
 
-impl NoiseFn<f64, 3> for PlanetTemperature {
+impl NoiseFunction<f64, f64, 3> for PlanetTemperature {
     fn get(&self, point: [f64; 3]) -> f64 {
         let base_temperature_fb = Fbm::<Perlin>::new(self.seed)
             .set_frequency(self.continent_frequency * 0.5)
@@ -308,7 +309,7 @@ impl Default for PlanetHumidity {
     }
 }
 
-impl NoiseFn<f64, 3> for PlanetHumidity {
+impl NoiseFunction<f64, f64, 3> for PlanetHumidity {
     fn get(&self, point: [f64; 3]) -> f64 {
         let base_humidity_fb = Fbm::<Perlin>::new(self.seed)
             .set_frequency(self.continent_frequency * 0.5)
