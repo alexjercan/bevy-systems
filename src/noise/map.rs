@@ -87,12 +87,22 @@ impl<U, Noise: From<U>> ComputeNoise<U, Noise> {
 }
 
 #[derive(Component)]
-struct ComputePoint;
+struct ComputePoint<Noise> {
+    _marker_noise: std::marker::PhantomData<Noise>,
+}
+
+impl<Noise> ComputePoint<Noise> {
+    fn new() -> Self {
+        Self {
+            _marker_noise: std::marker::PhantomData,
+        }
+    }
+}
 
 fn generate_noise<T, U, const DIM: usize, F, Coord, Noise>(
     mut commands: Commands,
     func: Res<F>,
-    q_point: Query<(Entity, &Coord, &ChildOf), (Without<Noise>, Without<ComputePoint>)>,
+    q_point: Query<(Entity, &Coord, &ChildOf), (Without<Noise>, Without<ComputePoint<Noise>>)>,
 ) where
     T: Clone + Send + Sync + 'static,
     U: Clone + Send + Sync + 'static,
@@ -108,7 +118,7 @@ fn generate_noise<T, U, const DIM: usize, F, Coord, Noise>(
             .collect_vec();
 
         for (child_entity, _) in chunk.iter() {
-            commands.entity(*child_entity).insert(ComputePoint);
+            commands.entity(*child_entity).insert(ComputePoint::<Noise>::new());
         }
 
         let func = func.clone();

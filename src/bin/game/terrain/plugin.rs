@@ -35,13 +35,13 @@ impl Plugin for PlanetPlugin {
             self.chunk_radius,
             self.discover_radius,
         ))
-        .add_plugins(NoisePlugin::<f64, f64, 3, _, HexCoord, HexNoiseHeight>::new(
+        .add_plugins(NoisePlugin::<_, _, 3, _, HexCoord, HexNoiseHeight>::new(
             PlanetHeight::default().with_seed(self.seed),
         ))
-        .add_plugins(NoisePlugin::<f64, f64, 3, _, HexCoord, HexNoiseTemperature>::new(
+        .add_plugins(NoisePlugin::<_, _, 3, _, HexCoord, HexNoiseTemperature>::new(
             PlanetTemperature::default().with_seed(self.seed + 1),
         ))
-        .add_plugins(NoisePlugin::<f64, f64, 3, _, HexCoord, HexNoiseHumidity>::new(
+        .add_plugins(NoisePlugin::<_, _, 3, _, HexCoord, HexNoiseHumidity>::new(
             PlanetHumidity::default().with_seed(self.seed + 2),
         ))
         .configure_sets(Update, HexMapSet.in_set(PlanetPluginSet))
