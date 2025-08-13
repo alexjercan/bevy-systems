@@ -29,7 +29,7 @@ Check examples.
     - Add a threshold metter to filter out low-density resources and display only high-density resources.
     - Maybe add a noisemap for resources, to add more randomness to the resource distribution.
 - [ ] generic noise function
-    - implement a noise function that can return something else than a f64 => resource type and density (the f64 confidence level)
+    + implement a noise function that can return something else than a f64 => resource type and density (the f64 confidence level)
     - use the resource type with the tile kind and confidence to tell if I should place that thing in the tile: how can I add variants? (oak tree in plains, spruce in hills etc)
     - we can have a "variants" map in the resource which has variants based on tile kind (I would rather use maps for simplicity, but we can try to use Vec too)
     - generic resources load them from a ron file as an asset

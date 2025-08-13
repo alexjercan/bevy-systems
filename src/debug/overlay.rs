@@ -13,9 +13,9 @@ use itertools::Itertools;
 use crate::{render::prelude::*, terrain::prelude::*};
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct OverlayPluginSet;
+pub(super) struct OverlayPluginSet;
 
-pub struct OverlayPlugin;
+pub(super) struct OverlayPlugin;
 
 impl Plugin for OverlayPlugin {
     fn build(&self, app: &mut App) {
@@ -232,7 +232,7 @@ fn handle_overlay_update(
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-pub struct GradientMaterial {
+pub(super) struct GradientMaterial {
     #[uniform(100)]
     pub chunk_radius: u32,
     #[uniform(101)]

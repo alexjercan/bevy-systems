@@ -2,7 +2,7 @@ use super::components::*;
 use super::planet::*;
 use bevy::prelude::*;
 use hexx::*;
-use systems::{
+use crate::{
     hexmap::map::{HexMapPlugin, HexMapSet},
     noise::map::{NoisePlugin, NoiseSet},
 };
@@ -44,6 +44,9 @@ impl Plugin for PlanetPlugin {
         .add_plugins(NoisePlugin::<HexCoord, HexNoiseHumidity, _>::new(
             PlanetHumidity::default().with_seed(self.seed + 2),
         ))
+        // .add_plugins(NoisePlugin::<(HexCoord, HexNoiseHeight), HexFeature, _>::new(
+        //     PlanetFeatures::default().with_seed(self.seed + 3),
+        // ))
         .configure_sets(Update, HexMapSet.in_set(PlanetPluginSet))
         .configure_sets(Update, NoiseSet.in_set(PlanetPluginSet));
     }

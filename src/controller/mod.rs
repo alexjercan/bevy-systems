@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
-use systems::camera::wasd_camera::prelude::*;
+use crate::camera::wasd_camera::prelude::*;
 
 pub mod prelude {
     pub use super::{

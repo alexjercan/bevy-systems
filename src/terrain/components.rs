@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use hexx::*;
-use systems::noise::map::NoiseInput;
+use crate::noise::map::NoiseInput;
+
+use crate::assets::prelude::FeatureAsset;
 
 #[derive(Component, Clone, Debug, Deref, DerefMut)]
 pub struct HexCoord(pub Hex);
@@ -10,6 +12,9 @@ impl From<Hex> for HexCoord {
         Self(hex)
     }
 }
+
+#[derive(Component, Clone, Debug, Deref, DerefMut)]
+pub struct HexFeature(pub FeatureAsset);
 
 #[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
 pub struct HexNoiseHeight(pub f64);
@@ -27,5 +32,15 @@ impl NoiseInput for HexCoord {
         item: bevy::ecs::query::QueryItem<<Self::Query as bevy::ecs::query::QueryData>::ReadOnly>,
     ) -> Self {
         item.0.clone()
+    }
+}
+
+impl NoiseInput for (HexCoord, HexNoiseHeight) {
+    type Query = (&'static HexCoord, &'static HexNoiseHeight);
+
+    fn from_query_item(
+        item: bevy::ecs::query::QueryItem<<Self::Query as bevy::ecs::query::QueryData>::ReadOnly>,
+    ) -> Self {
+        (item.0.clone(), item.1.clone())
     }
 }

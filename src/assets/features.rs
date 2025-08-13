@@ -1,7 +1,7 @@
 use bevy::{ecs::system::SystemState, platform::collections::HashMap, prelude::*};
 use bevy_asset_loader::prelude::*;
 
-#[derive(Asset, TypePath, Debug)]
+#[derive(Asset, TypePath, Debug, Clone)]
 pub struct FeatureAsset {
     pub id: String,
     pub name: String,

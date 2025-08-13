@@ -1,14 +1,18 @@
+use crate::hexmap::map::HexDiscoverEvent;
 use crate::{
     assets::prelude::*, controller::prelude::*, debug::prelude::*, render::prelude::*,
     states::GameStates, terrain::prelude::*,
 };
 use bevy::prelude::*;
 use hexx::*;
-use systems::hexmap::map::HexDiscoverEvent;
 
 mod assets;
+mod camera;
 mod controller;
 mod debug;
+mod hexmap;
+mod meth;
+mod noise;
 mod render;
 mod states;
 mod terrain;

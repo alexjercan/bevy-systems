@@ -10,6 +10,7 @@ mod tiles;
 pub mod prelude {
     pub use super::{AssetsPlugin, AssetsPluginSet, GameAssets};
     pub use super::tiles::TileAsset;
+    pub use super::features::FeatureAsset;
 }
 
 #[derive(AssetCollection, Resource, Clone)]

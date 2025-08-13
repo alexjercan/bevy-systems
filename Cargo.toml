@@ -9,10 +9,6 @@ description = "Random systems that I think are interesting."
 categories = ["games"]
 exclude = ["dist", "build", "assets", "credits"]
 
-[lib]
-name = "systems"
-path = "src/lib.rs"
-
 # Enable a small amount of optimization in debug mode
 [profile.dev]
 opt-level = 1

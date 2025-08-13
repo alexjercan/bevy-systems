@@ -1,6 +1,7 @@
+use crate::{assets::prelude::*, noise::map::NoiseFunction};
 use bevy::prelude::*;
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
-use systems::noise::map::NoiseFunction;
+
 use super::components::*;
 
 /// Planet seed. Change this to generate a different planet.
@@ -324,5 +325,30 @@ impl NoiseFunction<HexCoord, HexNoiseHumidity> for PlanetHumidity {
         let z = point.z() as f64 * self.zoom_scale;
 
         HexNoiseHumidity(base_humidity_fb.get([x, y, z]))
+    }
+}
+
+#[derive(Resource, Debug, Clone, Default)]
+pub struct PlanetFeatures {
+    seed: u32,
+    zoom_scale: f64,
+    features: Vec<FeatureAsset>,
+}
+
+impl PlanetFeatures {
+    pub fn with_seed(mut self, seed: u32) -> Self {
+        self.seed = seed;
+        self
+    }
+
+    pub fn with_features(mut self, features: Vec<FeatureAsset>) -> Self {
+        self.features = features;
+        self
+    }
+}
+
+impl NoiseFunction<(HexCoord, HexNoiseHeight), HexFeature> for PlanetFeatures {
+    fn get(&self, point: (HexCoord, HexNoiseHeight)) -> HexFeature {
+        todo!()
     }
 }

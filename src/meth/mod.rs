@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::LerpSnap;
+    pub use super::*;
 }
 
 pub trait LerpSnap {
