@@ -29,7 +29,7 @@ pub struct WASDCameraControllerBundle {
 impl Default for WASDCameraControllerBundle {
     fn default() -> Self {
         Self {
-            camera: WASDCamera::default(),
+            camera: WASDCamera { wasd_sensitivity: 2.0, ..default() },
             input: WASDCameraInput::default(),
             map: InputMap::default()
                 .with_dual_axis(CameraMovement::Pan, MouseMove::default())

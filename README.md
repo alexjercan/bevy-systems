@@ -28,22 +28,23 @@ Check examples.
     - Switch between different resource types using `UP` and `DOWN` keys.
     - Add a threshold metter to filter out low-density resources and display only high-density resources.
     - Maybe add a noisemap for resources, to add more randomness to the resource distribution.
-- [ ] generic noise function
+- [x] generic noise function
     + implement a noise function that can return something else than a f64 => resource type and density (the f64 confidence level)
     + implement all noise values to be between 0.0 and 1.0, so we can use them as a confidence level
     + refactor the render plugin to use TileKind instead of computing it
     + implement the feature planet function and add some tree meshes
-    - use the resource type with the tile kind and confidence to tell if I should place that thing in the tile: how can I add variants? (oak tree in plains, spruce in hills etc)
-    - we can have a "variants" map in the resource which has variants based on tile kind (I would rather use maps for simplicity, but we can try to use Vec too)
-    - generic resources load them from a ron file as an asset
-    - Load resources from a RON file as an asset.
-    - Resources should have some settings for generation (e.g. density, size, type).
-    - Keep in mind that resources are just decoration for now
-- [ ] better biomes:
-    - I want to still have tile kinds like water and non-water (or maybe just land)
-    - Then I want the biome to be a property of the tile, not a kind of tile.
-    - For example we can color the tile based on the biome, e.g water that is in ocean biome is blue, water that is in river biome is light blue, water that is in lake biome is dark blue.
-    - Then we can even look at resources based on biome: e.g tree's in grasland are simple trees, tree's in forest are big trees, tree's in desert are palm trees or cacti.
+    + use the resource type with the tile kind and confidence to tell if I should place that thing in the tile: how can I add variants? (oak tree in plains, spruce in hills etc)
+    + we can have a "variants" map in the resource which has variants based on tile kind (I would rather use maps for simplicity, but we can try to use Vec too)
+    + generic resources load them from a ron file as an asset
+    + Load resources from a RON file as an asset.
+    + Resources should have some settings for generation (e.g. density, size, type).
+    + Keep in mind that resources are just decoration for now
+    * For the future I would like a better way of loading resources, I want it to be more in the WML style
+- [ ] refactor the assets:
+    - I need the Asset data structures to be more reliable
+    - Use a resource structure after we load the asset for the game and put the tiles and terrain generation stuff in there
+- [ ] refactor the debug module in each module: e.g overlay stuff in the renderer
+- [ ] add more resources to the game
 - [ ] water shader - Add a water shader to the hex map.
 - [ ] vegetation shader - Add a vegetation shader to the hex map. (grass for grassland, dust for desert, leaves for forest: cute small details)
 - [ ] hexmap_2d.rs - Render a 2D preview of the hex map.
