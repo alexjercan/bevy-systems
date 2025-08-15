@@ -41,8 +41,8 @@ impl NoiseInput for HexCoord {
     }
 }
 
-impl NoiseInput for (HexCoord, HexNoiseHeight) {
-    type Query = (&'static HexCoord, &'static HexNoiseHeight);
+impl NoiseInput for (HexCoord, HexTile) {
+    type Query = (&'static HexCoord, &'static HexTile);
 
     fn from_query_item(
         item: bevy::ecs::query::QueryItem<<Self::Query as bevy::ecs::query::QueryData>::ReadOnly>,

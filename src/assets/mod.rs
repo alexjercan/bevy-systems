@@ -13,6 +13,7 @@ pub mod prelude {
     pub use super::features::FeatureAsset;
 }
 
+// TODO: I kind of want to not need to use handle, but it is what it is.
 #[derive(AssetCollection, Resource, Clone)]
 pub struct GameAssets {
     #[asset(key = "tiles", collection(typed))]

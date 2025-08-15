@@ -12,7 +12,7 @@ use bevy::{
 use hexx::*;
 use itertools::Itertools;
 
-use crate::terrain::prelude::*;
+use crate::{assets::prelude::*, terrain::prelude::*};
 
 #[derive(Resource, Debug, Clone, Default)]
 pub struct HeightMapLayout {
@@ -76,7 +76,63 @@ impl Plugin for RenderPlugin {
         .add_plugins(MaterialPlugin::<
             ExtendedMaterial<StandardMaterial, ChunkMaterial>,
         >::default())
-        .add_systems(Update, handle_overlay_chunk.in_set(RenderPluginSet));
+        .add_systems(
+            Update,
+            (
+                handle_render_height,
+                handle_feature_tile,
+                handle_overlay_chunk,
+            )
+                .in_set(RenderPluginSet),
+        );
+    }
+}
+
+#[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
+struct TileTopHeight(f32);
+
+fn handle_render_height(
+    mut commands: Commands,
+    q_hex: Query<(Entity, &HexNoiseHeight), Without<TileTopHeight>>,
+    layout: Res<HeightMapLayout>,
+) {
+    for (entity, height) in q_hex.iter() {
+        let height = **height as f32;
+
+        let height_value = (height * 2.0 - 1.0).clamp(0.0, 1.0);
+        let height_mesh = (height_value * layout.max_height).round();
+
+        commands.entity(entity).insert(TileTopHeight(height_mesh));
+    }
+}
+
+#[derive(Component)]
+struct ChunkFeatureReady;
+
+fn handle_feature_tile(
+    mut commands: Commands,
+    feature_assets: Res<Assets<FeatureAsset>>,
+    game_assets: Res<GameAssets>,
+    q_hex: Query<(Entity, &TileTopHeight, &HexFeature), Without<ChunkFeatureReady>>,
+) {
+    for (entity, height, feature) in q_hex.iter() {
+        let index = **feature;
+        if index < 0 {
+            continue;
+        }
+
+        if let Some(feature_asset) = feature_assets.get(&game_assets.features[index as usize]) {
+            commands
+                .entity(entity)
+                .insert(ChunkFeatureReady)
+                .with_children(|parent| {
+                    parent.spawn((
+                        Transform::from_xyz(0.0, **height, 0.0),
+                        SceneRoot(feature_asset.scene.clone()),
+                        Name::new("Feature Tile"),
+                    ));
+                });
+        }
     }
 }
 
@@ -89,7 +145,7 @@ fn handle_overlay_chunk(
     mut chunk_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, ChunkMaterial>>>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
     layout: Res<HeightMapLayout>,
-    q_hex: Query<(Entity, &HexCoord, &HexNoiseHeight, &HexTile, &ChildOf), Without<ChunkMeshReady>>,
+    q_hex: Query<(Entity, &HexCoord, &TileTopHeight, &HexTile, &ChildOf), Without<ChunkMeshReady>>,
 ) {
     let size = layout.chunk_radius * 2 + 1;
     for (&chunk_entity, chunk) in q_hex
@@ -112,11 +168,7 @@ fn handle_overlay_chunk(
             }
             let coord = **coord - center.unwrap();
 
-            let height = **height as f32;
-
-            let height_value = (height * 2.0 - 1.0).clamp(0.0, 1.0);
-            let height_mesh = (height_value * layout.max_height).round();
-            storage.insert(coord, height_mesh);
+            storage.insert(coord, **height);
 
             let q_offset = coord.x + layout.chunk_radius as i32;
             let r_offset = coord.y + layout.chunk_radius as i32;

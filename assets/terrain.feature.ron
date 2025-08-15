@@ -3,8 +3,15 @@
         FeatureDynamicAsset (
             id: "tree",
             name: "Tree",
-            frequency: 0.5,
-            threshold: 0.1,
+            threshold: [
+                1.0,
+                1.0,
+                0.9,
+                0.5,
+                0.3,
+                0.7,
+            ],
+            model: "gltf/decoration/nature/trees_A_large.gltf#Scene0",
         ),
     ]),
 })

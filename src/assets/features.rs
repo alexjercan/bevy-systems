@@ -5,30 +5,32 @@ use bevy_asset_loader::prelude::*;
 pub struct FeatureAsset {
     pub id: String,
     pub name: String,
-    pub frequency: f64,
-    pub threshold: f64,
+    pub threshold: Vec<f64>,
+    pub scene: Handle<Scene>,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
 struct FeatureDynamicAsset {
     id: String,
     name: String,
-    frequency: f64,
-    threshold: f64,
+    threshold: Vec<f64>,
+    model: String,
 }
 
 #[derive(serde::Deserialize, Debug, Clone, Deref)]
 struct FeaturesDynamicAsset(Vec<FeatureDynamicAsset>);
 
 impl DynamicAsset for FeaturesDynamicAsset {
-    fn load(&self, _: &AssetServer) -> Vec<UntypedHandle> {
-        vec![]
+    fn load(&self, asset_server: &AssetServer) -> Vec<UntypedHandle> {
+        self.iter()
+            .flat_map(|feature| vec![asset_server.load_untyped(feature.model.clone()).untyped()])
+            .collect()
     }
 
     fn build(&self, world: &mut World) -> Result<DynamicAssetType, anyhow::Error> {
         let mut system_state =
             SystemState::<(ResMut<Assets<FeatureAsset>>, Res<AssetServer>)>::new(world);
-        let (mut terrain, _) = system_state.get_mut(world);
+        let (mut terrain, asset_server) = system_state.get_mut(world);
 
         return Ok(DynamicAssetType::Collection(
             self.iter()
@@ -36,8 +38,8 @@ impl DynamicAsset for FeaturesDynamicAsset {
                     let tile = FeatureAsset {
                         id: feature.id.clone(),
                         name: feature.name.clone(),
-                        frequency: feature.frequency,
-                        threshold: feature.threshold,
+                        threshold: feature.threshold.clone(),
+                        scene: asset_server.load(feature.model.clone()),
                     };
 
                     terrain.add(tile).untyped()
@@ -57,4 +59,3 @@ impl DynamicAssetCollection for FeaturesDynamicAssetCollection {
         }
     }
 }
-

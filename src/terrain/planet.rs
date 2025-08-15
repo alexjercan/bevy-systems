@@ -1,6 +1,6 @@
 use crate::{assets::prelude::*, noise::map::NoiseFunction};
 use bevy::prelude::*;
-use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
+use noise::{Fbm, MultiFractal, NoiseFn, Perlin, Worley};
 
 use super::components::*;
 
@@ -18,6 +18,24 @@ const CONTINENT_FREQUENCY: f64 = 1.0;
 /// slightly different continents. For the best results, this value should
 /// be random, but close to 2.0.
 const CONTINENT_LACUNARITY: f64 = 2.208984375;
+
+/// Frequency of the planet's feature patches. This value is measured in
+/// radians. Higher frequency produces smaller, more numerous patches.
+const FEATURE_PATCH_FREQUENCY: f64 = 0.125;
+
+/// Lacunarity of the planet's feature patches. Changing this value
+/// produces slightly different patches. For the best results, this value
+/// should be random, but close to 2.0.
+const FEATURE_PATCH_LACUNARITY: f64 = 2.1875;
+
+/// Frequency of the planet's features abundance. This value is measured
+/// in radians. Higher frequency produces smaller, more numerous abundance.
+const FEATURE_ABUNDANCE_FREQUENCY: f64 = 0.4;
+
+/// Lacunarity of the planet's features abundance. Changing this value
+/// produces slightly different abundance. For the best results, this
+/// value should be random, but close to 2.0.
+const FEATURE_ABUNDANCE_LACUNARITY: f64 = 2.21875;
 
 /// Lacunarity of the planet's mountains. Changing the value produces
 /// slightly different mountains. For the best results, this value should
@@ -331,11 +349,29 @@ impl NoiseFunction<HexCoord, HexNoiseHumidity> for PlanetHumidity {
     }
 }
 
-#[derive(Resource, Debug, Clone, Default)]
+#[derive(Resource, Debug, Clone)]
 pub struct PlanetFeatures {
     seed: u32,
     zoom_scale: f64,
     features: Vec<FeatureAsset>,
+    patch_frequency: f64,
+    patch_lacunarity: f64,
+    abundance_frequency: f64,
+    abundance_lacunarity: f64,
+}
+
+impl Default for PlanetFeatures {
+    fn default() -> Self {
+        PlanetFeatures {
+            seed: CURRENT_SEED,
+            zoom_scale: ZOOM_SCALE,
+            features: Vec::new(),
+            patch_frequency: FEATURE_PATCH_FREQUENCY,
+            patch_lacunarity: FEATURE_PATCH_LACUNARITY,
+            abundance_frequency: FEATURE_ABUNDANCE_FREQUENCY,
+            abundance_lacunarity: FEATURE_ABUNDANCE_LACUNARITY,
+        }
+    }
 }
 
 impl PlanetFeatures {
@@ -350,8 +386,39 @@ impl PlanetFeatures {
     }
 }
 
-impl NoiseFunction<(HexCoord, HexNoiseHeight), HexFeature> for PlanetFeatures {
-    fn get(&self, point: (HexCoord, HexNoiseHeight)) -> HexFeature {
-        todo!()
+impl NoiseFunction<(HexCoord, HexTile), HexFeature> for PlanetFeatures {
+    fn get(&self, (point, tile): (HexCoord, HexTile)) -> HexFeature {
+        // TODO: not use hardcoded values for freq etc
+
+        let x = point.x() as f64 * self.zoom_scale;
+        let y = point.y() as f64 * self.zoom_scale;
+        let z = point.z() as f64 * self.zoom_scale;
+
+        // 1. Voronoi-like patch selection using Worley noise
+        let selection_noise = Fbm::<Worley>::new(self.seed)
+            .set_frequency(self.patch_frequency)
+            .set_persistence(0.5)
+            .set_lacunarity(self.patch_lacunarity)
+            .set_octaves(8)
+            .get([x, y, z]);
+
+        let feature_index = ((selection_noise + 1.0) * 0.5 * self.features.len() as f64) as usize;
+        let feature_index = feature_index.min(self.features.len() - 1);
+
+        // 2. Abundance variation using high-frequency FBM
+        let abundance_val = Fbm::<Perlin>::new(self.seed + 1)
+            .set_frequency(self.abundance_frequency)
+            .set_persistence(0.5)
+            .set_lacunarity(self.abundance_lacunarity)
+            .set_octaves(4)
+            .get([x, y, z]);
+
+
+        let index = *tile as usize;
+        if abundance_val > self.features[feature_index].threshold[index] {
+            return HexFeature(feature_index as i32);
+        }
+
+        return HexFeature(-1);
     }
 }

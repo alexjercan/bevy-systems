@@ -1,7 +1,6 @@
 use super::components::*;
 use super::planet::*;
-use crate::assets::prelude::TileAsset;
-use crate::assets::GameAssets;
+use crate::assets::prelude::*;
 use crate::{
     noise::map::{NoisePlugin, NoiseSet},
     tilemap::hexmap::{HexMapPlugin, HexMapSet},
@@ -47,12 +46,30 @@ impl Plugin for PlanetPlugin {
         .add_plugins(NoisePlugin::<HexCoord, HexNoiseHumidity, _>::new(
             PlanetHumidity::default().with_seed(self.seed + 2),
         ))
-        // .add_plugins(NoisePlugin::<(HexCoord, HexNoiseHeight), HexFeature, _>::new(
-        //     PlanetFeatures::default().with_seed(self.seed + 3),
-        // ))
+        .add_plugins(NoisePlugin::<(HexCoord, HexTile), HexFeature, _>::new(
+            PlanetFeatures::default().with_seed(self.seed + 3),
+        ))
         .configure_sets(Update, HexMapSet.in_set(PlanetPluginSet))
         .configure_sets(Update, NoiseSet.in_set(PlanetPluginSet))
-        .add_systems(Update, handle_chunk.in_set(PlanetPluginSet));
+        .add_systems(Update, handle_chunk.in_set(PlanetPluginSet))
+        .add_systems(Update, handle_features.in_set(PlanetPluginSet));
+    }
+}
+
+fn handle_features(
+    feature_assets: Res<Assets<FeatureAsset>>,
+    assets: Res<GameAssets>,
+    mut planet: ResMut<PlanetFeatures>,
+) {
+    if feature_assets.is_changed() && assets.is_changed() {
+        let features: Vec<FeatureAsset> = assets.features
+            .iter()
+            .filter_map(|handle| {
+                feature_assets.get(handle).cloned()
+            })
+            .collect::<_>();
+
+        *planet = planet.clone().with_features(features);
     }
 }
 
