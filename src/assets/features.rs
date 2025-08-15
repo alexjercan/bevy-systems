@@ -6,7 +6,7 @@ pub struct FeatureAsset {
     pub id: String,
     pub name: String,
     pub threshold: Vec<f64>,
-    pub scene: Handle<Scene>,
+    pub scene: Vec<Option<Handle<Scene>>>,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -14,7 +14,7 @@ struct FeatureDynamicAsset {
     id: String,
     name: String,
     threshold: Vec<f64>,
-    model: String,
+    model: Vec<Option<String>>,
 }
 
 #[derive(serde::Deserialize, Debug, Clone, Deref)]
@@ -23,7 +23,11 @@ struct FeaturesDynamicAsset(Vec<FeatureDynamicAsset>);
 impl DynamicAsset for FeaturesDynamicAsset {
     fn load(&self, asset_server: &AssetServer) -> Vec<UntypedHandle> {
         self.iter()
-            .flat_map(|feature| vec![asset_server.load_untyped(feature.model.clone()).untyped()])
+            .flat_map(|feature| {
+                feature.model.iter().filter_map(|model| {
+                    model.as_ref().map(|m| asset_server.load_untyped(m).untyped())
+                })
+            })
             .collect()
     }
 
@@ -35,11 +39,17 @@ impl DynamicAsset for FeaturesDynamicAsset {
         return Ok(DynamicAssetType::Collection(
             self.iter()
                 .map(|feature| {
+                    let scene = feature
+                        .model
+                        .iter()
+                        .map(|model| model.as_ref().map(|m| asset_server.load(m)))
+                        .collect();
+
                     let tile = FeatureAsset {
                         id: feature.id.clone(),
                         name: feature.name.clone(),
                         threshold: feature.threshold.clone(),
-                        scene: asset_server.load(feature.model.clone()),
+                        scene: scene,
                     };
 
                     terrain.add(tile).untyped()

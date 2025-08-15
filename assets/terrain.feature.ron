@@ -11,7 +11,14 @@
                 0.3,
                 0.7,
             ],
-            model: "gltf/decoration/nature/trees_A_large.gltf#Scene0",
+            model: [
+                None,
+                None,
+                Some("gltf/decoration/nature/trees_A_cut.gltf#Scene0"),
+                Some("gltf/decoration/nature/trees_A_small.gltf#Scene0"),
+                Some("gltf/decoration/nature/trees_A_large.gltf#Scene0"),
+                Some("gltf/decoration/nature/trees_A_large.gltf#Scene0"),
+            ]
         ),
     ]),
 })

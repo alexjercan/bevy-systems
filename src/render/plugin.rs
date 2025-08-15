@@ -113,26 +113,32 @@ fn handle_feature_tile(
     mut commands: Commands,
     feature_assets: Res<Assets<FeatureAsset>>,
     game_assets: Res<GameAssets>,
-    q_hex: Query<(Entity, &TileTopHeight, &HexFeature), Without<ChunkFeatureReady>>,
+    q_hex: Query<(Entity, &TileTopHeight, &HexTile, &HexFeature), Without<ChunkFeatureReady>>,
 ) {
-    for (entity, height, feature) in q_hex.iter() {
+    for (entity, height, tile, feature) in q_hex.iter() {
         let index = **feature;
         if index < 0 {
             continue;
         }
 
-        if let Some(feature_asset) = feature_assets.get(&game_assets.features[index as usize]) {
-            commands
-                .entity(entity)
-                .insert(ChunkFeatureReady)
-                .with_children(|parent| {
-                    parent.spawn((
-                        Transform::from_xyz(0.0, **height, 0.0),
-                        SceneRoot(feature_asset.scene.clone()),
-                        Name::new("Feature Tile"),
-                    ));
-                });
-        }
+        let Some(feature_asset) = feature_assets.get(&game_assets.features[index as usize]) else {
+            continue;
+        };
+
+        let Some(scene) = feature_asset.scene[**tile as usize].clone() else {
+            continue;
+        };
+
+        commands
+            .entity(entity)
+            .insert(ChunkFeatureReady)
+            .with_children(|parent| {
+                parent.spawn((
+                    Transform::from_xyz(0.0, **height, 0.0),
+                    SceneRoot(scene),
+                    Name::new("Feature Tile"),
+                ));
+            });
     }
 }
 
