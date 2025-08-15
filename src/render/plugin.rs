@@ -12,10 +12,7 @@ use bevy::{
 use hexx::*;
 use itertools::Itertools;
 
-use crate::{
-    assets::prelude::*,
-    terrain::prelude::*,
-};
+use crate::terrain::prelude::*;
 
 #[derive(Resource, Debug, Clone, Default)]
 pub struct HeightMapLayout {
@@ -92,57 +89,39 @@ fn handle_overlay_chunk(
     mut chunk_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, ChunkMaterial>>>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
     layout: Res<HeightMapLayout>,
-    q_hex: Query<
-        (
-            Entity,
-            &HexCoord,
-            &HexNoiseHeight,
-            &HexNoiseHumidity,
-            &HexNoiseTemperature,
-            &ChildOf,
-        ),
-        Without<ChunkMeshReady>,
-    >,
-    terrain: Res<Assets<TileAsset>>,
-    assets: Res<GameAssets>,
+    q_hex: Query<(Entity, &HexCoord, &HexNoiseHeight, &HexTile, &ChildOf), Without<ChunkMeshReady>>,
 ) {
     let size = layout.chunk_radius * 2 + 1;
     for (&chunk_entity, chunk) in q_hex
         .iter()
-        .chunk_by(|(_, _, _, _, _, ChildOf(e))| e)
+        .chunk_by(|(_, _, _, _, ChildOf(e))| e)
         .into_iter()
     {
         let mut center: Option<Hex> = None;
         let mut storage = HashMap::default();
         let mut biome_data = vec![-1; (size * size) as usize];
 
-        for (entity, hex, height, humidity, temperature, _) in chunk {
+        for (entity, coord, height, tile, _) in chunk {
             commands.entity(entity).insert(ChunkMeshReady);
-            let hex: Hex = **hex;
             if center.is_none() {
                 center = Some(
-                    hex.to_lower_res(layout.chunk_radius)
+                    coord
+                        .to_lower_res(layout.chunk_radius)
                         .to_higher_res(layout.chunk_radius),
                 );
             }
-            let hex = hex - center.unwrap();
+            let coord = **coord - center.unwrap();
 
             let height = **height as f32;
-            let humidity = **humidity as f32;
-            let temperature = **temperature as f32;
 
             let height_value = (height * 2.0 - 1.0).clamp(0.0, 1.0);
             let height_mesh = (height_value * layout.max_height).round();
-            storage.insert(hex, height_mesh);
+            storage.insert(coord, height_mesh);
 
-            let biome = assets
-                .terrain_index(&terrain, height, humidity, temperature)
-                .map_or(-1, |v| v as i32);
-
-            let q_offset = hex.x + layout.chunk_radius as i32;
-            let r_offset = hex.y + layout.chunk_radius as i32;
+            let q_offset = coord.x + layout.chunk_radius as i32;
+            let r_offset = coord.y + layout.chunk_radius as i32;
             let index = (r_offset * size as i32 + q_offset) as usize;
-            biome_data[index] = biome as i32;
+            biome_data[index] = **tile;
         }
 
         if let Some(center) = center {

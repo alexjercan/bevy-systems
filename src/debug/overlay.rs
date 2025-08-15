@@ -1,3 +1,6 @@
+/// TODO: Move this debug plugin to the right place in the render plugin: it should be part of the
+/// render plugin
+
 use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension},
     platform::collections::HashMap,
