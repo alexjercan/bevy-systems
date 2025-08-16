@@ -13,19 +13,19 @@
                 FeatureVariantDynamic(
                     id: "grassland",
                     name: "Grassland Tree",
-                    threshold: 0.5,
+                    threshold: 0.7,
                     scene: "gltf/decoration/nature/trees_A_small.gltf#Scene0",
                 ),
                 FeatureVariantDynamic(
                     id: "hills",
                     name: "Hills Tree",
-                    threshold: 0.3,
+                    threshold: 0.6,
                     scene: "gltf/decoration/nature/trees_A_large.gltf#Scene0",
                 ),
                 FeatureVariantDynamic(
                     id: "mountains",
                     name: "Mountain Tree",
-                    threshold: 0.7,
+                    threshold: 0.8,
                     scene: "gltf/decoration/nature/trees_A_large.gltf#Scene0",
                 ),
             ],
