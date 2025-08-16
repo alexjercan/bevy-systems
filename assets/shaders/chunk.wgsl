@@ -39,7 +39,7 @@ fn fragment(
     let kind = tiles[index];
     pbr_input.material.base_color = tile_kind_to_color(kind);
 
-    if (kind == 0 || kind == 1) {
+    if (kind == DEEP_WATER || kind == WATER) {
         let time = globals.time;
         let uv = in.uv * 5.0;
         let pos = in.world_position.xy;

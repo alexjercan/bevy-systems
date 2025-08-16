@@ -1,4 +1,7 @@
-use crate::noise::map::NoiseInput;
+use crate::{
+    assets::prelude::{FeatureID, TileID},
+    noise::map::NoiseInput,
+};
 use bevy::prelude::*;
 use hexx::*;
 
@@ -11,14 +14,11 @@ impl From<Hex> for HexCoord {
     }
 }
 
-pub type HexTileKind = i32;
-pub type HexFeatureKind = i32;
+#[derive(Component, Clone, Debug, Deref, DerefMut)]
+pub struct HexTile(pub TileID);
 
 #[derive(Component, Clone, Debug, Deref, DerefMut)]
-pub struct HexTile(pub HexTileKind);
-
-#[derive(Component, Clone, Debug, Deref, DerefMut)]
-pub struct HexFeature(pub HexFeatureKind);
+pub struct HexFeature(pub Option<FeatureID>);
 
 #[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
 pub struct HexNoiseHeight(pub f64);

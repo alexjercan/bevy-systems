@@ -1,20 +1,44 @@
 use bevy::{ecs::system::SystemState, platform::collections::HashMap, prelude::*};
 use bevy_asset_loader::prelude::*;
 
+use super::tiles::TileID;
+
+pub type FeatureID = String;
+
 #[derive(Asset, TypePath, Debug, Clone)]
 pub struct FeatureAsset {
-    pub id: String,
+    pub id: FeatureID,
     pub name: String,
-    pub threshold: Vec<f64>,
-    pub scene: Vec<Option<Handle<Scene>>>,
+    variants: Vec<FeatureVariant>,
+}
+
+impl FeatureAsset {
+    pub fn get_variant(&self, id: &TileID) -> Option<&FeatureVariant> {
+        self.variants.iter().find(|variant| &variant.id == id)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FeatureVariant {
+    pub id: TileID,
+    pub name: String,
+    pub threshold: f64,
+    pub scene: Handle<Scene>,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
 struct FeatureDynamicAsset {
     id: String,
     name: String,
-    threshold: Vec<f64>,
-    model: Vec<Option<String>>,
+    variants: Vec<FeatureVariantDynamic>,
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct FeatureVariantDynamic {
+    id: String,
+    name: String,
+    threshold: f64,
+    scene: String,
 }
 
 #[derive(serde::Deserialize, Debug, Clone, Deref)]
@@ -24,11 +48,10 @@ impl DynamicAsset for FeaturesDynamicAsset {
     fn load(&self, asset_server: &AssetServer) -> Vec<UntypedHandle> {
         self.iter()
             .flat_map(|feature| {
-                feature.model.iter().filter_map(|model| {
-                    model
-                        .as_ref()
-                        .map(|m| asset_server.load_untyped(m).untyped())
-                })
+                feature
+                    .variants
+                    .iter()
+                    .map(|variant| asset_server.load_untyped(&variant.scene).untyped())
             })
             .collect()
     }
@@ -41,20 +64,24 @@ impl DynamicAsset for FeaturesDynamicAsset {
         return Ok(DynamicAssetType::Collection(
             self.iter()
                 .map(|feature| {
-                    let scene = feature
-                        .model
+                    let variants = feature
+                        .variants
                         .iter()
-                        .map(|model| model.as_ref().map(|m| asset_server.load(m)))
+                        .map(|variant| FeatureVariant {
+                            id: variant.id.clone(),
+                            name: variant.name.clone(),
+                            threshold: variant.threshold,
+                            scene: asset_server.load(&variant.scene),
+                        })
                         .collect();
 
-                    let tile = FeatureAsset {
+                    let feature_asset = FeatureAsset {
                         id: feature.id.clone(),
                         name: feature.name.clone(),
-                        threshold: feature.threshold.clone(),
-                        scene: scene,
+                        variants,
                     };
 
-                    terrain.add(tile).untyped()
+                    terrain.add(feature_asset).untyped()
                 })
                 .collect(),
         ));

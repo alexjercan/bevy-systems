@@ -121,21 +121,19 @@ struct ChunkFeatureReady;
 
 fn handle_feature_tile(
     mut commands: Commands,
-    feature_assets: Res<Assets<FeatureAsset>>,
-    game_assets: Res<GameAssets>,
+    assets: Res<MapAssets>,
     q_hex: Query<(Entity, &TileTopHeight, &HexTile, &HexFeature), Without<ChunkFeatureReady>>,
 ) {
     for (entity, height, tile, feature) in q_hex.iter() {
-        let index = **feature;
-        if index < 0 {
-            continue;
-        }
-
-        let Some(feature_asset) = feature_assets.get(&game_assets.features[index as usize]) else {
+        let Some(id) = (**feature).clone() else {
             continue;
         };
 
-        let Some(scene) = feature_asset.scene[**tile as usize].clone() else {
+        let Some(feature_asset) = assets.get_feature(&id) else {
+            continue;
+        };
+
+        let Some(variant) = feature_asset.get_variant(&**tile) else {
             continue;
         };
 
@@ -145,7 +143,7 @@ fn handle_feature_tile(
             .with_children(|parent| {
                 parent.spawn((
                     Transform::from_xyz(0.0, **height, 0.0),
-                    SceneRoot(scene),
+                    SceneRoot(variant.scene.clone()),
                     Name::new("Feature Tile"),
                 ));
             });
@@ -162,6 +160,7 @@ fn handle_overlay_chunk(
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
     layout: Res<HeightMapLayout>,
     q_hex: Query<(Entity, &HexCoord, &TileTopHeight, &HexTile, &ChildOf), Without<ChunkMeshReady>>,
+    assets: Res<MapAssets>,
 ) {
     let size = layout.chunk_radius * 2 + 1;
     for (&chunk_entity, chunk) in q_hex
@@ -189,7 +188,7 @@ fn handle_overlay_chunk(
             let q_offset = coord.x + layout.chunk_radius as i32;
             let r_offset = coord.y + layout.chunk_radius as i32;
             let index = (r_offset * size as i32 + q_offset) as usize;
-            biome_data[index] = **tile;
+            biome_data[index] = assets.get_tile_index(&**tile).map_or(-1, |i| i as i32);
         }
 
         if let Some(center) = center {

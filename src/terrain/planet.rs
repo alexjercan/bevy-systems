@@ -353,7 +353,7 @@ impl NoiseFunction<HexCoord, HexNoiseHumidity> for PlanetHumidity {
 pub struct PlanetFeatures {
     seed: u32,
     zoom_scale: f64,
-    features: Vec<FeatureAsset>,
+    map: MapAssets,
     patch_frequency: f64,
     patch_lacunarity: f64,
     abundance_frequency: f64,
@@ -365,7 +365,7 @@ impl Default for PlanetFeatures {
         PlanetFeatures {
             seed: CURRENT_SEED,
             zoom_scale: ZOOM_SCALE,
-            features: Vec::new(),
+            map: MapAssets::default(),
             patch_frequency: FEATURE_PATCH_FREQUENCY,
             patch_lacunarity: FEATURE_PATCH_LACUNARITY,
             abundance_frequency: FEATURE_ABUNDANCE_FREQUENCY,
@@ -380,16 +380,14 @@ impl PlanetFeatures {
         self
     }
 
-    pub fn with_features(mut self, features: Vec<FeatureAsset>) -> Self {
-        self.features = features;
+    pub fn with_map(mut self, map: MapAssets) -> Self {
+        self.map = map;
         self
     }
 }
 
 impl NoiseFunction<(HexCoord, HexTile), HexFeature> for PlanetFeatures {
     fn get(&self, (point, tile): (HexCoord, HexTile)) -> HexFeature {
-        // TODO: not use hardcoded values for freq etc
-
         let x = point.x() as f64 * self.zoom_scale;
         let y = point.y() as f64 * self.zoom_scale;
         let z = point.z() as f64 * self.zoom_scale;
@@ -402,8 +400,9 @@ impl NoiseFunction<(HexCoord, HexTile), HexFeature> for PlanetFeatures {
             .set_octaves(8)
             .get([x, y, z]);
 
-        let feature_index = ((selection_noise + 1.0) * 0.5 * self.features.len() as f64) as usize;
-        let feature_index = feature_index.min(self.features.len() - 1);
+        let feature_index =
+            ((selection_noise + 1.0) * 0.5 * self.map.features.len() as f64) as usize;
+        let feature_index = feature_index.min(self.map.features.len() - 1);
 
         // 2. Abundance variation using high-frequency FBM
         let abundance_val = Fbm::<Perlin>::new(self.seed + 1)
@@ -413,11 +412,15 @@ impl NoiseFunction<(HexCoord, HexTile), HexFeature> for PlanetFeatures {
             .set_octaves(4)
             .get([x, y, z]);
 
-        let index = *tile as usize;
-        if abundance_val > self.features[feature_index].threshold[index] {
-            return HexFeature(feature_index as i32);
+        let feature = self.map.features[feature_index].clone();
+        let variant = feature.get_variant(&*tile);
+
+        if let Some(variant) = variant {
+            if variant.threshold < abundance_val {
+                return HexFeature(Some(feature.id));
+            }
         }
 
-        return HexFeature(-1);
+        return HexFeature(None);
     }
 }

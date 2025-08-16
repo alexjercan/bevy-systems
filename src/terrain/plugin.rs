@@ -56,19 +56,9 @@ impl Plugin for PlanetPlugin {
     }
 }
 
-fn handle_features(
-    feature_assets: Res<Assets<FeatureAsset>>,
-    assets: Res<GameAssets>,
-    mut planet: ResMut<PlanetFeatures>,
-) {
-    if feature_assets.is_changed() && assets.is_changed() {
-        let features: Vec<FeatureAsset> = assets
-            .features
-            .iter()
-            .filter_map(|handle| feature_assets.get(handle).cloned())
-            .collect::<_>();
-
-        *planet = planet.clone().with_features(features);
+fn handle_features(assets: Res<MapAssets>, mut planet: ResMut<PlanetFeatures>) {
+    if assets.is_changed() {
+        *planet = planet.clone().with_map(assets.clone());
     }
 }
 
@@ -84,8 +74,7 @@ fn handle_chunk(
         ),
         (With<HexCoord>, Without<HexTile>),
     >,
-    terrain: Res<Assets<TileAsset>>,
-    assets: Res<GameAssets>,
+    assets: Res<MapAssets>,
 ) {
     for (&chunk_entity, chunk) in q_hex
         .iter()
@@ -97,12 +86,20 @@ fn handle_chunk(
             let humidity = **humidity as f32;
             let temperature = **temperature as f32;
 
-            let kind = assets
-                .terrain_index(&terrain, height, humidity, temperature)
-                .map_or(-1, |v| v as i32);
+            let kind = assets.terrain_index(height, humidity, temperature);
 
-            commands.entity(chunk_entity).add_child(entity);
-            commands.entity(entity).insert(HexTile(kind));
+            match kind {
+                Some(kind) => {
+                    commands.entity(chunk_entity).add_child(entity);
+                    commands.entity(entity).insert(HexTile(kind));
+                }
+                None => {
+                    warn!(
+                        "No tile found for height: {}, humidity: {}, temperature: {}",
+                        height, humidity, temperature
+                    );
+                }
+            }
         }
     }
 }

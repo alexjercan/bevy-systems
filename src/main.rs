@@ -43,7 +43,7 @@ fn main() {
         .add_plugins(DebugPlugin)
         .configure_sets(
             Update,
-            AssetsPluginSet.run_if(in_state(GameStates::AssetLoading)),
+            AssetsPluginSet.run_if(in_state(GameStates::Playing)),
         )
         .configure_sets(
             Update,

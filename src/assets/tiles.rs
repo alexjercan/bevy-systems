@@ -1,10 +1,17 @@
 use bevy::{ecs::system::SystemState, platform::collections::HashMap, prelude::*};
 use bevy_asset_loader::prelude::*;
 
+pub type TileID = String;
+
 #[derive(Asset, TypePath, Debug, Clone)]
 pub struct TileAsset {
-    pub id: String,
+    pub id: TileID,
     pub name: String,
+    pub generation: TileGeneration,
+}
+
+#[derive(Debug, Clone)]
+pub struct TileGeneration {
     pub elevation: Option<Vec2>,
     pub humidity: Option<Vec2>,
     pub temperature: Option<Vec2>,
@@ -14,6 +21,11 @@ pub struct TileAsset {
 struct TileDynamicAsset {
     id: String,
     name: String,
+    generation: TileGenerationDynamic,
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+struct TileGenerationDynamic {
     elevation: Option<Vec2>,
     humidity: Option<Vec2>,
     temperature: Option<Vec2>,
@@ -38,9 +50,11 @@ impl DynamicAsset for TilesDynamicAsset {
                     let tile = TileAsset {
                         id: tile.id.clone(),
                         name: tile.name.clone(),
-                        elevation: tile.elevation,
-                        humidity: tile.humidity,
-                        temperature: tile.temperature,
+                        generation: TileGeneration {
+                            elevation: tile.generation.elevation,
+                            humidity: tile.generation.humidity,
+                            temperature: tile.generation.temperature,
+                        },
                     };
 
                     terrain.add(tile).untyped()
