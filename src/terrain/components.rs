@@ -1,6 +1,6 @@
+use crate::noise::map::NoiseInput;
 use bevy::prelude::*;
 use hexx::*;
-use crate::noise::map::NoiseInput;
 
 #[derive(Component, Clone, Debug, Deref, DerefMut)]
 pub struct HexCoord(pub Hex);

@@ -8,9 +8,9 @@ mod features;
 mod tiles;
 
 pub mod prelude {
-    pub use super::{AssetsPlugin, AssetsPluginSet, GameAssets};
-    pub use super::tiles::TileAsset;
     pub use super::features::FeatureAsset;
+    pub use super::tiles::TileAsset;
+    pub use super::{AssetsPlugin, AssetsPluginSet, GameAssets};
 }
 
 // TODO: I kind of want to not need to use handle, but it is what it is.

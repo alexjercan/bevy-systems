@@ -62,11 +62,10 @@ fn handle_features(
     mut planet: ResMut<PlanetFeatures>,
 ) {
     if feature_assets.is_changed() && assets.is_changed() {
-        let features: Vec<FeatureAsset> = assets.features
+        let features: Vec<FeatureAsset> = assets
+            .features
             .iter()
-            .filter_map(|handle| {
-                feature_assets.get(handle).cloned()
-            })
+            .filter_map(|handle| feature_assets.get(handle).cloned())
             .collect::<_>();
 
         *planet = planet.clone().with_features(features);

@@ -25,7 +25,9 @@ impl DynamicAsset for FeaturesDynamicAsset {
         self.iter()
             .flat_map(|feature| {
                 feature.model.iter().filter_map(|model| {
-                    model.as_ref().map(|m| asset_server.load_untyped(m).untyped())
+                    model
+                        .as_ref()
+                        .map(|m| asset_server.load_untyped(m).untyped())
                 })
             })
             .collect()

@@ -3,7 +3,10 @@
 // called `util::chunked_map` or something similar.
 
 use bevy::{
-    ecs::{query::{QueryData, QueryItem}, world::CommandQueue},
+    ecs::{
+        query::{QueryData, QueryItem},
+        world::CommandQueue,
+    },
     prelude::*,
     tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task},
 };
@@ -58,11 +61,7 @@ where
 
         app.add_systems(
             Update,
-            (
-                generate_noise::<T, U, F>,
-                handle_generate_noise::<U>,
-            )
-                .in_set(NoiseSet),
+            (generate_noise::<T, U, F>, handle_generate_noise::<U>).in_set(NoiseSet),
         );
     }
 }
@@ -98,7 +97,10 @@ impl<U> ComputePoint<U> {
 fn generate_noise<T, U, F>(
     mut commands: Commands,
     func: Res<F>,
-    q_point: Query<(Entity, <T as NoiseInput>::Query, &ChildOf), (Without<U>, Without<ComputePoint<U>>)>,
+    q_point: Query<
+        (Entity, <T as NoiseInput>::Query, &ChildOf),
+        (Without<U>, Without<ComputePoint<U>>),
+    >,
 ) where
     T: NoiseInput + Clone + Send + Sync + 'static,
     U: Component + Clone + Send + Sync + 'static,
@@ -114,7 +116,9 @@ fn generate_noise<T, U, F>(
             .collect_vec();
 
         for (child_entity, _) in chunk.iter() {
-            commands.entity(*child_entity).insert(ComputePoint::<U>::new());
+            commands
+                .entity(*child_entity)
+                .insert(ComputePoint::<U>::new());
         }
 
         let func = func.clone();
@@ -128,9 +132,7 @@ fn generate_noise<T, U, F>(
             }
 
             command_queue.push(move |world: &mut World| {
-                world
-                    .entity_mut(chunk_entity)
-                    .remove::<ComputeNoise<U>>();
+                world.entity_mut(chunk_entity).remove::<ComputeNoise<U>>();
             });
             command_queue
         });
@@ -141,10 +143,8 @@ fn generate_noise<T, U, F>(
     }
 }
 
-fn handle_generate_noise<U>(
-    mut commands: Commands,
-    mut tasks: Query<&mut ComputeNoise<U>>,
-) where
+fn handle_generate_noise<U>(mut commands: Commands, mut tasks: Query<&mut ComputeNoise<U>>)
+where
     U: Send + Sync + 'static,
 {
     for mut task in tasks.iter_mut() {

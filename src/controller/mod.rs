@@ -1,6 +1,6 @@
+use crate::camera::wasd_camera::prelude::*;
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
-use crate::camera::wasd_camera::prelude::*;
 
 pub mod prelude {
     pub use super::{
@@ -29,7 +29,10 @@ pub struct WASDCameraControllerBundle {
 impl Default for WASDCameraControllerBundle {
     fn default() -> Self {
         Self {
-            camera: WASDCamera { wasd_sensitivity: 2.0, ..default() },
+            camera: WASDCamera {
+                wasd_sensitivity: 2.0,
+                ..default()
+            },
             input: WASDCameraInput::default(),
             map: InputMap::default()
                 .with_dual_axis(CameraMovement::Pan, MouseMove::default())

@@ -40,10 +40,11 @@ Check examples.
     + Resources should have some settings for generation (e.g. density, size, type).
     + Keep in mind that resources are just decoration for now
     * For the future I would like a better way of loading resources, I want it to be more in the WML style
+- [x] refactor the debug module in each module: e.g overlay stuff in the renderer
 - [ ] refactor the assets:
     - I need the Asset data structures to be more reliable
     - Use a resource structure after we load the asset for the game and put the tiles and terrain generation stuff in there
-- [ ] refactor the debug module in each module: e.g overlay stuff in the renderer
+- [ ] kind of want to implement a WML style language for assets
 - [ ] add more resources to the game
 - [ ] water shader - Add a water shader to the hex map.
 - [ ] vegetation shader - Add a vegetation shader to the hex map. (grass for grassland, dust for desert, leaves for forest: cute small details)

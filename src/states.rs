@@ -6,4 +6,3 @@ pub enum GameStates {
     AssetLoading,
     Playing,
 }
-

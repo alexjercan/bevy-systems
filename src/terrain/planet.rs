@@ -413,7 +413,6 @@ impl NoiseFunction<(HexCoord, HexTile), HexFeature> for PlanetFeatures {
             .set_octaves(4)
             .get([x, y, z]);
 
-
         let index = *tile as usize;
         if abundance_val > self.features[feature_index].threshold[index] {
             return HexFeature(feature_index as i32);
