@@ -1,6 +1,5 @@
 use crate::{
-    assets::prelude::{FeatureID, TileID},
-    noise::map::NoiseInput,
+    assets::prelude::{FeatureID, TileID}, helpers::prelude::*,
 };
 use bevy::prelude::*;
 use hexx::*;
@@ -29,9 +28,12 @@ pub struct HexNoiseTemperature(pub f64);
 #[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
 pub struct HexNoiseHumidity(pub f64);
 
+#[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
+pub struct TileTopHeight(pub f32);
+
 // Maybe I can implement these in the noise::map module instead?
 
-impl NoiseInput for HexCoord {
+impl ChunkMapInput for HexCoord {
     type Query = (&'static HexCoord,);
 
     fn from_query_item(
@@ -41,7 +43,7 @@ impl NoiseInput for HexCoord {
     }
 }
 
-impl NoiseInput for (HexCoord, HexTile) {
+impl ChunkMapInput for (HexCoord, HexTile) {
     type Query = (&'static HexCoord, &'static HexTile);
 
     fn from_query_item(

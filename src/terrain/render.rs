@@ -1,5 +1,3 @@
-#[cfg(feature = "debug")]
-use bevy::render::RenderSet;
 use bevy::{
     asset::RenderAssetUsages,
     pbr::{ExtendedMaterial, MaterialExtension},
@@ -17,7 +15,7 @@ use itertools::Itertools;
 use crate::{assets::prelude::*, terrain::prelude::*};
 
 #[cfg(feature = "debug")]
-use self::debug::{DebugPlugin, DebugSet};
+use self::debug::*;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RenderPluginSet;
@@ -43,7 +41,7 @@ impl Plugin for RenderPlugin {
         #[cfg(feature = "debug")]
         app.add_plugins(DebugPlugin);
         #[cfg(feature = "debug")]
-        app.configure_sets(Update, DebugSet.in_set(RenderPluginSet));
+        app.configure_sets(Update, DebugPluginSet.in_set(RenderPluginSet));
 
         app.insert_resource(HeightMapLayout::new(
             self.layout.clone(),
@@ -98,9 +96,6 @@ impl HeightMapLayout {
     }
 }
 
-#[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
-pub struct TileTopHeight(pub f32);
-
 fn handle_render_height(
     mut commands: Commands,
     q_hex: Query<(Entity, &HexNoiseHeight), Without<TileTopHeight>>,
@@ -135,9 +130,7 @@ fn handle_feature_tile(
     debug!("Handling feature tiles for {} hexes", q_hex.iter().len());
 
     for (entity, height, tile, feature) in q_hex.iter() {
-        commands
-            .entity(entity)
-            .insert(ChunkFeatureReady);
+        commands.entity(entity).insert(ChunkFeatureReady);
 
         let Some(id) = (**feature).clone() else {
             continue;
@@ -151,15 +144,13 @@ fn handle_feature_tile(
             continue;
         };
 
-        commands
-            .entity(entity)
-            .with_children(|parent| {
-                parent.spawn((
-                    Transform::from_xyz(0.0, **height, 0.0),
-                    SceneRoot(variant.scene.clone()),
-                    Name::new("Feature Tile"),
-                ));
-            });
+        commands.entity(entity).with_children(|parent| {
+            parent.spawn((
+                Transform::from_xyz(0.0, **height, 0.0),
+                SceneRoot(variant.scene.clone()),
+                Name::new("Feature Tile"),
+            ));
+        });
     }
 }
 
@@ -267,10 +258,10 @@ mod debug {
     use hexx::*;
     use itertools::Itertools;
 
-    use crate::{render::prelude::*, terrain::prelude::*};
+    use super::*;
 
     #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-    pub(super) struct DebugSet;
+    pub(super) struct DebugPluginSet;
 
     pub(super) struct DebugPlugin;
 
@@ -287,7 +278,7 @@ mod debug {
                         input_switch_overlay,
                         handle_overlay_update,
                     )
-                        .in_set(DebugSet),
+                        .in_set(DebugPluginSet),
                 );
         }
     }

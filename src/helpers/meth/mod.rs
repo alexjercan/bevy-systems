@@ -1,4 +1,4 @@
-//! TODO: Document this module and refactor
+//! Helper module for math operations for my games.
 
 use bevy::prelude::*;
 

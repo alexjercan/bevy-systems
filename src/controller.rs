@@ -1,12 +1,6 @@
-use crate::camera::wasd_camera::prelude::*;
+use crate::helpers::prelude::*;
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
-
-pub mod prelude {
-    pub use super::{
-        WASDCameraControllerBundle, WASDCameraControllerPlugin, WASDCameraControllerPluginSet,
-    };
-}
 
 #[derive(Actionlike, Clone, Debug, Copy, PartialEq, Eq, Hash, Reflect)]
 enum CameraMovement {

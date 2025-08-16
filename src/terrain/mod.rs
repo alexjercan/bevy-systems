@@ -1,7 +1,8 @@
-pub mod components;
-pub mod plugin;
-
+mod components;
+mod generation;
 mod planet;
+mod render;
+mod plugin;
 
 pub mod prelude {
     pub use super::components::*;

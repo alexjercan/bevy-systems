@@ -2,11 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::meth::LerpSnap;
-
-pub mod prelude {
-    pub use super::{RTSCamera, RTSCameraInput, RTSCameraPlugin, RTSCameraSet};
-}
+use crate::helpers::meth::LerpSnap;
 
 /// The RTS camera component, which allows for orbiting, panning, and zooming around a focus point.
 #[derive(Component, Clone, Copy, Debug)]

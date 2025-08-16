@@ -1,20 +1,16 @@
 use crate::{
-    assets::prelude::*, controller::prelude::*, debug::prelude::*, render::prelude::*,
-    states::GameStates, terrain::prelude::*, tilemap::prelude::*, unit::prelude::*,
+    assets::prelude::*, controller::*, helpers::prelude::*, states::GameStates,
+    terrain::prelude::*, unit::prelude::*,
 };
-use bevy::{log::tracing::field::Visit, prelude::*};
+use bevy::prelude::*;
 use hexx::*;
 
+mod helpers;
+
 mod assets;
-mod camera;
 mod controller;
-mod debug;
-mod meth;
-mod noise;
-mod render;
 mod states;
 mod terrain;
-mod tilemap;
 mod unit;
 
 // This is included for const, but it is unstable...
@@ -33,13 +29,13 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .init_state::<GameStates>()
         .add_plugins(AssetsPlugin)
-        .add_plugins(PlanetPlugin::new(
+        .add_plugins(TerrainPlugin::new(
             seed,
             layout.clone(),
             CHUNK_RADIUS,
             DISCOVER_RADIUS,
+            COLUMN_HEIGHT,
         ))
-        .add_plugins(RenderPlugin::new(layout, CHUNK_RADIUS, COLUMN_HEIGHT))
         .add_plugins(UnitPlugin)
         .add_plugins(WASDCameraControllerPlugin)
         .add_plugins(DebugPlugin)
@@ -49,11 +45,7 @@ fn main() {
         )
         .configure_sets(
             Update,
-            PlanetPluginSet.run_if(in_state(GameStates::Playing)),
-        )
-        .configure_sets(
-            Update,
-            RenderPluginSet.run_if(in_state(GameStates::Playing)),
+            TerrainPluginSet.run_if(in_state(GameStates::Playing)),
         )
         .configure_sets(Update, UnitPluginSet.run_if(in_state(GameStates::Playing)))
         .configure_sets(

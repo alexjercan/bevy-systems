@@ -1,4 +1,5 @@
-use crate::{assets::prelude::*, noise::map::NoiseFunction};
+use crate::assets::prelude::*;
+use crate::helpers::prelude::*;
 use bevy::prelude::*;
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin, Worley};
 
@@ -171,7 +172,7 @@ impl PlanetHeight {
     }
 }
 
-impl NoiseFunction<HexCoord, HexNoiseHeight> for PlanetHeight {
+impl ChunkMapFunction<HexCoord, HexNoiseHeight> for PlanetHeight {
     fn get(&self, point: HexCoord) -> HexNoiseHeight {
         _ = self.mountain_lacunarity; // Silence unused warning
         _ = self.hills_lacunarity; // Silence unused warning
@@ -289,7 +290,7 @@ impl Default for PlanetTemperature {
     }
 }
 
-impl NoiseFunction<HexCoord, HexNoiseTemperature> for PlanetTemperature {
+impl ChunkMapFunction<HexCoord, HexNoiseTemperature> for PlanetTemperature {
     fn get(&self, point: HexCoord) -> HexNoiseTemperature {
         let base_temperature_fb = Fbm::<Perlin>::new(self.seed)
             .set_frequency(self.continent_frequency * 0.5)
@@ -332,7 +333,7 @@ impl Default for PlanetHumidity {
     }
 }
 
-impl NoiseFunction<HexCoord, HexNoiseHumidity> for PlanetHumidity {
+impl ChunkMapFunction<HexCoord, HexNoiseHumidity> for PlanetHumidity {
     fn get(&self, point: HexCoord) -> HexNoiseHumidity {
         let base_humidity_fb = Fbm::<Perlin>::new(self.seed)
             .set_frequency(self.continent_frequency * 0.5)
@@ -386,7 +387,7 @@ impl PlanetFeatures {
     }
 }
 
-impl NoiseFunction<(HexCoord, HexTile), HexFeature> for PlanetFeatures {
+impl ChunkMapFunction<(HexCoord, HexTile), HexFeature> for PlanetFeatures {
     fn get(&self, (point, tile): (HexCoord, HexTile)) -> HexFeature {
         let x = point.x() as f64 * self.zoom_scale;
         let y = point.y() as f64 * self.zoom_scale;

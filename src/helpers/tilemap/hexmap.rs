@@ -10,15 +10,9 @@
 //!
 //! You can use the `debug` feature to enable debug visualization of the hexagonal grid.
 
-use std::collections::BinaryHeap;
-
 use bevy::{platform::collections::HashMap, prelude::*};
 use hexx::*;
 use pathfinding::prelude::astar;
-
-pub mod prelude {
-    pub use super::{HexDiscoverEvent, HexMapPlugin, HexMapSet, HexMapStorage};
-}
 
 #[cfg(feature = "debug")]
 use self::debug::{DebugPlugin, DebugSet};

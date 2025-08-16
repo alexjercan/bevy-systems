@@ -2,10 +2,6 @@
 
 use bevy::prelude::*;
 
-pub mod prelude {
-    pub use super::{WASDCamera, WASDCameraInput, WASDCameraPlugin, WASDCameraSet};
-}
-
 /// The WASD camera component, which allows for wasd movement and mouse look.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct WASDCamera {

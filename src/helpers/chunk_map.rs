@@ -1,6 +1,8 @@
-// TODO: Documentation for this module; rethink the name, it is more of a Chunked Multithreaded Map
-// system rather than a Noise system; maybe it can go into a `util` module and then this would be
-// called `util::chunked_map` or something similar.
+//! Chunk Map Plugin for Bevy
+//!
+//! This plugin provides a system that takes as input a query of entities, applies a function on
+//! that query and inserts the result as a component on the entities. This is done using tasks
+//! to allow for non-blocking computation and parallel processing.
 
 use bevy::{
     ecs::{
@@ -13,33 +15,33 @@ use bevy::{
 use itertools::Itertools;
 
 pub mod prelude {
-    pub use super::{NoisePlugin, NoiseSet};
+    pub use super::*;
 }
 
-pub trait NoiseInput {
+pub trait ChunkMapInput {
     type Query: bevy::ecs::query::QueryData;
     fn from_query_item(item: QueryItem<<Self::Query as QueryData>::ReadOnly>) -> Self;
 }
 
-pub trait NoiseFunction<T, U> {
+pub trait ChunkMapFunction<T, U> {
     fn get(&self, point: T) -> U;
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct NoiseSet;
+pub struct ChunkMapPluginSet; // NOTE: Might want to parametrize this to match the plugin's type
 
-pub struct NoisePlugin<T, U, F>
+pub struct ChunkMapPlugin<T, U, F>
 where
-    F: NoiseFunction<T, U>,
+    F: ChunkMapFunction<T, U>,
 {
     func: F,
     _marker_t: std::marker::PhantomData<T>,
     _marker_u: std::marker::PhantomData<U>,
 }
 
-impl<T, U, F> NoisePlugin<T, U, F>
+impl<T, U, F> ChunkMapPlugin<T, U, F>
 where
-    F: NoiseFunction<T, U>,
+    F: ChunkMapFunction<T, U>,
 {
     pub fn new(func: F) -> Self {
         Self {
@@ -50,29 +52,29 @@ where
     }
 }
 
-impl<T, U, F> Plugin for NoisePlugin<T, U, F>
+impl<T, U, F> Plugin for ChunkMapPlugin<T, U, F>
 where
-    T: NoiseInput + Clone + Send + Sync + 'static,
+    T: ChunkMapInput + Clone + Send + Sync + 'static,
     U: Component + Clone + Send + Sync + 'static,
-    F: Resource + NoiseFunction<T, U> + Clone + Send + Sync + 'static,
+    F: Resource + ChunkMapFunction<T, U> + Clone + Send + Sync + 'static,
 {
     fn build(&self, app: &mut App) {
         app.insert_resource(self.func.clone());
 
         app.add_systems(
             Update,
-            (generate_noise::<T, U, F>, handle_generate_noise::<U>).in_set(NoiseSet),
+            (create_task::<T, U, F>, handle_task::<U>).in_set(ChunkMapPluginSet),
         );
     }
 }
 
 #[derive(Component)]
-struct ComputeNoise<U> {
+struct ComputeTask<U> {
     task: Task<CommandQueue>,
     _maker_u: std::marker::PhantomData<U>,
 }
 
-impl<U> ComputeNoise<U> {
+impl<U> ComputeTask<U> {
     fn new(task: Task<CommandQueue>) -> Self {
         Self {
             task,
@@ -94,17 +96,17 @@ impl<U> ComputePoint<U> {
     }
 }
 
-fn generate_noise<T, U, F>(
+fn create_task<T, U, F>(
     mut commands: Commands,
     func: Res<F>,
     q_point: Query<
-        (Entity, <T as NoiseInput>::Query, &ChildOf),
+        (Entity, <T as ChunkMapInput>::Query, &ChildOf),
         (Without<U>, Without<ComputePoint<U>>),
     >,
 ) where
-    T: NoiseInput + Clone + Send + Sync + 'static,
+    T: ChunkMapInput + Clone + Send + Sync + 'static,
     U: Component + Clone + Send + Sync + 'static,
-    F: Resource + NoiseFunction<T, U> + Clone + Send + Sync + 'static,
+    F: Resource + ChunkMapFunction<T, U> + Clone + Send + Sync + 'static,
 {
     let thread_pool = AsyncComputeTaskPool::get();
     for (&chunk_entity, chunk) in q_point.iter().chunk_by(|(_, _, ChildOf(e))| e).into_iter() {
@@ -125,25 +127,25 @@ fn generate_noise<T, U, F>(
         let task = thread_pool.spawn(async move {
             let mut command_queue = CommandQueue::default();
             for (child_entity, input) in chunk {
-                let noise = func.get(input);
+                let value = func.get(input);
                 command_queue.push(move |world: &mut World| {
-                    world.entity_mut(child_entity).insert(U::from(noise));
+                    world.entity_mut(child_entity).insert(U::from(value));
                 });
             }
 
             command_queue.push(move |world: &mut World| {
-                world.entity_mut(chunk_entity).remove::<ComputeNoise<U>>();
+                world.entity_mut(chunk_entity).remove::<ComputeTask<U>>();
             });
             command_queue
         });
 
         commands
             .entity(chunk_entity)
-            .insert(ComputeNoise::<U>::new(task));
+            .insert(ComputeTask::<U>::new(task));
     }
 }
 
-fn handle_generate_noise<U>(mut commands: Commands, mut tasks: Query<&mut ComputeNoise<U>>)
+fn handle_task<U>(mut commands: Commands, mut tasks: Query<&mut ComputeTask<U>>)
 where
     U: Send + Sync + 'static,
 {

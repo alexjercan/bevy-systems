@@ -5,7 +5,8 @@
 //! certain radius, and a system to handle the discovery of tiles and chunks.
 
 pub mod hexmap;
+// TODO: basic squares `pub mod tilemap;`
 
 pub mod prelude {
-    pub use super::hexmap::prelude::*;
+    pub use super::hexmap::*;
 }
