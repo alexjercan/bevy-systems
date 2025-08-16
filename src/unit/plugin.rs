@@ -1,3 +1,5 @@
+// TODO: Implement a tilemap-like plugin for units in the heleprs module
+
 use super::{components::*, render::*};
 use crate::{helpers::prelude::*, terrain::prelude::TileTopHeight};
 use bevy::prelude::*;
@@ -57,8 +59,6 @@ fn handle_path_follow(
     }
 }
 
-// TODO: implement a glue module for stuff to interact between unit and hexmap
-
 fn handle_unit_placement(
     mut q_unit: Query<(&mut Transform, &UnitCoord)>,
     q_hex: Query<(&GlobalTransform, &TileTopHeight), Without<UnitCoord>>,
@@ -69,8 +69,6 @@ fn handle_unit_placement(
             let Ok((hex_transform, TileTopHeight(height))) = q_hex.get(*hex_entity) else {
                 continue;
             };
-
-            println!("Placing unit at hex: {:?}", coord);
 
             transform.translation = hex_transform.translation() + Vec3::new(0.0, *height, 0.0);
         }

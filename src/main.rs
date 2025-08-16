@@ -7,6 +7,7 @@ use hexx::*;
 
 mod helpers;
 
+mod glue;
 mod assets;
 mod controller;
 mod states;
