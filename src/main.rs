@@ -1,8 +1,8 @@
 use crate::{
     assets::prelude::*, controller::prelude::*, debug::prelude::*, render::prelude::*,
-    states::GameStates, terrain::prelude::*, tilemap::prelude::*,
+    states::GameStates, terrain::prelude::*, tilemap::prelude::*, unit::prelude::*,
 };
-use bevy::prelude::*;
+use bevy::{log::tracing::field::Visit, prelude::*};
 use hexx::*;
 
 mod assets;
@@ -15,6 +15,7 @@ mod render;
 mod states;
 mod terrain;
 mod tilemap;
+mod unit;
 
 // This is included for const, but it is unstable...
 const FRAC_1_SQRT_3: f32 = 0.577350269189625764509148780501957456_f32;
@@ -39,6 +40,7 @@ fn main() {
             DISCOVER_RADIUS,
         ))
         .add_plugins(RenderPlugin::new(layout, CHUNK_RADIUS, COLUMN_HEIGHT))
+        .add_plugins(UnitPlugin)
         .add_plugins(WASDCameraControllerPlugin)
         .add_plugins(DebugPlugin)
         .configure_sets(
@@ -53,6 +55,7 @@ fn main() {
             Update,
             RenderPluginSet.run_if(in_state(GameStates::Playing)),
         )
+        .configure_sets(Update, UnitPluginSet.run_if(in_state(GameStates::Playing)))
         .configure_sets(
             Update,
             WASDCameraControllerPluginSet.run_if(in_state(GameStates::Playing)),
@@ -61,7 +64,7 @@ fn main() {
         .add_systems(OnEnter(GameStates::Playing), setup)
         .add_systems(
             Update,
-            mouse_click_discover.run_if(in_state(GameStates::Playing)),
+            (mouse_click_discover, mouse_click_target).run_if(in_state(GameStates::Playing)),
         )
         .run();
 }
@@ -78,6 +81,13 @@ fn setup(mut commands: Commands) {
         DirectionalLight::default(),
         Transform::from_xyz(60.0, 60.0, 00.0).looking_at(Vec3::ZERO, Vec3::Y),
         Name::new("Directional Light"),
+    ));
+
+    commands.spawn((
+        UnitCoord(Hex::ZERO),
+        Transform::IDENTITY,
+        Visibility::default(),
+        Name::new("Unit"),
     ));
 }
 
@@ -109,4 +119,37 @@ fn mouse_click_discover(
     let point = ray.get_point(distance);
 
     ev_discover.write(HexDiscoverEvent::new(point.xz()));
+}
+
+fn mouse_click_target(
+    mut commands: Commands,
+    windows: Query<&Window>,
+    q_camera: Single<(&Camera, &GlobalTransform)>,
+    q_unit: Query<Entity, With<UnitCoord>>,
+    buttons: Res<ButtonInput<MouseButton>>,
+    storage: ResMut<HexMapStorage>,
+) {
+    if !buttons.just_pressed(MouseButton::Right) {
+        return;
+    }
+
+    let (camera, transform) = q_camera.into_inner();
+
+    let Some(cursor_position) = windows.single().unwrap().cursor_position() else {
+        return;
+    };
+
+    let Ok(ray) = camera.viewport_to_world(transform, cursor_position) else {
+        return;
+    };
+
+    let Some(distance) = ray.intersect_plane(Vec3::ZERO, InfinitePlane3d::new(Vec3::Y)) else {
+        return;
+    };
+    let point = ray.get_point(distance);
+
+    for entity in q_unit.iter() {
+        let hex = storage.world_pos_to_hex(point.xz());
+        commands.entity(entity).insert(UnitTarget(hex));
+    }
 }

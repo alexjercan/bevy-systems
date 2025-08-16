@@ -10,11 +10,14 @@
 //!
 //! You can use the `debug` feature to enable debug visualization of the hexagonal grid.
 
+use std::collections::BinaryHeap;
+
 use bevy::{platform::collections::HashMap, prelude::*};
 use hexx::*;
+use pathfinding::prelude::astar;
 
 pub mod prelude {
-    pub use super::{HexDiscoverEvent, HexMapPlugin, HexMapSet};
+    pub use super::{HexDiscoverEvent, HexMapPlugin, HexMapSet, HexMapStorage};
 }
 
 #[cfg(feature = "debug")]
@@ -44,7 +47,7 @@ impl<C: From<Hex>> HexDiscoverEvent<C> {
 struct ChunkCoord(pub Hex);
 
 #[derive(Resource, Debug, Clone)]
-struct HexMapStorage {
+pub struct HexMapStorage {
     layout: HexLayout,
     chunk_radius: u32,
     discover_radius: u32,
@@ -89,6 +92,25 @@ impl HexMapStorage {
 
     fn insert_hex(&mut self, hex: Hex, entity: Entity) {
         self.hexes.insert(hex, entity);
+    }
+
+    pub fn get_hex(&self, hex: Hex) -> Option<&Entity> {
+        self.hexes.get(&hex)
+    }
+
+    pub fn pathfinding(&self, start: Hex, target: Hex) -> Vec<Hex> {
+        match astar(
+            &start,
+            |hex: &Hex| hex.all_neighbors().iter().map(|n| (n.clone(), 1)).collect::<Vec<_>>(),
+            |hex: &Hex| hex.distance_to(target),
+            |hex: &Hex| hex == &target,
+        ) {
+            Some((path, _)) => path,
+            None => {
+                warn!("No path found from {:?} to {:?}", start, target);
+                vec![]
+            }
+        }
     }
 }
 

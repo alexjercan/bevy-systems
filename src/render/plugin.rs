@@ -99,7 +99,7 @@ impl HeightMapLayout {
 }
 
 #[derive(Component, Debug, Clone, Copy, Deref, DerefMut)]
-struct TileTopHeight(f32);
+pub struct TileTopHeight(pub f32);
 
 fn handle_render_height(
     mut commands: Commands,

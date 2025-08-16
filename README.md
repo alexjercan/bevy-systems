@@ -47,6 +47,11 @@ Check examples.
 - [x] decide on a scale for the noise 0 to 1
 - [x] add more logging to the game
 - [x] add more resources to the game
+- [ ] refactor the hexmap module into a single module for generation and rendering
+- [ ] implement the unit module to handle units
+    - add unit ron file for assets
+- [ ] implement glue module for interaction between hexmap and unit modules
+- [ ] add better mouse clicking to check the terrain height
 - [ ] water shader - Add a water shader to the hex map.
 - [ ] vegetation shader - Add a vegetation shader to the hex map. (grass for grassland, dust for desert, leaves for forest: cute small details)
 - [ ] hexmap_2d.rs - Render a 2D preview of the hex map.
@@ -61,9 +66,9 @@ Check examples.
     - Use `UP` and `DOWN` keys to switch between different building types.
     - Add the visibility shader for building placement, valid/invalid placement.
 - [ ] hexmap_pathfinding.rs - Implement pathfinding on hex tiles.
-    - Use A* or Dijkstra's algorithm to find paths between hex tiles.
+    + Use A* or Dijkstra's algorithm to find paths between hex tiles.
     - Display the path on the hex map with a different color (e.g. green for path).
-    - Use mouse input to select start and end tiles for pathfinding.
+    + Use mouse input to select start and end tiles for pathfinding.
     - Add a simple pathfinding algorithm that checks if the tile is valid for pathfinding (e.g. not occupied, not water).
     - Add obstacles on the hex map that block pathfinding (e.g right click adds an obstacle).
 - [ ] hexmap_save_load.rs - Save and load hex map data to/from a file.
