@@ -95,7 +95,7 @@ fn handle_map_assets_update(
     feature_assets: Res<Assets<FeatureAsset>>,
 ) {
     if game_assets.is_changed() {
-        println!("Updating map assets...");
+        info!("Updating MapAssets with game assets");
 
         let mut map_assets = MapAssets::default();
         map_assets.tiles = game_assets

@@ -106,6 +106,11 @@ fn handle_render_height(
     q_hex: Query<(Entity, &HexNoiseHeight), Without<TileTopHeight>>,
     layout: Res<HeightMapLayout>,
 ) {
+    if q_hex.is_empty() {
+        return;
+    }
+    debug!("Handling tile top height for {} hexes", q_hex.iter().len());
+
     for (entity, height) in q_hex.iter() {
         let height = **height as f32;
 
@@ -124,7 +129,16 @@ fn handle_feature_tile(
     assets: Res<MapAssets>,
     q_hex: Query<(Entity, &TileTopHeight, &HexTile, &HexFeature), Without<ChunkFeatureReady>>,
 ) {
+    if q_hex.is_empty() {
+        return;
+    }
+    debug!("Handling feature tiles for {} hexes", q_hex.iter().len());
+
     for (entity, height, tile, feature) in q_hex.iter() {
+        commands
+            .entity(entity)
+            .insert(ChunkFeatureReady);
+
         let Some(id) = (**feature).clone() else {
             continue;
         };
@@ -139,7 +153,6 @@ fn handle_feature_tile(
 
         commands
             .entity(entity)
-            .insert(ChunkFeatureReady)
             .with_children(|parent| {
                 parent.spawn((
                     Transform::from_xyz(0.0, **height, 0.0),
@@ -162,6 +175,11 @@ fn handle_overlay_chunk(
     q_hex: Query<(Entity, &HexCoord, &TileTopHeight, &HexTile, &ChildOf), Without<ChunkMeshReady>>,
     assets: Res<MapAssets>,
 ) {
+    if q_hex.is_empty() {
+        return;
+    }
+    debug!("Handling chunk mesh for {} hexes", q_hex.iter().len());
+
     let size = layout.chunk_radius * 2 + 1;
     for (&chunk_entity, chunk) in q_hex
         .iter()

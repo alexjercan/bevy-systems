@@ -76,6 +76,11 @@ fn handle_chunk(
     >,
     assets: Res<MapAssets>,
 ) {
+    if q_hex.is_empty() {
+        return;
+    }
+    debug!("Handling hex tile for {} hexes", q_hex.iter().len());
+
     for (&chunk_entity, chunk) in q_hex
         .iter()
         .chunk_by(|(_, _, _, _, ChildOf(e))| e)
