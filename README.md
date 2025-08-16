@@ -45,8 +45,8 @@ Check examples.
     + I need the Asset data structures to be more reliable
     + Use a resource structure after we load the asset for the game and put the tiles and terrain generation stuff in there
 - [x] decide on a scale for the noise 0 to 1
-- [ ] add more logging to the game
-- [ ] add more resources to the game
+- [x] add more logging to the game
+- [x] add more resources to the game
 - [ ] water shader - Add a water shader to the hex map.
 - [ ] vegetation shader - Add a vegetation shader to the hex map. (grass for grassland, dust for desert, leaves for forest: cute small details)
 - [ ] hexmap_2d.rs - Render a 2D preview of the hex map.

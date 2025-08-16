@@ -30,5 +30,35 @@
                 ),
             ],
         ),
+        FeatureDynamicAsset (
+            id: "stone",
+            name: "Stone",
+            variants: [
+                FeatureVariantDynamic(
+                    id: "desert",
+                    name: "Desert Stone",
+                    threshold: 0.9,
+                    scene: "gltf/decoration/nature/rock_single_A.gltf#Scene0",
+                ),
+                FeatureVariantDynamic(
+                    id: "grassland",
+                    name: "Grassland Stone",
+                    threshold: 0.7,
+                    scene: "gltf/decoration/nature/rock_single_A.gltf#Scene0",
+                ),
+                FeatureVariantDynamic(
+                    id: "hills",
+                    name: "Hills Stone",
+                    threshold: 0.6,
+                    scene: "gltf/decoration/nature/rock_single_A.gltf#Scene0",
+                ),
+                FeatureVariantDynamic(
+                    id: "mountains",
+                    name: "Mountain Stone",
+                    threshold: 0.8,
+                    scene: "gltf/decoration/nature/rock_single_A.gltf#Scene0",
+                ),
+            ],
+        ),
     ]),
 })
