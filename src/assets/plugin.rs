@@ -4,7 +4,7 @@ use bevy_common_assets::ron::RonAssetPlugin;
 
 use super::features::{FeatureAsset, FeatureID, FeaturesDynamicAssetCollection};
 use super::tiles::{TileAsset, TileID, TilesDynamicAssetCollection};
-use crate::terrain::prelude::MapAssets;
+use crate::terrain::prelude::TerrainAssets;
 use crate::GameStates;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -20,7 +20,7 @@ impl Plugin for AssetsPlugin {
         .add_plugins(RonAssetPlugin::<FeaturesDynamicAssetCollection>::new(&[
             "feature.ron",
         ]))
-        .insert_resource(MapAssets::default())
+        .insert_resource(TerrainAssets::default())
         .init_asset::<TileAsset>()
         .init_asset::<FeatureAsset>()
         .add_loading_state(
@@ -53,7 +53,7 @@ fn handle_map_assets_update(
     if game_assets.is_changed() {
         info!("Updating MapAssets with game assets");
 
-        let mut map_assets = MapAssets::default();
+        let mut map_assets = TerrainAssets::default();
         map_assets.tiles = game_assets
             .tiles
             .iter()

@@ -51,7 +51,7 @@ impl Plugin for GenerationPlugin {
     }
 }
 
-fn handle_features(assets: Res<MapAssets>, mut planet: ResMut<PlanetFeatures>) {
+fn handle_features(assets: Res<TerrainAssets>, mut planet: ResMut<PlanetFeatures>) {
     if assets.is_changed() {
         debug!("Updating planet features with new assets");
         *planet = planet.clone().with_map(assets.clone());
@@ -70,7 +70,7 @@ fn handle_chunk(
         ),
         (With<HexCoord>, Without<HexTile>),
     >,
-    assets: Res<MapAssets>,
+    assets: Res<TerrainAssets>,
 ) {
     if q_hex.is_empty() {
         return;

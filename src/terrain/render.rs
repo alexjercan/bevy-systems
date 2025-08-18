@@ -121,7 +121,7 @@ struct ChunkFeatureReady;
 
 fn handle_feature_tile(
     mut commands: Commands,
-    assets: Res<MapAssets>,
+    assets: Res<TerrainAssets>,
     q_hex: Query<(Entity, &TileTopHeight, &HexTile, &HexFeature), Without<ChunkFeatureReady>>,
 ) {
     if q_hex.is_empty() {
@@ -164,7 +164,7 @@ fn handle_overlay_chunk(
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
     layout: Res<HeightMapLayout>,
     q_hex: Query<(Entity, &HexCoord, &TileTopHeight, &HexTile, &ChildOf), Without<ChunkMeshReady>>,
-    assets: Res<MapAssets>,
+    assets: Res<TerrainAssets>,
 ) {
     if q_hex.is_empty() {
         return;

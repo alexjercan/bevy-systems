@@ -354,7 +354,7 @@ impl ChunkMapFunction<HexCoord, HexNoiseHumidity> for PlanetHumidity {
 pub struct PlanetFeatures {
     seed: u32,
     zoom_scale: f64,
-    map: MapAssets,
+    map: TerrainAssets,
     patch_frequency: f64,
     patch_lacunarity: f64,
     abundance_frequency: f64,
@@ -366,7 +366,7 @@ impl Default for PlanetFeatures {
         PlanetFeatures {
             seed: CURRENT_SEED,
             zoom_scale: ZOOM_SCALE,
-            map: MapAssets::default(),
+            map: TerrainAssets::default(),
             patch_frequency: FEATURE_PATCH_FREQUENCY,
             patch_lacunarity: FEATURE_PATCH_LACUNARITY,
             abundance_frequency: FEATURE_ABUNDANCE_FREQUENCY,
@@ -381,7 +381,7 @@ impl PlanetFeatures {
         self
     }
 
-    pub fn with_map(mut self, map: MapAssets) -> Self {
+    pub fn with_map(mut self, map: TerrainAssets) -> Self {
         self.map = map;
         self
     }

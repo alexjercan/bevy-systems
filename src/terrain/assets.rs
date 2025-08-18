@@ -3,12 +3,12 @@ use bevy::prelude::*;
 use crate::assets::prelude::*;
 
 #[derive(Resource, Clone, Default, Debug)]
-pub struct MapAssets {
+pub struct TerrainAssets {
     pub tiles: Vec<TileAsset>,
     pub features: Vec<FeatureAsset>,
 }
 
-impl MapAssets {
+impl TerrainAssets {
     pub fn terrain_index(&self, elevation: f32, humidity: f32, temperature: f32) -> Option<TileID> {
         self.tiles
             .iter()
