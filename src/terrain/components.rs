@@ -1,7 +1,5 @@
-use crate::{
-    assets::prelude::{FeatureID, TileID},
-    helpers::prelude::*,
-};
+use super::assets::*;
+use crate::helpers::prelude::*;
 use bevy::prelude::*;
 use hexx::*;
 

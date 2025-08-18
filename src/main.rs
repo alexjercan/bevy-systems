@@ -26,8 +26,9 @@ fn main() {
     let layout = HexLayout::flat().with_hex_size(HEX_SIZE);
     let seed = 0;
 
-    App::new()
-        .add_plugins(DefaultPlugins)
+    let mut app = App::new();
+
+    app.add_plugins(DefaultPlugins)
         .init_state::<GameStates>()
         .add_plugins(AssetsPlugin)
         .add_plugins(TerrainPlugin::new(
@@ -39,7 +40,6 @@ fn main() {
         ))
         .add_plugins(UnitPlugin)
         .add_plugins(WASDCameraControllerPlugin)
-        .add_plugins(DebugPlugin)
         .configure_sets(
             Update,
             AssetsPluginSet.run_if(in_state(GameStates::Playing)),
@@ -53,13 +53,17 @@ fn main() {
             Update,
             WASDCameraControllerPluginSet.run_if(in_state(GameStates::Playing)),
         )
-        .configure_sets(Update, DebugPluginSet.run_if(in_state(GameStates::Playing)))
         .add_systems(OnEnter(GameStates::Playing), setup)
         .add_systems(
             Update,
             (mouse_click_discover, mouse_click_target).run_if(in_state(GameStates::Playing)),
-        )
-        .run();
+        );
+
+    #[cfg(feature = "debug")]
+    app.add_plugins(DebugPlugin)
+        .configure_sets(Update, DebugPluginSet.run_if(in_state(GameStates::Playing)));
+
+    app.run();
 }
 
 fn setup(mut commands: Commands) {

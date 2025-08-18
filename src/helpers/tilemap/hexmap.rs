@@ -206,6 +206,7 @@ fn generate_chunks<C: Component + From<Hex> + Send + Sync + 'static>(
     }
 }
 
+#[cfg(feature = "debug")]
 mod debug {
     use super::{ChunkCoord, HexMapStorage};
     use bevy::prelude::*;

@@ -12,7 +12,7 @@ use bevy::{
 use hexx::*;
 use itertools::Itertools;
 
-use crate::{assets::prelude::*, terrain::prelude::*};
+use crate::terrain::prelude::*;
 
 #[cfg(feature = "debug")]
 use self::debug::*;
@@ -245,6 +245,7 @@ impl MaterialExtension for ChunkMaterial {
     }
 }
 
+#[cfg(feature = "debug")]
 mod debug {
     use bevy::{
         pbr::{ExtendedMaterial, MaterialExtension},

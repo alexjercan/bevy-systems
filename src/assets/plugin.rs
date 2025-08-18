@@ -1,11 +1,9 @@
+use super::{features::*, tiles::*};
+use crate::terrain::prelude::*;
+use crate::GameStates;
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_common_assets::ron::RonAssetPlugin;
-
-use super::features::{FeatureAsset, FeatureID, FeaturesDynamicAssetCollection};
-use super::tiles::{TileAsset, TileID, TilesDynamicAssetCollection};
-use crate::terrain::prelude::TerrainAssets;
-use crate::GameStates;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AssetsPluginSet;

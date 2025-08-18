@@ -17,6 +17,7 @@ impl Plugin for RenderPlugin {
     }
 }
 
+#[cfg(feature = "debug")]
 mod debug {
     // TODO: Add a keybind to toggle the unit render system
 

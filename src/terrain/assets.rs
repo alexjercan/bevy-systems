@@ -1,7 +1,5 @@
 use bevy::prelude::*;
 
-use crate::assets::prelude::*;
-
 #[derive(Resource, Clone, Default, Debug)]
 pub struct TerrainAssets {
     pub tiles: Vec<TileAsset>,
@@ -31,10 +29,6 @@ impl TerrainAssets {
             .map(|tile| tile.id.clone())
     }
 
-    pub fn get_tile(&self, id: &TileID) -> Option<&TileAsset> {
-        self.tiles.iter().find(|tile| &tile.id == id)
-    }
-
     pub fn get_tile_index(&self, id: &TileID) -> Option<usize> {
         self.tiles.iter().position(|tile| &tile.id == id)
     }
@@ -42,4 +36,43 @@ impl TerrainAssets {
     pub fn get_feature(&self, id: &FeatureID) -> Option<&FeatureAsset> {
         self.features.iter().find(|feature| &feature.id == id)
     }
+}
+
+pub type FeatureID = String;
+
+#[derive(Asset, TypePath, Debug, Clone)]
+pub struct FeatureAsset {
+    pub id: FeatureID,
+    pub name: String,
+    pub variants: Vec<FeatureVariant>,
+}
+
+impl FeatureAsset {
+    pub fn get_variant(&self, id: &TileID) -> Option<&FeatureVariant> {
+        self.variants.iter().find(|variant| &variant.id == id)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FeatureVariant {
+    pub id: TileID,
+    pub name: String,
+    pub threshold: f64,
+    pub scene: Handle<Scene>,
+}
+
+pub type TileID = String;
+
+#[derive(Asset, TypePath, Debug, Clone)]
+pub struct TileAsset {
+    pub id: TileID,
+    pub name: String,
+    pub generation: TileGeneration,
+}
+
+#[derive(Debug, Clone)]
+pub struct TileGeneration {
+    pub elevation: Option<Vec2>,
+    pub humidity: Option<Vec2>,
+    pub temperature: Option<Vec2>,
 }

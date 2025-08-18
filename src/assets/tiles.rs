@@ -1,21 +1,6 @@
+use crate::terrain::prelude::*;
 use bevy::{ecs::system::SystemState, platform::collections::HashMap, prelude::*};
 use bevy_asset_loader::prelude::*;
-
-pub type TileID = String;
-
-#[derive(Asset, TypePath, Debug, Clone)]
-pub struct TileAsset {
-    pub id: TileID,
-    pub name: String,
-    pub generation: TileGeneration,
-}
-
-#[derive(Debug, Clone)]
-pub struct TileGeneration {
-    pub elevation: Option<Vec2>,
-    pub humidity: Option<Vec2>,
-    pub temperature: Option<Vec2>,
-}
 
 #[derive(serde::Deserialize, Debug, Clone)]
 struct TileDynamicAsset {
@@ -56,6 +41,8 @@ impl DynamicAsset for TilesDynamicAsset {
                             temperature: tile.generation.temperature,
                         },
                     };
+
+                    debug!("Registering tile {}  asset: {:?}", tile.name, tile);
 
                     terrain.add(tile).untyped()
                 })

@@ -1,30 +1,6 @@
+use crate::terrain::prelude::*;
 use bevy::{ecs::system::SystemState, platform::collections::HashMap, prelude::*};
 use bevy_asset_loader::prelude::*;
-
-use super::tiles::TileID;
-
-pub type FeatureID = String;
-
-#[derive(Asset, TypePath, Debug, Clone)]
-pub struct FeatureAsset {
-    pub id: FeatureID,
-    pub name: String,
-    variants: Vec<FeatureVariant>,
-}
-
-impl FeatureAsset {
-    pub fn get_variant(&self, id: &TileID) -> Option<&FeatureVariant> {
-        self.variants.iter().find(|variant| &variant.id == id)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct FeatureVariant {
-    pub id: TileID,
-    pub name: String,
-    pub threshold: f64,
-    pub scene: Handle<Scene>,
-}
 
 #[derive(serde::Deserialize, Debug, Clone)]
 struct FeatureDynamicAsset {
@@ -80,6 +56,11 @@ impl DynamicAsset for FeaturesDynamicAsset {
                         name: feature.name.clone(),
                         variants,
                     };
+
+                    debug!("Registering feature {} asset: {:?}", feature_asset.name, feature_asset);
+                    for feature_asset in feature_asset.variants.iter() {
+                        debug!("Registering feature variant {} with threshold {}", feature_asset.name, feature_asset.threshold);
+                    }
 
                     terrain.add(feature_asset).untyped()
                 })
