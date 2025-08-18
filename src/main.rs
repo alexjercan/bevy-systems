@@ -7,9 +7,9 @@ use hexx::*;
 
 mod helpers;
 
-mod glue;
 mod assets;
 mod controller;
+mod glue;
 mod states;
 mod terrain;
 mod unit;

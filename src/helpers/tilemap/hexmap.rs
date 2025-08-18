@@ -95,7 +95,12 @@ impl HexMapStorage {
     pub fn pathfinding(&self, start: Hex, target: Hex) -> Vec<Hex> {
         match astar(
             &start,
-            |hex: &Hex| hex.all_neighbors().iter().map(|n| (n.clone(), 1)).collect::<Vec<_>>(),
+            |hex: &Hex| {
+                hex.all_neighbors()
+                    .iter()
+                    .map(|n| (n.clone(), 1))
+                    .collect::<Vec<_>>()
+            },
             |hex: &Hex| hex.distance_to(target),
             |hex: &Hex| hex == &target,
         ) {
