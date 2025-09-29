@@ -9,6 +9,35 @@ description = "Random systems that I think are interesting."
 categories = ["games"]
 exclude = ["dist", "build", "assets", "credits"]
 
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+avian3d = "0.3.1"
+bevy = {version = "0.16.1", features = [
+  "serialize",
+  "bevy_asset",
+  "bevy_state",
+  "bevy_pbr",
+  "bevy_ui",
+  "bevy_ui_picking_backend",
+  "default_font",
+  "tonemapping_luts",
+  "animation",
+  "bevy_animation",
+  "bevy_gltf",
+  "png",
+  "bevy_window",
+  "bevy_winit",
+  "webgpu", # TODO: Disable this when not on WASM
+  "x11",
+  "bevy_gizmos",
+], default-features = false}
+bevy-inspector-egui = "0.33.1"
+bevy_asset_loader = "0.23.0"
+bevy_enhanced_input = "0.18.2"
+clap = { version = "4.5.48", features = ["derive"] }
+
 # Enable a small amount of optimization in debug mode
 [profile.dev]
 opt-level = 1
@@ -33,31 +62,19 @@ lto = true
 codegen-units = 1
 strip = true
 
+[workspace.lints.rust]
+# dead_code = "allow"
+# unused_variables = "allow"
+# unused_imports = "allow"
+
+[workspace.lints.clippy]
+type_complexity = "allow"
+
+[build-dependencies]
+embed-resource = "1"
+
 [features]
 debug = []
 dev = [
     "bevy/dynamic_linking", "debug"
 ]
-
-[dependencies]
-anyhow = "1.0.99"
-bevy = { version = "0.16" }
-bevy-inspector-egui = "0.32.0"
-bevy_asset_loader = "0.23.0"
-bevy_common_assets = { version = "0.13.0", features = ["ron"] }
-hexx = { version = "0.21.0", features = ["bevy"] }
-itertools = "0.14.0"
-iyes_perf_ui = "0.5.0"
-leafwing-input-manager = "0.17.1"
-noise = "0.9.0"
-pathfinding = "4.14.0"
-serde = { version = "1.0.219", features = ["derive"] }
-
-[workspace]
-members = [
-    # "crates/*",
-]
-resolver = "2"
-
-[build-dependencies]
-embed-resource = "1"

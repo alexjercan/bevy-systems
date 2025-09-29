@@ -47,10 +47,9 @@ Check examples.
 - [x] decide on a scale for the noise 0 to 1
 - [x] add more logging to the game
 - [x] add more resources to the game
-- [ ] refactor the hexmap module into a single module for generation and rendering
+- [x] refactor the hexmap module into a single module for generation and rendering
 - [ ] implement the unit module to handle units
     - add unit ron file for assets
-- [ ] implement glue module for interaction between hexmap and unit modules
 - [ ] add better mouse clicking to check the terrain height
 - [ ] water shader - Add a water shader to the hex map.
 - [ ] vegetation shader - Add a vegetation shader to the hex map. (grass for grassland, dust for desert, leaves for forest: cute small details)
