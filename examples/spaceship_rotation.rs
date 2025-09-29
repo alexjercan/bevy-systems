@@ -3,8 +3,10 @@
 
 use avian3d::{math::*, prelude::*};
 use bevy::prelude::*;
+use bevy_enhanced_input::prelude::*;
 use bevy_systems::prelude::*;
 use clap::Parser;
+use rand::prelude::*;
 
 #[derive(Parser)]
 #[command(name = "spaceship_rotation")]
@@ -19,9 +21,16 @@ fn main() {
 
     app.add_plugins(PhysicsPlugins::default());
     app.insert_resource(Gravity::ZERO);
-
-    app.add_plugins(StableTorquePdControllerPlugin);
     app.add_systems(Startup, setup);
+
+    app.add_plugins(EnhancedInputPlugin);
+    app.add_input_context::<CameraInputMarker>();
+    app.add_observer(update_camera_rotation_input);
+    app.add_observer(update_camera_zoom_input);
+
+    app.add_plugins(OrbitCameraPlugin);
+    app.add_plugins(SphereRandomOrbitPlugin);
+    app.add_plugins(StableTorquePdControllerPlugin);
     app.add_systems(Update, update_spaceship_target_rotation);
 
     app.run();
@@ -37,8 +46,31 @@ fn setup(
     // Spawn a 3D camera
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(0.0, 5.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(0.0, 20.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
         GlobalTransform::default(),
+        OrbitCamera::default(),
+        CameraInputMarker,
+        actions!(
+            CameraInputMarker[
+                (
+                    Action::<CameraInputRotate>::new(),
+                    Bindings::spawn((
+                        // Bevy requires single entities to be wrapped in `Spawn`.
+                        // You can attach modifiers to individual bindings as well.
+                        Spawn((Binding::mouse_motion(), Scale::splat(0.1), Negate::all())),
+                        Axial::right_stick().with((Scale::splat(2.0), Negate::x())),
+                    )),
+                ),
+                (
+                    Action::<CameraInputZoom>::new(),
+                    Scale::splat(1.0),
+                    Bindings::spawn((
+                        Spawn((Binding::mouse_wheel(), SwizzleAxis::YXZ)),
+                        Bidirectional::up_down_dpad(),
+                    ))
+                ),
+            ]
+        ),
     ));
 
     // Spawn a light
@@ -69,13 +101,13 @@ fn setup(
                 Name::new("Spaceship Renderer"),
                 Mesh3d(meshes.add(Cylinder::new(0.5, 1.0))),
                 MeshMaterial3d(materials.add(Color::srgb(0.2, 0.7, 0.9))),
-                Transform::from_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+                Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
             ),
             (
                 Name::new("Spaceship Thruster"),
                 Mesh3d(meshes.add(Cone::new(0.5, 0.5))),
                 MeshMaterial3d(materials.add(Color::srgb(0.9, 0.3, 0.2))),
-                Transform::from_xyz(0.0, 0.0, -0.5).with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+                Transform::from_xyz(0.0, 0.0, 0.5).with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
             )
         ],
     ));
@@ -84,12 +116,46 @@ fn setup(
     commands.spawn((
         Name::new("Spaceship Rotation Target"),
         SpaceshipRotationTargetMarker,
+        SphereOrbit {
+            radius: 5.0,
+            angular_speed: 5.0,
+            center: Vec3::ZERO,
+        },
         StableTorquePdControllerTarget(Quat::IDENTITY),
         Transform::from_xyz(0.0, 0.0, -5.0),
         Visibility::Visible,
         Mesh3d(meshes.add(Cuboid::new(0.2, 0.2, 0.2))),
         MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 0.2))),
     ));
+}
+
+#[derive(Component, Debug, Clone)]
+struct CameraInputMarker;
+
+#[derive(InputAction)]
+#[action_output(Vec2)]
+struct CameraInputRotate;
+
+#[derive(InputAction)]
+#[action_output(f32)]
+struct CameraInputZoom;
+
+fn update_camera_rotation_input(
+    trigger: Trigger<Fired<CameraInputRotate>>,
+    mut q_input: Query<&mut OrbitCameraInput, With<CameraInputMarker>>,
+) {
+    if let Ok(mut input) = q_input.get_mut(trigger.target()) {
+        input.orbit = trigger.value;
+    }
+}
+
+fn update_camera_zoom_input(
+    trigger: Trigger<Fired<CameraInputZoom>>,
+    mut q_input: Query<&mut OrbitCameraInput, With<CameraInputMarker>>,
+) {
+    if let Ok(mut input) = q_input.get_mut(trigger.target()) {
+        input.zoom = trigger.value;
+    }
 }
 
 #[derive(Component, Debug, Clone)]
@@ -107,7 +173,11 @@ fn update_spaceship_target_rotation(
 
     let direction =
         (target_transform.translation - controller_transform.translation).normalize_or_zero();
-    let target_rotation = Quat::from_rotation_arc(Vec3::Z, direction);
+    let forward = controller_transform.forward();
+    let angle = forward.angle_between(direction);
+    let axis = forward.cross(direction).normalize_or_zero();
+
+    let target_rotation = Quat::from_axis_angle(axis, angle) * controller_transform.rotation;
 
     **controller_target = target_rotation;
 }
@@ -300,5 +370,117 @@ mod tests {
             Quat::IDENTITY,
         );
         assert!(torque.length() > 0.0);
+    }
+}
+
+#[derive(Component, Clone, Debug, Reflect)]
+#[require(SphereOrbitState, Transform)]
+/// Component to define a spherical orbit around a center point.
+pub struct SphereOrbit {
+    /// Radius of the sphere (distance from origin or from a center)
+    pub radius: f32,
+    /// Speed (in radians per second) of movement along the sphere surface
+    pub angular_speed: f32,
+    /// (Optional) center of the sphere (in world space)
+    pub center: Vec3,
+}
+
+#[derive(Component, Clone, Debug, Default, Reflect)]
+#[require(SphereOrbitNext)]
+struct SphereOrbitState {
+    theta: f32,
+    phi: f32,
+}
+
+#[derive(Component, Clone, Debug, Default, Reflect)]
+struct SphereOrbitNext {
+    theta: f32,
+    phi: f32,
+}
+
+pub struct SphereRandomOrbitPlugin;
+
+impl Plugin for SphereRandomOrbitPlugin {
+    fn build(&self, app: &mut App) {
+        app.register_type::<SphereOrbit>()
+            .register_type::<SphereOrbitState>()
+            .register_type::<SphereOrbitNext>();
+
+        app.add_systems(
+            Update,
+            (
+                sphere_random_orbit_next_system,
+                sphere_random_orbit_follow_system,
+            ),
+        );
+    }
+}
+
+/// System: pick a new random “next” angles for orbits that have reached (or nearly reached) their current next
+fn sphere_random_orbit_next_system(mut query: Query<(&SphereOrbitState, &mut SphereOrbitNext)>) {
+    let mut rng = rand::rng();
+
+    for (state, mut next) in query.iter_mut() {
+        let dtheta = (next.theta - state.theta).abs();
+        let dphi = (next.phi - state.phi).abs();
+
+        let threshold = 0.01;
+        if dtheta < threshold && dphi < threshold {
+            let new_theta = rng.random_range(0.0..(std::f32::consts::TAU));
+
+            let new_phi =
+                rng.random_range(-std::f32::consts::FRAC_PI_2..std::f32::consts::FRAC_PI_2);
+            next.theta = new_theta;
+            next.phi = new_phi;
+        }
+    }
+}
+
+/// System: move the state toward `next` gradually, and update the Transform
+fn sphere_random_orbit_follow_system(
+    time: Res<Time>,
+    mut query: Query<(
+        &SphereOrbit,
+        &mut SphereOrbitState,
+        &SphereOrbitNext,
+        &mut Transform,
+    )>,
+) {
+    let dt = time.delta_secs();
+
+    for (orbit, mut state, next, mut tf) in query.iter_mut() {
+        // Interpolate angles toward next
+        let delta_theta = next.theta - state.theta;
+        let delta_phi = next.phi - state.phi;
+
+        // We can move with angular_speed; i.e. maximum angular change per second
+        let max_delta = orbit.angular_speed * dt;
+
+        // Move theta
+        let new_theta = if delta_theta.abs() <= max_delta {
+            next.theta
+        } else {
+            state.theta + delta_theta.signum() * max_delta
+        };
+
+        // Move phi
+        let new_phi = if delta_phi.abs() <= max_delta {
+            next.phi
+        } else {
+            state.phi + delta_phi.signum() * max_delta
+        };
+
+        state.theta = new_theta;
+        state.phi = new_phi;
+
+        // Convert spherical to Cartesian
+        // theta: azimuth around Y axis; phi: elevation from equator
+        let cos_phi = state.phi.cos();
+        let x = orbit.radius * cos_phi * state.theta.cos();
+        let y = orbit.radius * state.phi;
+        let z = orbit.radius * cos_phi * state.theta.sin();
+
+        let new_pos = orbit.center + Vec3::new(x, y, z);
+        tf.translation = new_pos;
     }
 }
