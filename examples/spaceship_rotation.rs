@@ -24,6 +24,7 @@ fn main() {
 
     app.add_plugins(EnhancedInputPlugin);
     app.add_input_context::<CameraInputMarker>();
+    app.add_observer(update_camera_rotation_input_enabled);
     app.add_observer(update_camera_rotation_input);
     app.add_observer(update_camera_zoom_input);
 
@@ -49,6 +50,9 @@ fn setup(
         GlobalTransform::default(),
         OrbitCamera::default(),
         CameraInputMarker,
+        CameraInputState {
+            rotate_enabled: false,
+        },
         actions!(
             CameraInputMarker[
                 (
@@ -67,6 +71,10 @@ fn setup(
                         Spawn((Binding::mouse_wheel(), SwizzleAxis::YXZ)),
                         Bidirectional::up_down_dpad(),
                     ))
+                ),
+                (
+                    Action::<CameraInputRotateEnable>::new(),
+                    bindings![MouseButton::Right],
                 ),
             ]
         ),
@@ -136,15 +144,39 @@ struct CameraInputMarker;
 struct CameraInputRotate;
 
 #[derive(InputAction)]
+#[action_output(bool)]
+struct CameraInputRotateEnable;
+
+#[derive(InputAction)]
 #[action_output(f32)]
 struct CameraInputZoom;
 
+#[derive(Component, Debug, Clone, Reflect)]
+struct CameraInputState {
+    rotate_enabled: bool,
+}
+
+fn update_camera_rotation_input_enabled(
+    trigger: Trigger<Fired<CameraInputRotateEnable>>,
+    mut q_state: Query<&mut CameraInputState, With<CameraInputMarker>>,
+) {
+    if let Ok(mut state) = q_state.get_mut(trigger.target()) {
+        state.rotate_enabled = trigger.value;
+    }
+}
+
 fn update_camera_rotation_input(
     trigger: Trigger<Fired<CameraInputRotate>>,
-    mut q_input: Query<&mut OrbitCameraInput, With<CameraInputMarker>>,
+    mut q_input: Query<(&mut OrbitCameraInput, &mut CameraInputState), With<CameraInputMarker>>,
 ) {
-    if let Ok(mut input) = q_input.get_mut(trigger.target()) {
+    if let Ok((mut input, mut enabled)) = q_input.get_mut(trigger.target()) {
+        if !enabled.rotate_enabled {
+            return;
+        }
+
         input.orbit = trigger.value;
+
+        enabled.rotate_enabled = false;
     }
 }
 
