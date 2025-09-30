@@ -2,13 +2,13 @@ use bevy::prelude::*;
 use rand::prelude::*;
 
 pub mod prelude {
-    pub use super::{SphereOrbit, SphereRandomOrbitPlugin};
+    pub use super::{RandomSphereOrbit, SphereRandomOrbitPlugin};
 }
 
 #[derive(Component, Clone, Debug, Reflect)]
-#[require(SphereOrbitState, Transform)]
+#[require(RandomSphereOrbitState, Transform)]
 /// Component to define a spherical orbit around a center point.
-pub struct SphereOrbit {
+pub struct RandomSphereOrbit {
     /// Radius of the sphere (distance from origin or from a center)
     pub radius: f32,
     /// Speed (in radians per second) of movement along the sphere surface
@@ -18,14 +18,14 @@ pub struct SphereOrbit {
 }
 
 #[derive(Component, Clone, Debug, Default, Reflect)]
-#[require(SphereOrbitNext)]
-struct SphereOrbitState {
+#[require(RandomSphereOrbitNext)]
+struct RandomSphereOrbitState {
     theta: f32,
     phi: f32,
 }
 
 #[derive(Component, Clone, Debug, Default, Reflect)]
-struct SphereOrbitNext {
+struct RandomSphereOrbitNext {
     theta: f32,
     phi: f32,
 }
@@ -34,9 +34,9 @@ pub struct SphereRandomOrbitPlugin;
 
 impl Plugin for SphereRandomOrbitPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<SphereOrbit>()
-            .register_type::<SphereOrbitState>()
-            .register_type::<SphereOrbitNext>();
+        app.register_type::<RandomSphereOrbit>()
+            .register_type::<RandomSphereOrbitState>()
+            .register_type::<RandomSphereOrbitNext>();
 
         app.add_systems(
             Update,
@@ -49,7 +49,7 @@ impl Plugin for SphereRandomOrbitPlugin {
 }
 
 /// System: pick a new random “next” angles for orbits that have reached (or nearly reached) their current next
-fn sphere_random_orbit_next_system(mut query: Query<(&SphereOrbitState, &mut SphereOrbitNext)>) {
+fn sphere_random_orbit_next_system(mut query: Query<(&RandomSphereOrbitState, &mut RandomSphereOrbitNext)>) {
     let mut rng = rand::rng();
 
     for (state, mut next) in query.iter_mut() {
@@ -72,9 +72,9 @@ fn sphere_random_orbit_next_system(mut query: Query<(&SphereOrbitState, &mut Sph
 fn sphere_random_orbit_follow_system(
     time: Res<Time>,
     mut query: Query<(
-        &SphereOrbit,
-        &mut SphereOrbitState,
-        &SphereOrbitNext,
+        &RandomSphereOrbit,
+        &mut RandomSphereOrbitState,
+        &RandomSphereOrbitNext,
         &mut Transform,
     )>,
 ) {

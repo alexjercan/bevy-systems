@@ -29,6 +29,7 @@ fn main() {
     app.add_observer(update_camera_zoom_input);
 
     app.add_plugins(OrbitCameraPlugin);
+    app.add_plugins(SmoothZoomOrbitPlugin);
     app.add_plugins(SphereRandomOrbitPlugin);
     app.add_plugins(StableTorquePdControllerPlugin);
     app.add_systems(Update, update_spaceship_target_rotation);
@@ -48,7 +49,8 @@ fn setup(
         Camera3d::default(),
         Transform::from_xyz(0.0, 20.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
         GlobalTransform::default(),
-        OrbitCamera::default(),
+        SmoothZoomOrbit::default(),
+        // Input Actions for controlling the camera
         CameraInputMarker,
         CameraInputState {
             rotate_enabled: false,
@@ -60,7 +62,7 @@ fn setup(
                     Bindings::spawn((
                         // Bevy requires single entities to be wrapped in `Spawn`.
                         // You can attach modifiers to individual bindings as well.
-                        Spawn((Binding::mouse_motion(), Scale::splat(0.1), Negate::all())),
+                        Spawn((Binding::mouse_motion(), Scale::splat(0.01), Negate::all())),
                         Axial::right_stick().with((Scale::splat(2.0), Negate::x())),
                     )),
                 ),
@@ -123,7 +125,7 @@ fn setup(
     commands.spawn((
         Name::new("Spaceship Rotation Target"),
         SpaceshipRotationTargetMarker,
-        SphereOrbit {
+        RandomSphereOrbit {
             radius: 5.0,
             angular_speed: 5.0,
             center: Vec3::ZERO,
