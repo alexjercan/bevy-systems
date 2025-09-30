@@ -3,9 +3,9 @@
 
 use avian3d::{math::*, prelude::*};
 use bevy::{
-    core_pipeline::{experimental::taa::TemporalAntiAliasing, Skybox},
-    pbr::ScreenSpaceAmbientOcclusion,
-    prelude::*, render::render_resource::{TextureViewDescriptor, TextureViewDimension},
+    core_pipeline::Skybox,
+    prelude::*,
+    render::render_resource::{TextureViewDescriptor, TextureViewDimension},
 };
 use bevy_asset_loader::prelude::*;
 use bevy_enhanced_input::prelude::*;
@@ -42,14 +42,20 @@ fn main() {
     app.add_systems(OnEnter(GameStates::Playing), (setup, setup_scene));
 
     app.add_plugins(EnhancedInputPlugin);
-    app.add_input_context::<CameraInputMarker>();
+    app.add_input_context::<PlayerInputMarker>();
     app.add_observer(update_camera_rotation_input);
     app.add_observer(update_thruster_input);
 
+    app.add_plugins(ChaseCameraPlugin);
     app.add_plugins(PointRotationPlugin);
     app.add_plugins(StableTorquePdControllerPlugin);
-    app.add_systems(Update, update_spaceship_target_rotation_torque);
-    app.add_systems(Update, update_camera_controller_position);
+    app.add_systems(
+        Update,
+        (
+            update_spaceship_target_rotation_torque,
+            update_chase_camera_input,
+        ),
+    );
 
     app.add_systems(Update, gizmos_draw_crosshair);
 
@@ -73,8 +79,6 @@ fn setup(
     game_assets: Res<GameAssets>,
     mut images: ResMut<Assets<Image>>,
 ) {
-    info!("Setting up the scene...");
-
     let image = images.get_mut(&game_assets.cubemap).unwrap();
     if image.texture_descriptor.array_layer_count() == 1 {
         image.reinterpret_stacked_2d_as_array(image.height() / image.width());
@@ -84,22 +88,36 @@ fn setup(
         });
     }
 
-    // Spawn a 3D camera with a controller
+    // Spawn a 3D camera with a chase camera component
     commands.spawn((
-        Name::new("Camera Controller 3rd Person"),
-        Transform::default(),
-        PointRotation::default(),
+        Name::new("Camera"),
+        Camera3d::default(),
+        Transform::from_xyz(0.0, 10.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
+        GlobalTransform::default(),
+        ChaseCamera::default(),
         Visibility::Visible,
-        // Input Actions for controlling the camera
-        CameraInputMarker,
+        Skybox {
+            image: game_assets.cubemap.clone(),
+            brightness: 1000.0,
+            ..default()
+        },
+    ));
+
+    // Spawn a player input controller entity to hold the input and target for the chase camera
+    commands.spawn((
+        Name::new("Player Input Controller"),
+        Transform::default(),
+        GlobalTransform::default(),
+        PointRotation::default(),
+        PlayerInputMarker,
         actions!(
-            CameraInputMarker[
+            PlayerInputMarker[
                 (
                     Action::<CameraInputRotate>::new(),
                     Bindings::spawn((
                         // Bevy requires single entities to be wrapped in `Spawn`.
                         // You can attach modifiers to individual bindings as well.
-                        Spawn((Binding::mouse_motion(), Scale::splat(0.001), Negate::x())),
+                        Spawn((Binding::mouse_motion(), Scale::splat(0.001), Negate::none())),
                         Axial::right_stick().with((Scale::splat(2.0), Negate::none())),
                     )),
                 ),
@@ -109,19 +127,6 @@ fn setup(
                 ),
             ]
         ),
-        children![(
-            Camera3d::default(),
-            Transform::from_xyz(0.0, 10.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
-            GlobalTransform::default(),
-            // Msaa::Off,
-            // TemporalAntiAliasing::default(),
-            // ScreenSpaceAmbientOcclusion::default(),
-            Skybox {
-                image: game_assets.cubemap.clone(),
-                brightness: 1000.0,
-                ..default()
-            }
-        )],
     ));
 
     // Spawn a light
@@ -138,6 +143,7 @@ fn setup(
     commands.spawn((
         Name::new("Spaceship"),
         SpaceshipMarker,
+        ChaseCameraTargetMarker,
         RigidBody::Dynamic,
         Collider::cylinder(0.5, 1.0),
         ColliderDensity(2.0),
@@ -147,6 +153,7 @@ fn setup(
             max_torque: MAX_TORQUE,
         },
         Transform::default(),
+        GlobalTransform::default(),
         Visibility::Visible,
         children![
             (
@@ -160,6 +167,12 @@ fn setup(
                 Mesh3d(meshes.add(Cone::new(0.5, 0.5))),
                 MeshMaterial3d(materials.add(Color::srgb(0.9, 0.3, 0.2))),
                 Transform::from_xyz(0.0, 0.0, 0.5).with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+            ),
+            (
+                Name::new("Spaceship Window"),
+                Mesh3d(meshes.add(Cylinder::new(0.2, 0.1))),
+                MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 1.0))),
+                Transform::from_xyz(0.0, 0.5, -0.1),
             )
         ],
     ));
@@ -169,7 +182,7 @@ fn setup(
 struct SpaceshipMarker;
 
 #[derive(Component, Debug, Clone)]
-struct CameraInputMarker;
+struct PlayerInputMarker;
 
 #[derive(InputAction)]
 #[action_output(Vec2)]
@@ -181,7 +194,7 @@ struct ThrusterInput;
 
 fn update_camera_rotation_input(
     trigger: Trigger<Fired<CameraInputRotate>>,
-    mut q_input: Query<&mut PointRotationInput, With<CameraInputMarker>>,
+    mut q_input: Query<&mut PointRotationInput, With<PlayerInputMarker>>,
 ) {
     if let Ok(mut input) = q_input.get_mut(trigger.target()) {
         **input = trigger.value;
@@ -201,7 +214,7 @@ fn update_thruster_input(
 }
 
 fn update_spaceship_target_rotation_torque(
-    target: Single<&Transform, With<CameraInputMarker>>,
+    target: Single<&Transform, With<PlayerInputMarker>>,
     controller: Single<&mut StableTorquePdControllerTarget, With<StableTorquePdController>>,
 ) {
     let target_transform = target.into_inner();
@@ -210,30 +223,40 @@ fn update_spaceship_target_rotation_torque(
     **controller_target = target_transform.rotation;
 }
 
-fn update_camera_controller_position(
-    controller: Single<&mut Transform, With<CameraInputMarker>>,
-    spaceship: Single<&GlobalTransform, With<SpaceshipMarker>>,
+fn update_chase_camera_input(
+    controller: Single<&GlobalTransform, With<PlayerInputMarker>>,
+    mut q_camera_input: Query<&mut ChaseCameraAnchor>,
 ) {
-    let spaceship_transform = spaceship.into_inner();
-    let mut controller_transform = controller.into_inner();
+    let transform = controller.into_inner();
+    let anchor_rot = transform.rotation();
 
-    controller_transform.translation = spaceship_transform.translation();
+    for mut input in q_camera_input.iter_mut() {
+        input.achor_rot = anchor_rot;
+    }
 }
 
 fn gizmos_draw_crosshair(
     mut gizmos: Gizmos,
-    q_spaceship: Query<&GlobalTransform, With<SpaceshipMarker>>,
+    spaceship: Single<&GlobalTransform, With<SpaceshipMarker>>,
+    controller: Single<&GlobalTransform, With<PlayerInputMarker>>,
 ) {
-    if let Some(spaceship_transform) = q_spaceship.iter().next() {
-        let spaceship_forward = spaceship_transform.forward();
+    // Draw the forward of the spaceship
+    let spaceship_transform = spaceship.into_inner();
+    let spaceship_forward = spaceship_transform.forward();
+    gizmos.line(
+        spaceship_transform.translation(),
+        spaceship_transform.translation() + spaceship_forward * 5.0,
+        Color::srgb(0.9, 0.9, 0.1),
+    );
 
-        // Draw the forward of the spaceship
-        gizmos.line(
-            spaceship_transform.translation(),
-            spaceship_transform.translation() + spaceship_forward * 5.0,
-            Color::srgb(0.9, 0.9, 0.1),
-        );
-    }
+    // Draw the forward of the controller (where the spaceship is trying to face)
+    let controller_transform = controller.into_inner();
+    let controller_forward = controller_transform.forward();
+    gizmos.line(
+        spaceship_transform.translation(),
+        spaceship_transform.translation() + controller_forward * 5.0,
+        Color::srgb(0.1, 0.9, 0.1),
+    );
 }
 
 fn setup_scene(
