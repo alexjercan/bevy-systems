@@ -1,96 +1,205 @@
+//! A bevy plugin for rotating an object around its center point based on input.
+//! The idea is that we have a point that is facing in a certain direction, that we inially set up.
+//! And then we can use theta and phi deltas to rotate the facing direction such that we get a new
+//! rotation. We want this rotation to be around the local axes.
+
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::{PointRotation, PointRotationInput, PointRotationPlugin};
+    pub use super::{PointRotation, PointRotationInput, PointRotationOutput, PointRotationPlugin};
 }
 
-#[derive(Component, Clone, Copy, Debug, Default, Reflect)]
-#[require(Transform, GlobalTransform)]
-pub struct PointRotation {}
+/// Component that marks an entity as a point that can be rotated.
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+pub struct PointRotation {
+    /// Initial rotation of the point - used to compute the initial facing direction.
+    pub initial_rotation: Quat,
+}
 
-#[derive(Component, Clone, Copy, Debug, Default, Reflect)]
-struct PointRotationState {
-    forward: Vec3,
-    right: Vec3,
+impl Default for PointRotation {
+    fn default() -> Self {
+        Self {
+            // We assume the initial rotation is identity, meaning the point is facing down the -Z
+            // axis, up is +Y, and right is +X.
+            initial_rotation: Quat::IDENTITY,
+        }
+    }
 }
 
 /// The delta by how much to rotate the point
 #[derive(Component, Default, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
 pub struct PointRotationInput(pub Vec2);
 
+/// The target rotation state of the point, which is computed from the State and the Input.
+#[derive(Component, Clone, Copy, Debug, Default, Deref, DerefMut, Reflect)]
+pub struct PointRotationOutput(pub Quat);
+
 pub struct PointRotationPlugin;
 
 impl Plugin for PointRotationPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<PointRotation>()
-            .register_type::<PointRotationInput>();
+            .register_type::<PointRotationInput>()
+            .register_type::<PointRotationOutput>();
 
         app.add_observer(initialize_point_rotation_system);
-        app.add_systems(
-            Update,
-            (point_rotation_update_system, point_rotation_sync_system),
-        );
+        app.add_systems(Update, point_rotation_update_system);
     }
 }
 
 fn initialize_point_rotation_system(
-    trigger: Trigger<OnAdd, PointRotation>,
-    q_point: Query<&GlobalTransform, With<PointRotation>>,
+    trigger: Trigger<OnInsert, PointRotation>,
     mut commands: Commands,
+    q_point: Query<&PointRotation, With<PointRotation>>,
 ) {
     let entity = trigger.target();
-    let Ok(transform) = q_point.get(entity) else {
-        warn!("PointRotation is not setup correctly");
+    let Ok(point) = q_point.get(entity) else {
+        warn!("initialize_point_rotation_system: entity does not have PointRotation component");
         return;
     };
-
-    let forward = transform.forward();
-    let forward = forward.normalize();
-
-    let right = transform.right();
-    let right = right.normalize();
 
     commands
         .entity(entity)
         .insert(PointRotationInput(Vec2::ZERO))
-        .insert(PointRotationState { forward, right });
+        .insert(PointRotationOutput(point.initial_rotation));
 }
 
 fn point_rotation_update_system(
-    mut q_point: Query<(&mut PointRotationInput, &mut PointRotationState), With<PointRotation>>,
+    mut q_point: Query<(&PointRotationInput, &mut PointRotationOutput), With<PointRotation>>,
 ) {
-    for (mut input, mut state) in &mut q_point {
-        let delta_x = input.x;
-        let delta_y = input.y;
-
-        if delta_x != 0.0 {
-            let up = state.forward.cross(state.right).normalize();
-            let yaw = Quat::from_axis_angle(up, delta_x);
-            state.forward = (yaw * state.forward).normalize();
-            state.right   = (yaw * state.right).normalize();
-        }
-
-        if delta_y != 0.0 {
-            let pitch = Quat::from_axis_angle(state.right, -delta_y);
-            state.forward = (pitch * state.forward).normalize();
-            let up = state.forward.cross(state.right).normalize();
-            state.right = up.cross(state.forward).normalize();
-        }
-
-        **input = Vec2::ZERO;
+    for (input, mut out) in &mut q_point {
+        let mut state = PointRotationState::from(**out);
+        state = compute_point_rotation(&state, &input);
+        **out = point_rotation_quat(state);
     }
 }
 
-fn point_rotation_sync_system(
-    mut q_point: Query<(&PointRotationState, &mut Transform), With<PointRotation>>,
-) {
-    for (state, mut transform) in &mut q_point {
-        let forward = state.forward.normalize();
-        let right   = state.right.normalize();
-        let up      = forward.cross(right).normalize();
+#[derive(Clone, Copy, Debug)]
+struct PointRotationState {
+    forward: Vec3,
+    right: Vec3,
+}
 
-        // Local basis: right, up, forward
-        let mat3 = Mat3::from_cols(right, -up, -forward);
-        transform.rotation = Quat::from_mat3(&mat3);
+impl From<Quat> for PointRotationState {
+    fn from(rotation: Quat) -> Self {
+        let forward = rotation * -Vec3::Z;
+        let right = rotation * Vec3::X;
+        Self { forward, right }
+    }
+}
+
+fn compute_point_rotation(
+    state: &PointRotationState,
+    input: &PointRotationInput,
+) -> PointRotationState {
+    let mut new_state = *state;
+
+    let delta_x = input.x;
+    let delta_y = input.y;
+
+    if delta_x != 0.0 {
+        let up = new_state.right.cross(new_state.forward).normalize();
+        let yaw_quat = Quat::from_axis_angle(up, delta_x);
+        new_state.forward = (yaw_quat * new_state.forward).normalize();
+        new_state.right = (yaw_quat * new_state.right).normalize();
+    }
+
+    if delta_y != 0.0 {
+        let right = new_state.right.normalize();
+        let pitch_quat = Quat::from_axis_angle(right, delta_y);
+        new_state.forward = (pitch_quat * new_state.forward).normalize();
+        new_state.right = (pitch_quat * new_state.right).normalize();
+    }
+
+    new_state
+}
+
+fn point_rotation_quat(state: PointRotationState) -> Quat {
+    let forward = state.forward.normalize();
+    let right = state.right.normalize();
+    let up = state.right.cross(state.forward).normalize();
+
+    // Local basis: right, up, forward
+    let mat3 = Mat3::from_cols(right, up, -forward);
+    Quat::from_mat3(&mat3)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_compute_point_rotation_1() {
+        let initial_state = PointRotationState {
+            forward: -Vec3::Z,
+            right: Vec3::X,
+        };
+
+        // Rotate 90 degrees to the right (yaw)
+        let input = PointRotationInput(Vec2::new(-std::f32::consts::FRAC_PI_2, 0.0));
+        let new_state = compute_point_rotation(&initial_state, &input);
+        assert!(new_state.forward.abs_diff_eq(Vec3::X, 1e-6));
+        assert!(new_state.right.abs_diff_eq(Vec3::Z, 1e-6));
+    }
+
+    #[test]
+    fn test_compute_point_rotation_2() {
+        let initial_state = PointRotationState {
+            forward: -Vec3::Z,
+            right: Vec3::X,
+        };
+
+        // Rotate 90 degrees up (pitch)
+        let input = PointRotationInput(Vec2::new(0.0, std::f32::consts::FRAC_PI_2));
+        let new_state = compute_point_rotation(&initial_state, &input);
+        assert!(new_state.forward.abs_diff_eq(Vec3::Y, 1e-6));
+        assert!(new_state.right.abs_diff_eq(Vec3::X, 1e-6));
+    }
+
+    #[test]
+    fn test_compute_point_rotation_3() {
+        let initial_state = PointRotationState {
+            forward: -Vec3::Z,
+            right: Vec3::X,
+        };
+
+        // Rotate 45 degrees right and 45 degrees up
+        let input = PointRotationInput(Vec2::new(
+            -std::f32::consts::FRAC_PI_4,
+            std::f32::consts::FRAC_PI_4,
+        ));
+        let new_state = compute_point_rotation(&initial_state, &input);
+        let expected_forward = Vec3::new(0.5, 0.70710677, -0.5).normalize();
+        let expected_right = Vec3::new(0.70710677, 0.0, 0.70710677).normalize();
+        assert!(new_state.forward.abs_diff_eq(expected_forward, 1e-6));
+        assert!(new_state.right.abs_diff_eq(expected_right, 1e-6));
+    }
+
+    #[test]
+    fn test_compute_point_rotation_4() {
+        let initial_state = PointRotationState {
+            forward: -Vec3::Z,
+            right: Vec3::X,
+        };
+
+        // Rotate 90 degrees to the left (yaw)
+        let input = PointRotationInput(Vec2::new(std::f32::consts::FRAC_PI_2, 0.0));
+        let new_state = compute_point_rotation(&initial_state, &input);
+        assert!(new_state.forward.abs_diff_eq(-Vec3::X, 1e-6));
+        assert!(new_state.right.abs_diff_eq(-Vec3::Z, 1e-6));
+    }
+
+    #[test]
+    fn test_compute_point_rotation_5() {
+        let initial_state = PointRotationState {
+            forward: -Vec3::Z,
+            right: Vec3::X,
+        };
+
+        // Rotate -90 degrees down (pitch)
+        let input = PointRotationInput(Vec2::new(0.0, -std::f32::consts::FRAC_PI_2));
+        let new_state = compute_point_rotation(&initial_state, &input);
+        assert!(new_state.forward.abs_diff_eq(-Vec3::Y, 1e-6));
+        assert!(new_state.right.abs_diff_eq(Vec3::X, 1e-6));
     }
 }

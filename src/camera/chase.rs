@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::{ChaseCamera, ChaseCameraTargetMarker, ChaseCameraAnchor, ChaseCameraPlugin};
+    pub use super::{ChaseCamera, ChaseCameraInput, ChaseCameraPlugin};
 }
 
 /// The Case Camera Component is used to add some attributes to the camera
@@ -11,34 +11,29 @@ pub mod prelude {
 /// add a focus offset point. The Chase Camera will also have a rotation orbit style to look around
 /// the focus point at the target.
 #[derive(Component, Debug, Reflect)]
-#[require(Transform, GlobalTransform)]
 pub struct ChaseCamera {
-    /// Distance behind the target
-    pub radius: f32,
-    /// Vertical offset above the target
-    pub height: f32,
+    /// Offset distance behind the target
+    pub offset: Vec3,
     /// How far ahead of the target to look
-    pub focus_distance: f32,
+    pub focus_offset: Vec3,
 }
 
 impl Default for ChaseCamera {
     fn default() -> Self {
         Self {
-            radius: 20.0,
-            height: 5.0,
-            focus_distance: 20.0,
+            offset: Vec3::new(0.0, 5.0, -20.0),
+            focus_offset: Vec3::new(0.0, 0.0, 20.0),
         }
     }
 }
 
-/// The target marker component for the chase camera to follow
-#[derive(Component, Default, Debug, Reflect)]
-pub struct ChaseCameraTargetMarker;
-
 /// The anchor point for the chase camera to use as a frame of reference
 #[derive(Component, Default, Debug, Reflect)]
-pub struct ChaseCameraAnchor {
+pub struct ChaseCameraInput {
+    /// The rotation that we want to match
     pub achor_rot: Quat,
+    /// The position that we want to match (and we will add the offset to this)
+    pub anchor_pos: Vec3,
 }
 
 pub struct ChaseCameraPlugin;
@@ -46,8 +41,7 @@ pub struct ChaseCameraPlugin;
 impl Plugin for ChaseCameraPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<ChaseCamera>()
-            .register_type::<ChaseCameraTargetMarker>()
-            .register_type::<ChaseCameraAnchor>();
+            .register_type::<ChaseCameraInput>();
 
         app.add_observer(initialize_chase_camera);
         app.add_systems(Update, chase_camera_update_system);
@@ -55,28 +49,31 @@ impl Plugin for ChaseCameraPlugin {
 }
 
 /// Initialize camera state and target from config
-fn initialize_chase_camera(trigger: Trigger<OnAdd, ChaseCamera>, mut commands: Commands) {
+fn initialize_chase_camera(trigger: Trigger<OnInsert, ChaseCamera>, mut commands: Commands) {
     let entity = trigger.target();
     commands
         .entity(entity)
-        .insert((ChaseCameraAnchor::default(),));
+        .insert((ChaseCameraInput::default(),));
 }
 
 fn chase_camera_update_system(
-    mut q_camera: Query<(&ChaseCamera, &ChaseCameraAnchor, &mut Transform), With<ChaseCamera>>,
-    target: Single<&GlobalTransform, With<ChaseCameraTargetMarker>>,
+    mut q_camera: Query<(&ChaseCamera, &ChaseCameraInput, &mut Transform), With<ChaseCamera>>,
 ) {
-    let target_transform = target.into_inner();
-    let target_pos = target_transform.translation();
 
     for (chase, input, mut transform) in q_camera.iter_mut() {
+        let target_pos = input.anchor_pos;
         let desired_pos = target_pos
-            + input.achor_rot * Vec3::Z * chase.radius
-            + input.achor_rot * Vec3::Y * chase.height;
+            + input.achor_rot * Vec3::NEG_Z * chase.offset.z
+            + input.achor_rot * Vec3::Y * chase.offset.y
+            + input.achor_rot * Vec3::X * chase.offset.x;
 
         transform.translation = desired_pos;
 
-        let focus = target_pos - input.achor_rot * Vec3::Z * chase.focus_distance;
+        let focus = target_pos
+            + input.achor_rot * Vec3::NEG_Z * chase.focus_offset.z
+            + input.achor_rot * Vec3::Y * chase.focus_offset.y
+            + input.achor_rot * Vec3::X * chase.focus_offset.x;
+
         transform.look_at(focus, input.achor_rot * Vec3::Y);
     }
 }
