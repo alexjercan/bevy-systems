@@ -4,12 +4,7 @@
 mod helpers;
 
 use avian3d::{math::*, prelude::*};
-use bevy::{
-    core_pipeline::Skybox,
-    prelude::*,
-    render::render_resource::{TextureViewDescriptor, TextureViewDimension},
-};
-use bevy_asset_loader::prelude::*;
+use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 use bevy_systems::prelude::*;
 use clap::Parser;
@@ -21,25 +16,11 @@ use helpers::prelude::*;
 #[command(about = "Example for the 3rd person camera controller", long_about = None)]
 struct Cli;
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
-enum GameStates {
-    #[default]
-    Loading,
-    Playing,
-}
-
 fn main() {
     let _ = Cli::parse();
 
     let mut app = new_gui_app();
-
-    // Setup the asset loader to load assets during the loading state.
-    app.init_state::<GameStates>();
-    app.add_loading_state(
-        LoadingState::new(GameStates::Loading)
-            .continue_to_state(GameStates::Playing)
-            .load_collection::<GameAssets>(),
-    );
+    app.add_plugins(PrettyScenePlugin);
 
     // We need to enable the physics plugins to have access to RigidBody and other components.
     // We will also disable gravity for this example, since we are in space, duh.
@@ -47,7 +28,7 @@ fn main() {
     app.insert_resource(Gravity::ZERO);
 
     // Setup the scene with some entities, to have something to look at.
-    app.add_systems(OnEnter(GameStates::Playing), (setup, setup_simple_scene));
+    app.add_systems(OnEnter(GameStates::Playing), setup);
 
     // Setup the input system to get input from the mouse and keyboard.
     app.add_plugins(EnhancedInputPlugin);
@@ -58,9 +39,6 @@ fn main() {
     app.add_observer(on_thruster_input_completed);
     app.add_observer(on_control_mode_input_started);
     app.add_observer(on_control_mode_input_completed);
-
-    // Add some util systems to handle debugging and drawing gizmos.
-    app.add_systems(Update, draw_debug_gizmos_axis);
 
     app.insert_resource(SpaceshipControlMode::default());
 
@@ -163,28 +141,11 @@ const FREQUENCY: f32 = 2.0;
 const DAMPING_RATIO: f32 = 2.0;
 const MAX_TORQUE: f32 = 1.0;
 
-#[derive(AssetCollection, Resource, Clone)]
-pub struct GameAssets {
-    #[asset(path = "textures/cubemap.png")]
-    pub cubemap: Handle<Image>,
-}
-
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    game_assets: Res<GameAssets>,
-    mut images: ResMut<Assets<Image>>,
 ) {
-    let image = images.get_mut(&game_assets.cubemap).unwrap();
-    if image.texture_descriptor.array_layer_count() == 1 {
-        image.reinterpret_stacked_2d_as_array(image.height() / image.width());
-        image.texture_view_descriptor = Some(TextureViewDescriptor {
-            dimension: Some(TextureViewDimension::Cube),
-            ..default()
-        });
-    }
-
     // Spawn a player input controller entity to hold the input from the player
     commands.spawn((
         Name::new("Player Input Controller"),
@@ -276,15 +237,14 @@ fn setup(
     commands.spawn((
         Name::new("Camera"),
         Camera3d::default(),
+        Camera {
+            order: 0,
+            ..default()
+        },
         Transform::from_xyz(0.0, 10.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
         GlobalTransform::default(),
         ChaseCamera::default(),
         Visibility::Visible,
-        Skybox {
-            image: game_assets.cubemap.clone(),
-            brightness: 1000.0,
-            ..default()
-        },
     ));
 }
 

@@ -1,8 +1,11 @@
+mod helpers;
+
 use avian3d::{math::*, prelude::*};
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 use bevy_systems::prelude::*;
 use clap::Parser;
+use helpers::prelude::*;
 
 #[derive(Parser)]
 #[command(name = "turret_rotation")]
@@ -14,19 +17,28 @@ fn main() {
     let _ = Cli::parse();
 
     let mut app = new_gui_app();
+    app.add_plugins(PrettyScenePlugin);
 
+    // We need to enable the physics plugins to have access to RigidBody and other components.
+    // We will also disable gravity for this example, since we are in space, duh.
     app.add_plugins(PhysicsPlugins::default());
     app.insert_resource(Gravity::ZERO);
-    app.add_systems(Startup, setup);
 
+    // Setup the scene with some entities, to have something to look at.
+    app.add_systems(OnEnter(GameStates::Playing), setup);
+
+    // Setup the input system to get input from the mouse and keyboard.
+    // For a WASD camera, see the `wasd_camera` plugin.
+    app.add_plugins(WASDCameraPlugin);
     app.add_plugins(EnhancedInputPlugin);
     app.add_input_context::<CameraInputMarker>();
-    app.add_observer(update_camera_rotation_input_enabled);
     app.add_observer(update_camera_rotation_input);
-    app.add_observer(update_camera_zoom_input);
+    app.add_observer(update_camera_rotation_input_completed);
+    app.add_observer(update_camera_move_input);
+    app.add_observer(update_camera_move_input_completed);
+    app.add_observer(update_camera_elevation_input);
+    app.add_observer(update_camera_elevation_input_completed);
 
-    app.add_plugins(OrbitCameraPlugin);
-    app.add_plugins(SmoothZoomOrbitPlugin);
     app.add_plugins(SphereRandomOrbitPlugin);
     app.add_plugins(SmoothLookRotationPlugin);
     app.add_plugins(PDCTurretPlugin);
@@ -52,15 +64,14 @@ fn setup(
 
     // Spawn a 3D camera
     commands.spawn((
+        Name::new("3D Camera"),
         Camera3d::default(),
         Transform::from_xyz(0.0, 20.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
         GlobalTransform::default(),
-        SmoothZoomOrbit::default(),
+        // WASD Camera Controller for moving around the scene
+        WASDCamera::default(),
         // Input Actions for controlling the camera
         CameraInputMarker,
-        CameraInputState {
-            rotate_enabled: false,
-        },
         actions!(
             CameraInputMarker[
                 (
@@ -68,34 +79,30 @@ fn setup(
                     Bindings::spawn((
                         // Bevy requires single entities to be wrapped in `Spawn`.
                         // You can attach modifiers to individual bindings as well.
-                        Spawn((Binding::mouse_motion(), Scale::splat(0.01), Negate::all())),
+                        Spawn((Binding::mouse_motion(), Scale::splat(0.01), Negate::none())),
                         Axial::right_stick().with((Scale::splat(2.0), Negate::x())),
                     )),
                 ),
                 (
-                    Action::<CameraInputZoom>::new(),
+                    Action::<CameraInputMove>::new(),
                     Scale::splat(1.0),
                     Bindings::spawn((
-                        Spawn((Binding::mouse_wheel(), SwizzleAxis::YXZ)),
-                        Bidirectional::up_down_dpad(),
+                        Cardinal::wasd_keys(),
+                        Axial::left_stick().with(Negate::y()),
                     ))
                 ),
                 (
-                    Action::<CameraInputRotateEnable>::new(),
-                    bindings![MouseButton::Right],
+                    Action::<CameraInputElevation>::new(),
+                    Scale::splat(1.0),
+                    Bindings::spawn(
+                        Bidirectional::<Binding, Binding> {
+                            positive: KeyCode::Space.into(),
+                            negative: KeyCode::ShiftLeft.into(),
+                        }
+                    ),
                 ),
             ]
         ),
-    ));
-
-    // Spawn a light
-    commands.spawn((
-        DirectionalLight {
-            illuminance: 10000.0,
-            ..default()
-        },
-        Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -FRAC_PI_2, 0.0, 0.0)),
-        GlobalTransform::default(),
     ));
 
     // Spawn a cooler turret entity
@@ -197,48 +204,64 @@ struct CameraInputMarker;
 struct CameraInputRotate;
 
 #[derive(InputAction)]
-#[action_output(bool)]
-struct CameraInputRotateEnable;
+#[action_output(Vec2)]
+struct CameraInputMove;
 
 #[derive(InputAction)]
 #[action_output(f32)]
-struct CameraInputZoom;
-
-#[derive(Component, Debug, Clone, Reflect)]
-struct CameraInputState {
-    rotate_enabled: bool,
-}
-
-fn update_camera_rotation_input_enabled(
-    trigger: Trigger<Fired<CameraInputRotateEnable>>,
-    mut q_state: Query<&mut CameraInputState, With<CameraInputMarker>>,
-) {
-    if let Ok(mut state) = q_state.get_mut(trigger.target()) {
-        state.rotate_enabled = trigger.value;
-    }
-}
+struct CameraInputElevation;
 
 fn update_camera_rotation_input(
     trigger: Trigger<Fired<CameraInputRotate>>,
-    mut q_input: Query<(&mut OrbitCameraInput, &mut CameraInputState), With<CameraInputMarker>>,
+    mut q_input: Query<&mut WASDCameraInput, With<CameraInputMarker>>,
 ) {
-    if let Ok((mut input, mut enabled)) = q_input.get_mut(trigger.target()) {
-        if !enabled.rotate_enabled {
-            return;
-        }
-
-        input.orbit = trigger.value;
-
-        enabled.rotate_enabled = false;
+    if let Ok(mut input) = q_input.get_mut(trigger.target()) {
+        input.pan = trigger.value;
     }
 }
 
-fn update_camera_zoom_input(
-    trigger: Trigger<Fired<CameraInputZoom>>,
-    mut q_input: Query<&mut OrbitCameraInput, With<CameraInputMarker>>,
+fn update_camera_rotation_input_completed(
+    trigger: Trigger<Completed<CameraInputRotate>>,
+    mut q_input: Query<&mut WASDCameraInput, With<CameraInputMarker>>,
 ) {
     if let Ok(mut input) = q_input.get_mut(trigger.target()) {
-        input.zoom = trigger.value;
+        input.pan = Vec2::ZERO;
+    }
+}
+
+fn update_camera_move_input(
+    trigger: Trigger<Fired<CameraInputMove>>,
+    mut q_input: Query<&mut WASDCameraInput, With<CameraInputMarker>>,
+) {
+    if let Ok(mut input) = q_input.get_mut(trigger.target()) {
+        input.wasd = trigger.value;
+    }
+}
+
+fn update_camera_move_input_completed(
+    trigger: Trigger<Completed<CameraInputMove>>,
+    mut q_input: Query<&mut WASDCameraInput, With<CameraInputMarker>>,
+) {
+    if let Ok(mut input) = q_input.get_mut(trigger.target()) {
+        input.wasd = Vec2::ZERO;
+    }
+}
+
+fn update_camera_elevation_input(
+    trigger: Trigger<Fired<CameraInputElevation>>,
+    mut q_input: Query<&mut WASDCameraInput, With<CameraInputMarker>>,
+) {
+    if let Ok(mut input) = q_input.get_mut(trigger.target()) {
+        input.vertical = trigger.value;
+    }
+}
+
+fn update_camera_elevation_input_completed(
+    trigger: Trigger<Completed<CameraInputElevation>>,
+    mut q_input: Query<&mut WASDCameraInput, With<CameraInputMarker>>,
+) {
+    if let Ok(mut input) = q_input.get_mut(trigger.target()) {
+        input.vertical = 0.0;
     }
 }
 
@@ -398,4 +421,3 @@ fn pdc_turret_update_target_system(
         };
     }
 }
-

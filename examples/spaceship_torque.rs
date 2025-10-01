@@ -4,12 +4,7 @@
 mod helpers;
 
 use avian3d::{math::*, prelude::*};
-use bevy::{
-    core_pipeline::Skybox,
-    prelude::*,
-    render::render_resource::{TextureViewDescriptor, TextureViewDimension},
-};
-use bevy_asset_loader::prelude::*;
+use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 use bevy_systems::prelude::*;
 use clap::Parser;
@@ -21,25 +16,11 @@ use helpers::prelude::*;
 #[command(about = "Example for the StableTorquePdController", long_about = None)]
 struct Cli;
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
-enum GameStates {
-    #[default]
-    Loading,
-    Playing,
-}
-
 fn main() {
     let _ = Cli::parse();
 
     let mut app = new_gui_app();
-
-    // Setup the asset loader to load assets during the loading state.
-    app.init_state::<GameStates>();
-    app.add_loading_state(
-        LoadingState::new(GameStates::Loading)
-            .continue_to_state(GameStates::Playing)
-            .load_collection::<GameAssets>(),
-    );
+    app.add_plugins(PrettyScenePlugin);
 
     // We need to enable the physics plugins to have access to RigidBody and other components.
     // We will also disable gravity for this example, since we are in space, duh.
@@ -47,7 +28,7 @@ fn main() {
     app.insert_resource(Gravity::ZERO);
 
     // Setup the scene with some entities, to have something to look at.
-    app.add_systems(OnEnter(GameStates::Playing), (setup, setup_simple_scene));
+    app.add_systems(OnEnter(GameStates::Playing), setup);
 
     // Setup the input system to get input from the mouse and keyboard.
     // For a WASD camera, see the `wasd_camera` plugin.
@@ -103,29 +84,12 @@ const FREQUENCY: f32 = 2.0;
 const DAMPING_RATIO: f32 = 1.0;
 const MAX_TORQUE: f32 = 1.0;
 
-#[derive(AssetCollection, Resource, Clone)]
-pub struct GameAssets {
-    #[asset(path = "textures/cubemap.png")]
-    pub cubemap: Handle<Image>,
-}
-
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    game_assets: Res<GameAssets>,
-    mut images: ResMut<Assets<Image>>,
 ) {
     info!("Setting up the scene...");
-
-    let image = images.get_mut(&game_assets.cubemap).unwrap();
-    if image.texture_descriptor.array_layer_count() == 1 {
-        image.reinterpret_stacked_2d_as_array(image.height() / image.width());
-        image.texture_view_descriptor = Some(TextureViewDescriptor {
-            dimension: Some(TextureViewDimension::Cube),
-            ..default()
-        });
-    }
 
     // Spawn a 3D camera
     commands.spawn((
@@ -133,11 +97,6 @@ fn setup(
         Camera3d::default(),
         Transform::from_xyz(0.0, 20.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
         GlobalTransform::default(),
-        Skybox {
-            image: game_assets.cubemap.clone(),
-            brightness: 1000.0,
-            ..default()
-        },
         // WASD Camera Controller for moving around the scene
         WASDCamera::default(),
         // Input Actions for controlling the camera
@@ -173,16 +132,6 @@ fn setup(
                 ),
             ]
         ),
-    ));
-
-    // Spawn a light
-    commands.spawn((
-        DirectionalLight {
-            illuminance: 10000.0,
-            ..default()
-        },
-        Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -FRAC_PI_2, 0.0, 0.0)),
-        GlobalTransform::default(),
     ));
 
     // Spawn a spaceship entity (a rectangle with some features to figure out its orientation)
@@ -222,6 +171,8 @@ fn setup(
                 Transform::from_xyz(0.0, 0.5, -0.1),
             )
         ],
+        // Debug stuff
+        DebugAxisMarker,
     ));
 
     // Spawn a target entity to visualize the target rotation
@@ -237,6 +188,7 @@ fn setup(
         Visibility::Visible,
         Mesh3d(meshes.add(Cuboid::new(0.2, 0.2, 0.2))),
         MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 0.2))),
+        DebugAxisMarker,
     ));
 }
 
@@ -311,17 +263,8 @@ fn update_camera_elevation_input_completed(
 
 fn draw_debug_gizmos(
     q_spaceship: Query<(&Transform, &StableTorquePdControllerTarget), With<SpaceshipMarker>>,
-    q_target: Query<&Transform, With<SpaceshipRotationTargetMarker>>,
     mut gizmos: Gizmos,
 ) {
-    for (transform, _) in &q_spaceship {
-        draw_axes(&mut gizmos, transform, 5.0);
-    }
-
-    for transform in &q_target {
-        draw_axes(&mut gizmos, transform, 1.0);
-    }
-
     for (transform, target) in &q_spaceship {
         let origin = transform.translation;
         let desired_forward = target.mul_vec3(-Vec3::Z).normalize_or_zero();
@@ -329,15 +272,4 @@ fn draw_debug_gizmos(
 
         gizmos.line(origin, target_point, Color::srgb(1.0, 1.0, 0.0));
     }
-}
-
-fn draw_axes(gizmos: &mut Gizmos, transform: &Transform, length: f32) {
-    let origin = transform.translation;
-    let x_axis = origin + transform.right() * length;
-    let y_axis = origin + transform.up() * length;
-    let z_axis = origin + transform.forward() * length;
-
-    gizmos.line(origin, x_axis, Color::srgb(1.0, 0.0, 0.0));
-    gizmos.line(origin, y_axis, Color::srgb(0.0, 1.0, 0.0));
-    gizmos.line(origin, z_axis, Color::srgb(0.0, 0.0, 1.0));
 }
