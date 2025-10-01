@@ -41,18 +41,42 @@ fn main() {
 
     app.add_plugins(SphereRandomOrbitPlugin);
     app.add_plugins(SmoothLookRotationPlugin);
-    app.add_plugins(PDCTurretPlugin);
     app.add_systems(
         Update,
         (
             update_pdc_turret_target_system,
             // Debugging and visualization systems
-            pdc_turret_color_range_system,
+            // pdc_turret_color_range_system,
             draw_gizmos_from_turret_forward,
         ),
     );
 
     app.run();
+}
+
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+struct PDCTurretMarker;
+
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+struct PDCTurretTargetMarker;
+
+fn update_pdc_turret_target_system(
+    target: Single<&Transform, With<PDCTurretTargetMarker>>,
+    q_turret: Single<(&Transform, &mut SmoothLookRotationTarget), With<PDCTurretMarker>>,
+) {
+    let target_transform = target.into_inner();
+    let (turret_transform, mut look_target) = q_turret.into_inner();
+
+    let direction = (target_transform.translation - turret_transform.translation).normalize_or_zero();
+    if direction.length_squared() < 1e-6 {
+        return;
+    }
+
+    let (yaw, pitch, _) = Quat::from_rotation_arc(Vec3::NEG_Z, direction).to_euler(EulerRot::YXZ);
+    *look_target = SmoothLookRotationTarget {
+        yaw,
+        pitch,
+    };
 }
 
 fn setup(
@@ -109,13 +133,12 @@ fn setup(
     commands.spawn((
         Name::new("Turret"),
         PDCTurretMarker,
-        PDCTurret {
-            yaw_speed: PI * 2.0,     // 360 deg/s
-            pitch_speed: PI * 2.0,   // 360 deg/s
-            min_pitch: -std::f32::consts::FRAC_PI_6, // -30 deg
-            max_pitch: std::f32::consts::FRAC_PI_3,  // 60 deg
+        SmoothLookRotation {
+            yaw_speed: PI * 2.0,
+            pitch_speed: PI * 2.0,
+            min_pitch: Some(-std::f32::consts::FRAC_PI_6),
+            max_pitch: Some(std::f32::consts::FRAC_PI_3),
         },
-        PDCTurretTarget(Vec3::ZERO),
         Transform::from_xyz(0.0, 0.0, 0.0),
         GlobalTransform::default(),
         Visibility::Visible,
@@ -123,7 +146,7 @@ fn setup(
             // Base
             (
                 Name::new("Turret Base"),
-                PDCTurretBaseMarker,
+                Transform::default(),
                 Mesh3d(meshes.add(Cylinder::new(0.6, 0.3))),
                 MeshMaterial3d(materials.add(Color::srgb(0.3, 0.3, 0.3))),
             ),
@@ -178,6 +201,7 @@ fn setup(
                 MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 0.2))),
             ),
         ],
+        DebugAxisMarker,
     ));
 
     // Spawn a target entity to visualize the target rotation
@@ -265,22 +289,6 @@ fn update_camera_elevation_input_completed(
     }
 }
 
-#[derive(Component, Clone, Copy, Debug, Reflect)]
-struct PDCTurretTargetMarker;
-
-fn update_pdc_turret_target_system(
-    target: Single<&Transform, With<PDCTurretTargetMarker>>,
-    mut q_turret: Query<&mut PDCTurretTarget>,
-) {
-    let target_transform = target.into_inner();
-    for mut turret_target in &mut q_turret {
-        turret_target.0 = target_transform.translation;
-    }
-}
-
-#[derive(Component, Clone, Copy, Debug, Reflect)]
-struct PDCTurretMarker;
-
 fn draw_gizmos_from_turret_forward(
     q_turret: Query<&Transform, With<PDCTurretMarker>>,
     q_target: Query<&Transform, With<PDCTurretTargetMarker>>,
@@ -307,117 +315,39 @@ fn draw_gizmos_from_turret_forward(
     }
 }
 
-#[derive(Component, Clone, Copy, Debug, Reflect)]
-struct PDCTurretBaseMarker;
-
-fn pdc_turret_color_range_system(
-    mut commands: Commands,
-    mut q_turret: Query<(&PDCTurret, &PDCTurretTarget, &Transform, &Children)>,
-    q_mesh: Query<&MeshMaterial3d<StandardMaterial>, With<PDCTurretBaseMarker>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    for (turret, target, transform, children) in &mut q_turret {
-        // direction to target
-        let dir = (**target - transform.translation).normalize_or_zero();
-        if dir.length_squared() < 1e-6 {
-            continue;
-        }
-
-        // compute yaw/pitch in world space (same as your turret system)
-        let (_, pitch, _) = Quat::from_rotation_arc(-Vec3::Z, dir).to_euler(EulerRot::YXZ);
-
-        // check if pitch is in range
-        let in_range = pitch >= turret.min_pitch && pitch <= turret.max_pitch;
-
-        // set color based on range
-        let color = if in_range {
-            Color::srgb(0.2, 0.7, 0.2) // green if in range
-        } else {
-            Color::srgb(0.7, 0.2, 0.2) // red if out of range
-        };
-
-        // apply to all child meshes of the turret
-        for child in children.iter() {
-            if let Ok(_) = q_mesh.get(child) {
-                commands
-                    .entity(child)
-                    .insert(MeshMaterial3d(materials.add(color)));
-            }
-        }
-    }
-}
-
-// TODO: This is WIP. probably we want to also add an offset for the bullet spawn point, or just
-// leave it as it is and add some particles, but yeah... like do we want balistics, or just
-// raycasts?
-
-/// Point Defense Cannon Turret - it can rotate yaw and pitch to aim at a target;
-/// but it has limited pitch values.
-#[derive(Component, Clone, Copy, Debug, Reflect)]
-#[require(Transform, GlobalTransform)]
-pub struct PDCTurret {
-    pub yaw_speed: f32,   // rad/s
-    pub pitch_speed: f32, // rad/s
-    pub min_pitch: f32,   // rad
-    pub max_pitch: f32,   // rad
-}
-
-/// The target (look at) point that the turret will rotate toward (if it can or best)
-#[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
-pub struct PDCTurretTarget(pub Vec3);
-
-pub struct PDCTurretPlugin;
-
-impl Plugin for PDCTurretPlugin {
-    fn build(&self, app: &mut App) {
-        app.register_type::<PDCTurret>()
-            .register_type::<PDCTurretTarget>();
-
-        app.add_observer(initialize_pdc_turret_system);
-        app.add_systems(Update, pdc_turret_update_target_system);
-    }
-}
-
-fn initialize_pdc_turret_system(
-    trigger: Trigger<OnAdd, PDCTurret>,
-    q_turret: Query<&PDCTurret>,
-    mut commands: Commands,
-) {
-    let entity = trigger.target();
-    let Ok(turret) = q_turret.get(entity) else {
-        warn!(
-            "initialize_pdc_turret_system: entity {:?} is not setup correctly",
-            entity
-        );
-        return;
-    };
-
-    commands.entity(entity).insert(SmoothLookRotation {
-        yaw_speed: turret.yaw_speed,
-        pitch_speed: turret.pitch_speed,
-    });
-}
-
-fn pdc_turret_update_target_system(
-    mut q_turret: Query<(
-        &PDCTurret,
-        &PDCTurretTarget,
-        &Transform,
-        &mut SmoothLookRotationTarget,
-    )>,
-) {
-    for (turret, target, transform, mut look_target) in &mut q_turret {
-        let direction = (**target - transform.translation).normalize_or_zero();
-        if direction.length_squared() < 1e-6 {
-            continue;
-        }
-
-        let (yaw, pitch, _) = Quat::from_rotation_arc(-Vec3::Z, direction).to_euler(EulerRot::YXZ);
-
-        let clamped_pitch = pitch.clamp(turret.min_pitch, turret.max_pitch);
-        *look_target = SmoothLookRotationTarget {
-            yaw,
-            pitch: clamped_pitch,
-        };
-    }
-}
+// fn pdc_turret_color_range_system(
+//     mut commands: Commands,
+//     mut q_turret: Query<(&Transform, &Children), With<PDCTurretMarker>>,
+//     q_mesh: Query<&MeshMaterial3d<StandardMaterial>, With<PDCTurretBaseMarker>>,
+//     mut materials: ResMut<Assets<StandardMaterial>>,
+// ) {
+//     for (transform, children) in &mut q_turret {
+//         // direction to target
+//         let dir = (**target - transform.translation).normalize_or_zero();
+//         if dir.length_squared() < 1e-6 {
+//             continue;
+//         }
+//
+//         // compute yaw/pitch in world space (same as your turret system)
+//         let (_, pitch, _) = Quat::from_rotation_arc(-Vec3::Z, dir).to_euler(EulerRot::YXZ);
+//
+//         // check if pitch is in range
+//         let in_range = pitch >= turret.min_pitch && pitch <= turret.max_pitch;
+//
+//         // set color based on range
+//         let color = if in_range {
+//             Color::srgb(0.2, 0.7, 0.2) // green if in range
+//         } else {
+//             Color::srgb(0.7, 0.2, 0.2) // red if out of range
+//         };
+//
+//         // apply to all child meshes of the turret
+//         for child in children.iter() {
+//             if let Ok(_) = q_mesh.get(child) {
+//                 commands
+//                     .entity(child)
+//                     .insert(MeshMaterial3d(materials.add(color)));
+//             }
+//         }
+//     }
+// }

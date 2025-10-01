@@ -176,7 +176,6 @@ fn setup(
     ));
 
     // Spawn a RotationInput to consume the mouse movement and will be used to rotate the spaceship
-    // TODO: Implement the consume only when in Normal mode
     commands.spawn((
         Name::new("Spaceship Rotation Input"),
         SpaceshipRotationInputMarker,
@@ -185,7 +184,6 @@ fn setup(
     ));
 
     // Spawn a RotationInput to consume the mouse movement and will be used to rotate the free look
-    // TODO: Implement the consume only when in FreeLook mode
     commands.spawn((
         Name::new("FreeLook Rotation Input"),
         FreeLookRotationInputMarker,
@@ -233,7 +231,6 @@ fn setup(
     ));
 
     // Spawn a 3D camera with a chase camera component
-    // TODO: Implement this thing
     commands.spawn((
         Name::new("Camera"),
         Camera3d::default(),

@@ -9,6 +9,8 @@ pub mod prelude {
 pub struct SmoothLookRotation {
     pub yaw_speed: f32,   // rad/s
     pub pitch_speed: f32, // rad/s
+    pub min_pitch: Option<f32>,   // rad
+    pub max_pitch: Option<f32>,   // rad
 }
 
 impl Default for SmoothLookRotation {
@@ -16,6 +18,8 @@ impl Default for SmoothLookRotation {
         Self {
             yaw_speed: std::f32::consts::PI,   // 180 degrees per second
             pitch_speed: std::f32::consts::PI, // 180 degrees per second
+            min_pitch: None,
+            max_pitch: None,
         }
     }
 }
@@ -97,6 +101,14 @@ fn smooth_look_rotation_update_system(
             state.pitch = target.pitch;
         } else {
             state.pitch += pitch_diff.signum() * max_pitch_change;
+        }
+
+        // Clamp pitch
+        if let Some(min_pitch) = look.min_pitch {
+            state.pitch = state.pitch.max(min_pitch);
+        }
+        if let Some(max_pitch) = look.max_pitch {
+            state.pitch = state.pitch.min(max_pitch);
         }
 
         // Apply new rotation
