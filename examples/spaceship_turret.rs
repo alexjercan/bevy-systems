@@ -39,8 +39,10 @@ fn main() {
     app.add_observer(on_rotation_input_completed);
     app.add_observer(on_thruster_input);
     app.add_observer(on_thruster_input_completed);
-    app.add_observer(on_control_mode_input_started);
-    app.add_observer(on_control_mode_input_completed);
+    app.add_observer(on_free_mode_input_started);
+    app.add_observer(on_free_mode_input_completed);
+    app.add_observer(on_combat_input_started);
+    app.add_observer(on_combat_input_completed);
 
     app.insert_resource(SpaceshipControlMode::default());
 
@@ -82,6 +84,7 @@ enum SpaceshipControlMode {
     #[default]
     Normal,
     FreeLook,
+    Combat,
 }
 
 #[derive(Component, Debug, Clone)]
@@ -95,6 +98,7 @@ fn sync_spaceship_control_mode(
         With<SpaceshipRotationInputMarker>,
     >,
     spaceship_input_free_look: Single<Entity, With<FreeLookRotationInputMarker>>,
+    spaceship_input_combat: Single<Entity, With<CombatRotationInputMarker>>,
     camera: Single<Entity, With<ChaseCamera>>,
 ) {
     if !mode.is_changed() {
@@ -103,6 +107,7 @@ fn sync_spaceship_control_mode(
 
     let (spaceship_input_rotation, point_rotation) = spaceship_input_rotation.into_inner();
     let spaceship_input_free_look = spaceship_input_free_look.into_inner();
+    let spaceship_input_combat = spaceship_input_combat.into_inner();
     let camera = camera.into_inner();
 
     match *mode {
@@ -112,6 +117,9 @@ fn sync_spaceship_control_mode(
                 .insert(SpaceshipRotationInputActiveMarker);
             commands
                 .entity(spaceship_input_free_look)
+                .remove::<SpaceshipRotationInputActiveMarker>();
+            commands
+                .entity(spaceship_input_combat)
                 .remove::<SpaceshipRotationInputActiveMarker>();
             commands.entity(camera).insert(ChaseCamera {
                 offset: Vec3::new(0.0, 5.0, -20.0),
@@ -128,8 +136,29 @@ fn sync_spaceship_control_mode(
                     initial_rotation: **point_rotation,
                 })
                 .insert(SpaceshipRotationInputActiveMarker);
+            commands
+                .entity(spaceship_input_combat)
+                .remove::<SpaceshipRotationInputActiveMarker>();
             commands.entity(camera).insert(ChaseCamera {
                 offset: Vec3::new(0.0, 10.0, -30.0),
+                focus_offset: Vec3::new(0.0, 0.0, 0.0),
+            });
+        }
+        SpaceshipControlMode::Combat => {
+            commands
+                .entity(spaceship_input_rotation)
+                .remove::<SpaceshipRotationInputActiveMarker>();
+            commands
+                .entity(spaceship_input_free_look)
+                .remove::<SpaceshipRotationInputActiveMarker>();
+            commands
+                .entity(spaceship_input_combat)
+                .insert(PointRotation {
+                    initial_rotation: **point_rotation,
+                })
+                .insert(SpaceshipRotationInputActiveMarker);
+            commands.entity(camera).insert(ChaseCamera {
+                offset: Vec3::new(0.0, 5.0, -10.0),
                 focus_offset: Vec3::new(0.0, 0.0, 0.0),
             });
         }
@@ -152,11 +181,26 @@ fn update_chase_camera_input(
 fn update_turret_target_input(
     target: Single<&GlobalTransform, With<PDCTurretTargetMarker>>,
     turret: Single<&mut TurretTargetInput, With<PDCTurretMarker>>,
+    mode: Res<SpaceshipControlMode>,
+    point_rotation: Single<&PointRotationOutput, With<CombatRotationInputMarker>>,
+    spaceship: Single<&GlobalTransform, With<SpaceshipMarker>>,
 ) {
-    let target_transform = target.into_inner();
-    let mut turret_target = turret.into_inner();
+    if matches!(*mode, SpaceshipControlMode::Combat) {
+        let rotation = point_rotation.into_inner();
+        let mut turret_target = turret.into_inner();
+        let spaceship_transform = spaceship.into_inner();
 
-    **turret_target = target_transform.translation();
+        let forward = **rotation * -Vec3::Z;
+        let position = spaceship_transform.translation();
+        let distance = 100.0;
+
+        **turret_target = position + forward * distance;
+    } else {
+        let target_transform = target.into_inner();
+        let mut turret_target = turret.into_inner();
+
+        **turret_target = target_transform.translation();
+    }
 }
 
 const FREQUENCY: f32 = 2.0;
@@ -194,6 +238,10 @@ fn setup(
                     Action::<FreeLookInput>::new(),
                     bindings![KeyCode::AltLeft, GamepadButton::LeftTrigger],
                 ),
+                (
+                    Action::<CombatInput>::new(),
+                    bindings![MouseButton::Right],
+                ),
             ]
         ),
     ));
@@ -210,6 +258,13 @@ fn setup(
     commands.spawn((
         Name::new("FreeLook Rotation Input"),
         FreeLookRotationInputMarker,
+        PointRotation::default(),
+    ));
+
+    // Spawn a RotationInput to consume the mouse movement and will be used to rotate the combat
+    commands.spawn((
+        Name::new("Combat Rotation Input"),
+        CombatRotationInputMarker,
         PointRotation::default(),
     ));
 
@@ -263,7 +318,7 @@ fn setup(
                                 yaw_speed: std::f32::consts::PI,   // 180 degrees per second
                                 pitch_speed: std::f32::consts::PI, // 180 degrees per second
                                 min_pitch: Some(-std::f32::consts::FRAC_PI_6),
-                                max_pitch: Some(std::f32::consts::FRAC_PI_3),
+                                max_pitch: None,
                             },
                             Transform::from_xyz(0.0, 0.0, 0.0),
                             GlobalTransform::default(),
@@ -337,6 +392,9 @@ struct SpaceshipRotationInputMarker;
 #[derive(Component, Debug, Clone)]
 struct FreeLookRotationInputMarker;
 
+#[derive(Component, Debug, Clone)]
+struct CombatRotationInputMarker;
+
 #[derive(InputAction)]
 #[action_output(Vec2)]
 struct CameraInputRotate;
@@ -348,6 +406,10 @@ struct ThrusterInput;
 #[derive(InputAction)]
 #[action_output(bool)]
 struct FreeLookInput;
+
+#[derive(InputAction)]
+#[action_output(bool)]
+struct CombatInput;
 
 fn on_rotation_input(
     trigger: Trigger<Fired<CameraInputRotate>>,
@@ -381,15 +443,29 @@ fn on_thruster_input(
 
 fn on_thruster_input_completed(_: Trigger<Completed<ThrusterInput>>) {}
 
-fn on_control_mode_input_started(
+fn on_free_mode_input_started(
     _: Trigger<Started<FreeLookInput>>,
     mut mode: ResMut<SpaceshipControlMode>,
 ) {
     *mode = SpaceshipControlMode::FreeLook;
 }
 
-fn on_control_mode_input_completed(
+fn on_free_mode_input_completed(
     _: Trigger<Completed<FreeLookInput>>,
+    mut mode: ResMut<SpaceshipControlMode>,
+) {
+    *mode = SpaceshipControlMode::Normal;
+}
+
+fn on_combat_input_started(
+    _: Trigger<Started<CombatInput>>,
+    mut mode: ResMut<SpaceshipControlMode>,
+) {
+    *mode = SpaceshipControlMode::Combat;
+}
+
+fn on_combat_input_completed(
+    _: Trigger<Completed<CombatInput>>,
     mut mode: ResMut<SpaceshipControlMode>,
 ) {
     *mode = SpaceshipControlMode::Normal;
