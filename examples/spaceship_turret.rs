@@ -43,14 +43,23 @@ fn main() {
 
     app.insert_resource(SpaceshipControlMode::default());
 
+    // Chase Camera Plugin to have a 3rd person camera following the spaceship
     app.add_plugins(ChaseCameraPlugin);
+    // Point Rotation Plugin to convert mouse movement to a target rotation
     app.add_plugins(PointRotationPlugin);
+    // Torque Controller Plugin to rotate the spaceship to face the target rotation
     app.add_plugins(StableTorquePdControllerPlugin);
+    // for debug to have a random orbiting object
+    app.add_plugins(SphereRandomOrbitPlugin);
+    // Rotation Plugin for the turret facing direction
+    app.add_plugins(SmoothLookRotationPlugin);
+    app.add_plugins(TurretPlugin);
     app.add_systems(
         Update,
         (
             update_spaceship_target_rotation_torque,
             update_chase_camera_input,
+            update_turret_target_input,
             sync_spaceship_control_mode,
         ),
     );
@@ -80,7 +89,10 @@ struct SpaceshipRotationInputActiveMarker;
 fn sync_spaceship_control_mode(
     mut commands: Commands,
     mode: Res<SpaceshipControlMode>,
-    spaceship_input_rotation: Single<(Entity, &PointRotationOutput), With<SpaceshipRotationInputMarker>>,
+    spaceship_input_rotation: Single<
+        (Entity, &PointRotationOutput),
+        With<SpaceshipRotationInputMarker>,
+    >,
     spaceship_input_free_look: Single<Entity, With<FreeLookRotationInputMarker>>,
     camera: Single<Entity, With<ChaseCamera>>,
 ) {
@@ -100,12 +112,10 @@ fn sync_spaceship_control_mode(
             commands
                 .entity(spaceship_input_free_look)
                 .remove::<SpaceshipRotationInputActiveMarker>();
-            commands.entity(camera).insert(
-                ChaseCamera {
-                    offset: Vec3::new(0.0, 5.0, -20.0),
-                    focus_offset: Vec3::new(0.0, 0.0, 20.0),
-                },
-            );
+            commands.entity(camera).insert(ChaseCamera {
+                offset: Vec3::new(0.0, 5.0, -20.0),
+                focus_offset: Vec3::new(0.0, 0.0, 20.0),
+            });
         }
         SpaceshipControlMode::FreeLook => {
             commands
@@ -113,14 +123,14 @@ fn sync_spaceship_control_mode(
                 .remove::<SpaceshipRotationInputActiveMarker>();
             commands
                 .entity(spaceship_input_free_look)
-                .insert(PointRotation { initial_rotation: **point_rotation })
+                .insert(PointRotation {
+                    initial_rotation: **point_rotation,
+                })
                 .insert(SpaceshipRotationInputActiveMarker);
-            commands.entity(camera).insert(
-                ChaseCamera {
-                    offset: Vec3::new(0.0, 10.0, -30.0),
-                    focus_offset: Vec3::new(0.0, 0.0, 0.0),
-                },
-            );
+            commands.entity(camera).insert(ChaseCamera {
+                offset: Vec3::new(0.0, 10.0, -30.0),
+                focus_offset: Vec3::new(0.0, 0.0, 0.0),
+            });
         }
     }
 }
@@ -128,7 +138,7 @@ fn sync_spaceship_control_mode(
 fn update_chase_camera_input(
     camera: Single<&mut ChaseCameraInput, With<ChaseCamera>>,
     spaceship: Single<&GlobalTransform, With<SpaceshipMarker>>,
-    point_rotation: Single<&PointRotationOutput, With<SpaceshipRotationInputActiveMarker>>
+    point_rotation: Single<&PointRotationOutput, With<SpaceshipRotationInputActiveMarker>>,
 ) {
     let mut camera_input = camera.into_inner();
     let spaceship_transform = spaceship.into_inner();
@@ -136,6 +146,16 @@ fn update_chase_camera_input(
 
     camera_input.anchor_pos = spaceship_transform.translation();
     camera_input.achor_rot = **rotation;
+}
+
+fn update_turret_target_input(
+    target: Single<&GlobalTransform, With<PDCTurretTargetMarker>>,
+    turret: Single<&mut TurretTargetInput, With<PDCTurretMarker>>,
+) {
+    let target_transform = target.into_inner();
+    let mut turret_target = turret.into_inner();
+
+    **turret_target = target_transform.translation();
 }
 
 const FREQUENCY: f32 = 2.0;
@@ -192,25 +212,63 @@ fn setup(
     ));
 
     // Spawn a spaceship entity (a rectangle with some features to figure out its orientation)
-    commands.spawn((
-        Name::new("Spaceship"),
-        SpaceshipMarker,
-        RigidBody::Dynamic,
-        Collider::cylinder(0.5, 1.0),
-        ColliderDensity(2.0),
-        // PD Controller to rotate the spaceship to face the target rotation
-        StableTorquePdController {
-            frequency: FREQUENCY,
-            damping_ratio: DAMPING_RATIO,
-            max_torque: MAX_TORQUE,
-        },
-        Transform::default(),
-        GlobalTransform::default(),
-        Visibility::Visible,
-        spaceship_render(&mut meshes, &mut materials),
-        // Debug stuff
-        DebugAxisMarker,
-    ));
+    commands
+        .spawn((
+            Name::new("Spaceship"),
+            SpaceshipMarker,
+            RigidBody::Dynamic,
+            Collider::cylinder(0.5, 1.0),
+            ColliderDensity(2.0),
+            // PD Controller to rotate the spaceship to face the target rotation
+            StableTorquePdController {
+                frequency: FREQUENCY,
+                damping_ratio: DAMPING_RATIO,
+                max_torque: MAX_TORQUE,
+            },
+            Transform::default(),
+            GlobalTransform::default(),
+            Visibility::Visible,
+            spaceship_render(&mut meshes, &mut materials),
+            // Debug stuff
+            DebugAxisMarker,
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn((
+                    Name::new("Turret Anchor"),
+                    Transform::from_xyz(0.8, 0.0, 0.0)
+                        .with_rotation(Quat::from_rotation_z(-std::f32::consts::FRAC_PI_2))
+                        .with_scale(Vec3::splat(0.5)),
+                ))
+                .with_children(|parent| {
+                    parent
+                        .spawn((
+                            Name::new("Turret"),
+                            PDCTurretMarker,
+                            TurretBaseMarker,
+                            TurretTargetInput(Vec3::ZERO),
+                            Transform::default(),
+                            GlobalTransform::default(),
+                            Visibility::Visible,
+                            DebugAxisMarker,
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn((
+                                Name::new("Turret Rotator"),
+                                TurretRotatorMarker,
+                                SmoothLookRotation {
+                                    yaw_speed: std::f32::consts::PI,   // 180 degrees per second
+                                    pitch_speed: std::f32::consts::PI, // 180 degrees per second
+                                    ..default()
+                                },
+                                Transform::from_xyz(0.0, 0.0, 0.0),
+                                GlobalTransform::default(),
+                                turret_render(&mut meshes, &mut materials),
+                                DebugAxisMarker,
+                            ));
+                        });
+                });
+        });
 
     // Spawn a 3D camera with a chase camera component
     commands.spawn((
@@ -225,10 +283,31 @@ fn setup(
         ChaseCamera::default(),
         Visibility::Visible,
     ));
+
+    // Spawn a target entity to visualize the target rotation
+    commands.spawn((
+        Name::new("Turret Target"),
+        PDCTurretTargetMarker,
+        // RandomSphereOrbit {
+        //     radius: 5.0,
+        //     angular_speed: 5.0,
+        //     center: Vec3::ZERO,
+        // },
+        Transform::from_xyz(0.0, 0.0, -5.0),
+        Visibility::Visible,
+        Mesh3d(meshes.add(Cuboid::new(0.2, 0.2, 0.2))),
+        MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 0.2))),
+    ));
 }
 
 #[derive(Component, Debug, Clone)]
 struct SpaceshipMarker;
+
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+struct PDCTurretMarker;
+
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+struct PDCTurretTargetMarker;
 
 #[derive(Component, Debug, Clone)]
 struct PlayerInputMarker;
@@ -269,7 +348,10 @@ fn on_rotation_input_completed(
     }
 }
 
-fn on_thruster_input(_: Trigger<Fired<ThrusterInput>>, spaceship: Single<(&mut ExternalImpulse, &GlobalTransform), With<SpaceshipMarker>>) {
+fn on_thruster_input(
+    _: Trigger<Fired<ThrusterInput>>,
+    spaceship: Single<(&mut ExternalImpulse, &GlobalTransform), With<SpaceshipMarker>>,
+) {
     let (mut force, spaceship_transform) = spaceship.into_inner();
 
     let thrust_direction = spaceship_transform.forward();
@@ -278,10 +360,12 @@ fn on_thruster_input(_: Trigger<Fired<ThrusterInput>>, spaceship: Single<(&mut E
     force.apply_impulse(thrust_direction * thrust_magnitude);
 }
 
-fn on_thruster_input_completed(_: Trigger<Completed<ThrusterInput>>) {
-}
+fn on_thruster_input_completed(_: Trigger<Completed<ThrusterInput>>) {}
 
-fn on_control_mode_input_started(_: Trigger<Started<FreeLookInput>>, mut mode: ResMut<SpaceshipControlMode>) {
+fn on_control_mode_input_started(
+    _: Trigger<Started<FreeLookInput>>,
+    mut mode: ResMut<SpaceshipControlMode>,
+) {
     *mode = SpaceshipControlMode::FreeLook;
 }
 
@@ -290,4 +374,59 @@ fn on_control_mode_input_completed(
     mut mode: ResMut<SpaceshipControlMode>,
 ) {
     *mode = SpaceshipControlMode::Normal;
+}
+
+/// This will be root component for the turret entity. It will hold as a child the rotation part
+/// and it will provide a reference frame for the rotation.
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+pub struct TurretBaseMarker;
+
+/// This will be the component for the rotating part of the turret. It will be a child of the base.
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+pub struct TurretRotatorMarker;
+
+/// This will be the turret's target component input. It will be a Vec3 target position that we
+/// want to aim at in world space.
+#[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
+pub struct TurretTargetInput(pub Vec3);
+
+pub struct TurretPlugin;
+
+impl Plugin for TurretPlugin {
+    fn build(&self, app: &mut App) {
+        app.register_type::<TurretBaseMarker>()
+            .register_type::<TurretRotatorMarker>()
+            .register_type::<TurretTargetInput>();
+
+        app.add_systems(Update, (update_turret_target_system,));
+    }
+}
+
+fn update_turret_target_system(
+    q_turret: Query<(&GlobalTransform, Option<&TurretTargetInput>), With<TurretBaseMarker>>,
+    mut q_rotator: Query<(&mut SmoothLookRotationTarget, &ChildOf), With<TurretRotatorMarker>>,
+) {
+    for (mut rotator_target, &ChildOf(parent)) in &mut q_rotator {
+        let Ok((turret_transform, target_input)) = q_turret.get(parent) else {
+            warn!("TurretRotatorMarker's parent is not a TurretBaseMarker");
+            continue;
+        };
+
+        let Some(target_input) = target_input else {
+            println!("No target input for turret");
+            continue;
+        };
+
+        let world_to_turret = turret_transform.compute_matrix().inverse();
+        let world_pos = **target_input;
+        let local_pos = world_to_turret.transform_point3(world_pos);
+
+        let dir_local = local_pos.normalize_or_zero();
+
+        let (yaw, pitch, _) =
+            Quat::from_rotation_arc(Vec3::NEG_Z, dir_local).to_euler(EulerRot::YXZ);
+
+        rotator_target.yaw = yaw;
+        rotator_target.pitch = pitch;
+    }
 }

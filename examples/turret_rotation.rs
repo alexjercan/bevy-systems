@@ -1,6 +1,6 @@
 mod helpers;
 
-use avian3d::{math::*, prelude::*};
+use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 use bevy_systems::prelude::*;
@@ -22,6 +22,7 @@ fn main() {
     // We need to enable the physics plugins to have access to RigidBody and other components.
     // We will also disable gravity for this example, since we are in space, duh.
     app.add_plugins(PhysicsPlugins::default());
+    app.add_plugins(PhysicsDebugPlugin::default());
     app.insert_resource(Gravity::ZERO);
 
     // Setup the scene with some entities, to have something to look at.
@@ -41,10 +42,11 @@ fn main() {
 
     app.add_plugins(SphereRandomOrbitPlugin);
     app.add_plugins(SmoothLookRotationPlugin);
+    app.add_plugins(TurretPlugin);
     app.add_systems(
         Update,
         (
-            update_pdc_turret_target_system,
+            update_turret_target_input,
             // Debugging and visualization systems
             // pdc_turret_color_range_system,
             draw_gizmos_from_turret_forward,
@@ -54,30 +56,21 @@ fn main() {
     app.run();
 }
 
+fn update_turret_target_input(
+    target: Single<&GlobalTransform, With<PDCTurretTargetMarker>>,
+    turret: Single<&mut TurretTargetInput, With<PDCTurretMarker>>,
+) {
+    let target_transform = target.into_inner();
+    let mut turret_target = turret.into_inner();
+
+    **turret_target = target_transform.translation();
+}
+
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 struct PDCTurretMarker;
 
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 struct PDCTurretTargetMarker;
-
-fn update_pdc_turret_target_system(
-    target: Single<&Transform, With<PDCTurretTargetMarker>>,
-    q_turret: Single<(&Transform, &mut SmoothLookRotationTarget), With<PDCTurretMarker>>,
-) {
-    let target_transform = target.into_inner();
-    let (turret_transform, mut look_target) = q_turret.into_inner();
-
-    let direction = (target_transform.translation - turret_transform.translation).normalize_or_zero();
-    if direction.length_squared() < 1e-6 {
-        return;
-    }
-
-    let (yaw, pitch, _) = Quat::from_rotation_arc(Vec3::NEG_Z, direction).to_euler(EulerRot::YXZ);
-    *look_target = SmoothLookRotationTarget {
-        yaw,
-        pitch,
-    };
-}
 
 fn setup(
     mut commands: Commands,
@@ -133,76 +126,27 @@ fn setup(
     commands.spawn((
         Name::new("Turret"),
         PDCTurretMarker,
-        SmoothLookRotation {
-            yaw_speed: PI * 2.0,
-            pitch_speed: PI * 2.0,
-            min_pitch: Some(-std::f32::consts::FRAC_PI_6),
-            max_pitch: Some(std::f32::consts::FRAC_PI_3),
-        },
+        TurretBaseMarker,
+        TurretTargetInput(Vec3::ONE),
         Transform::from_xyz(0.0, 0.0, 0.0),
         GlobalTransform::default(),
         Visibility::Visible,
-        children![
-            // Base
-            (
-                Name::new("Turret Base"),
-                Transform::default(),
-                Mesh3d(meshes.add(Cylinder::new(0.6, 0.3))),
-                MeshMaterial3d(materials.add(Color::srgb(0.3, 0.3, 0.3))),
-            ),
-            // Yaw rotor / mount
-            (
-                Name::new("Turret Rotor"),
-                Transform::from_xyz(0.0, 0.15, 0.0),
-                Mesh3d(meshes.add(Cylinder::new(0.4, 0.1))),
-                MeshMaterial3d(materials.add(Color::srgb(0.5, 0.5, 0.5))),
-            ),
-            // Sphere for pivot point
-            (
-                Name::new("Turret Pivot"),
-                Transform::from_xyz(0.0, -0.2, 0.0),
-                Mesh3d(meshes.add(Sphere::new(0.5))),
-                MeshMaterial3d(materials.add(Color::srgb(0.7, 0.7, 0.7))),
-            ),
-            // Main Barrel
-            (
-                Name::new("Turret Barrel"),
-                Transform::from_xyz(0.0, 0.0, -0.8),
-                Mesh3d(meshes.add(Cuboid::new(0.15, 0.15, 1.2))),
-                MeshMaterial3d(materials.add(Color::srgb(0.2, 0.2, 0.7))),
-                children![
-                    // Barrel tip
-                    (
-                        Name::new("Barrel Tip"),
-                        Transform::from_xyz(0.0, 0.0, -0.6),
-                        Mesh3d(meshes.add(Cone::new(0.1, 0.2))),
-                        MeshMaterial3d(materials.add(Color::srgb(0.9, 0.2, 0.2))),
-                    ),
-                    // Optional second barrel (for twin cannons)
-                    (
-                        Name::new("Second Barrel"),
-                        Transform::from_xyz(0.2, 0.0, -0.4),
-                        Mesh3d(meshes.add(Cuboid::new(0.1, 0.1, 0.8))),
-                        MeshMaterial3d(materials.add(Color::srgb(0.2, 0.2, 0.7))),
-                    ),
-                ],
-            ),
-            // Small detail lights on the base
-            (
-                Name::new("Base Lights"),
-                Transform::from_xyz(0.35, 0.0, 0.0),
-                Mesh3d(meshes.add(Sphere::new(0.05))),
-                MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 0.2))),
-            ),
-            (
-                Name::new("Base Lights 2"),
-                Transform::from_xyz(-0.35, 0.0, 0.0),
-                Mesh3d(meshes.add(Sphere::new(0.05))),
-                MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 0.2))),
-            ),
-        ],
         DebugAxisMarker,
-    ));
+    )).with_children(|parent| {
+        parent.spawn((
+            Name::new("Turret Rotator"),
+            TurretRotatorMarker,
+            SmoothLookRotation {
+                yaw_speed: std::f32::consts::PI,   // 180 degrees per second
+                pitch_speed: std::f32::consts::PI, // 180 degrees per second
+                ..default()
+            },
+            Transform::from_xyz(0.0, 0.0, 0.0),
+            GlobalTransform::default(),
+            turret_render(&mut meshes, &mut materials),
+            DebugAxisMarker,
+        ));
+    });
 
     // Spawn a target entity to visualize the target rotation
     commands.spawn((
@@ -351,3 +295,62 @@ fn draw_gizmos_from_turret_forward(
 //         }
 //     }
 // }
+
+/// This will be root component for the turret entity. It will hold as a child the rotation part
+/// and it will provide a reference frame for the rotation.
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+pub struct TurretBaseMarker;
+
+/// This will be the component for the rotating part of the turret. It will be a child of the base.
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+pub struct TurretRotatorMarker;
+
+/// This will be the turret's target component input. It will be a Vec3 target position that we
+/// want to aim at in world space.
+#[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
+pub struct TurretTargetInput(pub Vec3);
+
+pub struct TurretPlugin;
+
+impl Plugin for TurretPlugin {
+    fn build(&self, app: &mut App) {
+        app.register_type::<TurretBaseMarker>()
+            .register_type::<TurretRotatorMarker>()
+            .register_type::<TurretTargetInput>();
+
+        app.add_systems(
+            Update,
+            (
+                update_turret_target_system,
+            )
+        );
+    }
+}
+
+fn update_turret_target_system(
+    q_turret: Query<(&GlobalTransform, Option<&TurretTargetInput>), With<TurretBaseMarker>>,
+    mut q_rotator: Query<(&mut SmoothLookRotationTarget, &ChildOf), With<TurretRotatorMarker>>,
+) {
+    for (mut rotator_target, &ChildOf(parent)) in &mut q_rotator {
+        let Ok((turret_transform, target_input)) = q_turret.get(parent) else {
+            warn!("TurretRotatorMarker's parent is not a TurretBaseMarker");
+            continue;
+        };
+
+        let Some(target_input) = target_input else {
+            println!("No target input for turret");
+            continue;
+        };
+
+        let world_to_turret = turret_transform.compute_matrix().inverse();
+        let world_pos = **target_input;
+        let local_pos = world_to_turret.transform_point3(world_pos);
+
+        let dir_local = local_pos.normalize_or_zero();
+
+        let (yaw, pitch, _) = Quat::from_rotation_arc(Vec3::NEG_Z, dir_local).to_euler(EulerRot::YXZ);
+
+        rotator_target.yaw = yaw;
+        rotator_target.pitch = pitch;
+    }
+}

@@ -3,7 +3,7 @@
 
 mod helpers;
 
-use avian3d::{math::*, prelude::*};
+use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 use bevy_systems::prelude::*;
@@ -25,6 +25,7 @@ fn main() {
     // We need to enable the physics plugins to have access to RigidBody and other components.
     // We will also disable gravity for this example, since we are in space, duh.
     app.add_plugins(PhysicsPlugins::default());
+    app.add_plugins(PhysicsDebugPlugin::default());
     app.insert_resource(Gravity::ZERO);
 
     // Setup the scene with some entities, to have something to look at.
@@ -151,26 +152,7 @@ fn setup(
         GlobalTransform::default(),
         // Rendering components
         Visibility::Visible,
-        children![
-            (
-                Name::new("Spaceship Renderer"),
-                Mesh3d(meshes.add(Cylinder::new(0.5, 1.0))),
-                MeshMaterial3d(materials.add(Color::srgb(0.2, 0.7, 0.9))),
-                Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-            ),
-            (
-                Name::new("Spaceship Thruster"),
-                Mesh3d(meshes.add(Cone::new(0.5, 0.5))),
-                MeshMaterial3d(materials.add(Color::srgb(0.9, 0.3, 0.2))),
-                Transform::from_xyz(0.0, 0.0, 0.5).with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
-            ),
-            (
-                Name::new("Spaceship Window"),
-                Mesh3d(meshes.add(Cylinder::new(0.2, 0.1))),
-                MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 1.0))),
-                Transform::from_xyz(0.0, 0.5, -0.1),
-            )
-        ],
+        spaceship_render(&mut meshes, &mut materials),
         // Debug stuff
         DebugAxisMarker,
     ));
