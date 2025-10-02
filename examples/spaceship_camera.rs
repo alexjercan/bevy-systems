@@ -51,7 +51,7 @@ fn main() {
         Update,
         (
             update_spaceship_target_rotation_torque,
-            update_chase_camera_input,
+            update_chase_camera_input.before(ChaseCameraPluginSet),
             sync_spaceship_control_mode,
         ),
     );

@@ -59,9 +59,9 @@ fn main() {
         Update,
         (
             update_spaceship_target_rotation_torque,
-            update_chase_camera_input,
-            update_turret_target_input,
+            update_chase_camera_input.before(ChaseCameraPluginSet),
             sync_spaceship_control_mode,
+            update_turret_target_input,
         ),
     );
 
@@ -192,7 +192,7 @@ fn setup(
                 ),
                 (
                     Action::<FreeLookInput>::new(),
-                    bindings![MouseButton::Right, GamepadButton::LeftTrigger],
+                    bindings![KeyCode::AltLeft, GamepadButton::LeftTrigger],
                 ),
             ]
         ),
@@ -214,7 +214,7 @@ fn setup(
     ));
 
     // Spawn a spaceship entity (a rectangle with some features to figure out its orientation)
-    commands
+    let spaceship = commands
         .spawn((
             Name::new("Spaceship"),
             SpaceshipMarker,
@@ -231,49 +231,58 @@ fn setup(
             GlobalTransform::default(),
             Visibility::Visible,
             spaceship_render(&mut meshes, &mut materials),
-            // Debug stuff
-            DebugAxisMarker,
+        ))
+        .id();
+
+    let turret = commands
+        .spawn((
+            Name::new("Turret Anchor"),
+            RigidBody::Dynamic,
+            Collider::sphere(0.4),
+            ColliderDensity(0.01),
+            Position::from_xyz(0.8, 0.0, 0.0),
+            Visibility::Visible,
         ))
         .with_children(|parent| {
             parent
                 .spawn((
-                    Name::new("Turret Anchor"),
-                    Transform::from_xyz(0.8, 0.0, 0.0)
-                        .with_rotation(Quat::from_rotation_z(-std::f32::consts::FRAC_PI_2))
-                        .with_scale(Vec3::splat(0.5)),
-                    Visibility::Visible,
+                    Name::new("Turret"),
+                    PDCTurretMarker,
+                    TurretBaseMarker,
+                    TurretTargetInput(Vec3::ZERO),
+                    Transform::from_rotation(Quat::from_rotation_z(-std::f32::consts::FRAC_PI_2)),
+                    GlobalTransform::default(),
+                    Visibility::Inherited,
                 ))
                 .with_children(|parent| {
                     parent
                         .spawn((
-                            Name::new("Turret"),
-                            PDCTurretMarker,
-                            TurretBaseMarker,
-                            TurretTargetInput(Vec3::ZERO),
-                            Transform::default(),
+                            Name::new("Turret Rotator"),
+                            TurretRotatorMarker,
+                            SmoothLookRotation {
+                                yaw_speed: std::f32::consts::PI,   // 180 degrees per second
+                                pitch_speed: std::f32::consts::PI, // 180 degrees per second
+                                min_pitch: Some(-std::f32::consts::FRAC_PI_6),
+                                max_pitch: Some(std::f32::consts::FRAC_PI_3),
+                            },
+                            Transform::from_xyz(0.0, 0.0, 0.0),
                             GlobalTransform::default(),
                             Visibility::Inherited,
+                            // See the turret facing direction
                             DebugAxisMarker,
                         ))
-                        .with_children(|parent| {
-                            parent.spawn((
-                                Name::new("Turret Rotator"),
-                                TurretRotatorMarker,
-                                SmoothLookRotation {
-                                    yaw_speed: std::f32::consts::PI,   // 180 degrees per second
-                                    pitch_speed: std::f32::consts::PI, // 180 degrees per second
-                                    min_pitch: Some(-std::f32::consts::FRAC_PI_6),
-                                    max_pitch: Some(std::f32::consts::FRAC_PI_3),
-                                },
-                                Transform::from_xyz(0.0, 0.0, 0.0),
-                                GlobalTransform::default(),
-                                Visibility::Inherited,
-                                turret_render(&mut meshes, &mut materials),
-                                DebugAxisMarker,
-                            ));
-                        });
+                        .with_child((
+                            Name::new("Render"),
+                            Transform::from_scale(Vec3::splat(0.5)),
+                            Visibility::Inherited,
+                            turret_render(&mut meshes, &mut materials),
+                        ));
                 });
-        });
+        })
+        .id();
+
+    commands
+        .spawn(FixedJoint::new(spaceship, turret).with_local_anchor_1(Vec3::new(0.8, 0.0, 0.0)));
 
     // Spawn a 3D camera with a chase camera component
     commands.spawn((
@@ -305,7 +314,7 @@ fn setup(
         // },
         Transform::from_xyz(0.0, 0.0, -5.0),
         Visibility::Visible,
-        Mesh3d(meshes.add(Cuboid::new(0.2, 0.2, 0.2))),
+        Mesh3d(meshes.add(Cuboid::new(3.0, 3.0, 3.0))),
         MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 0.2))),
     ));
 }

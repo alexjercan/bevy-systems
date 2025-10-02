@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod setup_systems;
 mod systems;
 mod plugins;

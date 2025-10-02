@@ -50,7 +50,7 @@ impl Plugin for SmoothLookRotationPlugin {
 }
 
 fn initialize_smooth_look_system(
-    trigger: Trigger<OnAdd, SmoothLookRotation>,
+    trigger: Trigger<OnInsert, SmoothLookRotation>,
     q_look: Query<&Transform, With<SmoothLookRotation>>,
     mut commands: Commands,
 ) {

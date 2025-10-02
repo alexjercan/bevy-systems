@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::{ChaseCamera, ChaseCameraInput, ChaseCameraPlugin};
+    pub use super::{ChaseCamera, ChaseCameraInput, ChaseCameraPlugin, ChaseCameraPluginSet};
 }
 
 /// The Case Camera Component is used to add some attributes to the camera
@@ -36,6 +36,9 @@ pub struct ChaseCameraInput {
     pub anchor_pos: Vec3,
 }
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ChaseCameraPluginSet;
+
 pub struct ChaseCameraPlugin;
 
 impl Plugin for ChaseCameraPlugin {
@@ -44,7 +47,7 @@ impl Plugin for ChaseCameraPlugin {
             .register_type::<ChaseCameraInput>();
 
         app.add_observer(initialize_chase_camera);
-        app.add_systems(Update, chase_camera_update_system);
+        app.add_systems(Update, chase_camera_update_system.in_set(ChaseCameraPluginSet));
     }
 }
 
@@ -59,7 +62,6 @@ fn initialize_chase_camera(trigger: Trigger<OnInsert, ChaseCamera>, mut commands
 fn chase_camera_update_system(
     mut q_camera: Query<(&ChaseCamera, &ChaseCameraInput, &mut Transform), With<ChaseCamera>>,
 ) {
-
     for (chase, input, mut transform) in q_camera.iter_mut() {
         let target_pos = input.anchor_pos;
         let desired_pos = target_pos
