@@ -4,7 +4,7 @@
 mod helpers;
 
 use avian3d::prelude::*;
-use bevy::prelude::*;
+use bevy::{core_pipeline::Skybox, prelude::*};
 use bevy_enhanced_input::prelude::*;
 use bevy_systems::prelude::*;
 use clap::Parser;
@@ -20,7 +20,8 @@ fn main() {
     let _ = Cli::parse();
 
     let mut app = new_gui_app();
-    app.add_plugins(PrettyScenePlugin);
+    app.add_plugins(GameAssetsPlugin);
+    app.add_plugins(DebugGizmosPlugin);
 
     // We need to enable the physics plugins to have access to RigidBody and other components.
     // We will also disable gravity for this example, since we are in space, duh.
@@ -29,7 +30,7 @@ fn main() {
     app.insert_resource(Gravity::ZERO);
 
     // Setup the scene with some entities, to have something to look at.
-    app.add_systems(OnEnter(GameStates::Playing), setup);
+    app.add_systems(OnEnter(GameStates::Playing), (setup, setup_simple_scene));
 
     // Setup the input system to get input from the mouse and keyboard.
     app.add_plugins(EnhancedInputPlugin);
@@ -166,6 +167,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    game_assets: Res<GameAssets>,
 ) {
     // Spawn a player input controller entity to hold the input from the player
     commands.spawn((
@@ -239,6 +241,7 @@ fn setup(
                     Transform::from_xyz(0.8, 0.0, 0.0)
                         .with_rotation(Quat::from_rotation_z(-std::f32::consts::FRAC_PI_2))
                         .with_scale(Vec3::splat(0.5)),
+                    Visibility::Visible,
                 ))
                 .with_children(|parent| {
                     parent
@@ -249,7 +252,7 @@ fn setup(
                             TurretTargetInput(Vec3::ZERO),
                             Transform::default(),
                             GlobalTransform::default(),
-                            Visibility::Visible,
+                            Visibility::Inherited,
                             DebugAxisMarker,
                         ))
                         .with_children(|parent| {
@@ -259,10 +262,12 @@ fn setup(
                                 SmoothLookRotation {
                                     yaw_speed: std::f32::consts::PI,   // 180 degrees per second
                                     pitch_speed: std::f32::consts::PI, // 180 degrees per second
-                                    ..default()
+                                    min_pitch: Some(-std::f32::consts::FRAC_PI_6),
+                                    max_pitch: Some(std::f32::consts::FRAC_PI_3),
                                 },
                                 Transform::from_xyz(0.0, 0.0, 0.0),
                                 GlobalTransform::default(),
+                                Visibility::Inherited,
                                 turret_render(&mut meshes, &mut materials),
                                 DebugAxisMarker,
                             ));
@@ -282,6 +287,11 @@ fn setup(
         GlobalTransform::default(),
         ChaseCamera::default(),
         Visibility::Visible,
+        Skybox {
+            image: game_assets.cubemap.clone(),
+            brightness: 1000.0,
+            ..default()
+        },
     ));
 
     // Spawn a target entity to visualize the target rotation
