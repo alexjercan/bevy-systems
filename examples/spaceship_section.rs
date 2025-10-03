@@ -88,7 +88,7 @@ fn setup_spaceship(mut commands: Commands) {
                 transform: Transform::from_xyz(0.0, 0.0, 0.0),
                 frequency: 4.0,
                 damping_ratio: 4.0,
-                max_torque: 10.0,
+                max_torque: 100.0,
                 ..default()
             }),),
             (hull_section(HullSectionConfig {
