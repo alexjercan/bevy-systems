@@ -1,5 +1,6 @@
 //! Helper functions to set up the 3D scene with planets and satellites.
 
+use avian3d::prelude::*;
 use bevy::prelude::*;
 use rand::prelude::*;
 
@@ -40,6 +41,8 @@ pub fn setup_simple_scene(
             GlobalTransform::default(),
             Mesh3d(meshes.add(Sphere::new(radius))),
             MeshMaterial3d(materials.add(color)),
+            Collider::sphere(radius),
+            RigidBody::Static,
         ));
     }
 
