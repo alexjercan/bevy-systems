@@ -53,28 +53,29 @@ fn main() {
     app.add_plugins(ChaseCameraPlugin);
     // Point Rotation Plugin to convert mouse movement to a target rotation
     app.add_plugins(PointRotationPlugin);
-    // Torque Controller Plugin to rotate the spaceship to face the target rotation
-    app.add_plugins(StableTorquePdControllerPlugin);
     // for debug to have a random orbiting object
     app.add_plugins(SphereRandomOrbitPlugin);
     // Rotation Plugin for the turret facing direction
     app.add_plugins(SmoothLookRotationPlugin);
 
     // Add sections plugins
-    app.add_plugins(RootSectionPlugin);
-    app.add_plugins(HullSectionPlugin);
-    app.add_plugins(EngineSectionPlugin);
-    app.add_plugins(TurretSectionPlugin);
-    app.add_plugins(CrewSectionPlugin);
+    app.add_plugins(SpaceshipPlugin);
+
+    app.add_systems(
+        Update,
+        (
+            update_chase_camera_input.before(ChaseCameraPluginSet),
+            sync_spaceship_control_mode,
+        ),
+    );
 
     app.add_systems(
         Update,
         (
             update_spaceship_target_rotation_torque,
-            update_chase_camera_input.before(ChaseCameraPluginSet),
-            sync_spaceship_control_mode,
             update_turret_target_input,
-        ),
+        )
+            .before(SpaceshipPluginSet),
     );
 
     app.run();
@@ -82,9 +83,9 @@ fn main() {
 
 fn setup_spaceship(mut commands: Commands) {
     commands.spawn((
-        root_section(RootSectionConfig { ..default() }),
+        spaceship_root(SpaceshipConfig { ..default() }),
         children![
-            (crew_section(CrewSectionConfig {
+            (controller_section(ControllerSectionConfig {
                 transform: Transform::from_xyz(0.0, 0.0, 0.0),
                 ..default()
             }),),
@@ -112,7 +113,7 @@ fn setup_spaceship(mut commands: Commands) {
 
 fn update_spaceship_target_rotation_torque(
     point_rotation: Single<&PointRotationOutput, With<SpaceshipRotationInputMarker>>,
-    controller: Single<&mut StableTorquePdControllerTarget, With<StableTorquePdController>>,
+    controller: Single<&mut ControllerSectionRotationInput, With<ControllerSectionMarker>>,
 ) {
     let rotation = point_rotation.into_inner();
     let mut controller_target = controller.into_inner();
@@ -121,7 +122,7 @@ fn update_spaceship_target_rotation_torque(
 
 fn update_chase_camera_input(
     camera: Single<&mut ChaseCameraInput, With<ChaseCamera>>,
-    spaceship: Single<&GlobalTransform, With<RootSectionMarker>>,
+    spaceship: Single<&GlobalTransform, With<SpaceshipRootMarker>>,
     point_rotation: Single<&PointRotationOutput, With<SpaceshipRotationInputActiveMarker>>,
 ) {
     let mut camera_input = camera.into_inner();
@@ -137,7 +138,7 @@ fn update_turret_target_input(
     mut q_turret: Query<&mut TurretSectionTargetInput, With<TurretSectionMarker>>,
     mode: Res<SpaceshipControlMode>,
     point_rotation: Single<&PointRotationOutput, With<CombatRotationInputMarker>>,
-    spaceship: Single<&GlobalTransform, With<RootSectionMarker>>,
+    spaceship: Single<&GlobalTransform, With<SpaceshipRootMarker>>,
 ) {
     if matches!(*mode, SpaceshipControlMode::Combat) {
         let rotation = point_rotation.into_inner();

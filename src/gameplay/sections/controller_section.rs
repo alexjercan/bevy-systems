@@ -1,0 +1,267 @@
+use avian3d::prelude::*;
+use bevy::prelude::*;
+
+use super::SpaceshipRootMarker;
+
+pub mod prelude {
+    pub use super::controller_section;
+    pub use super::ControllerSectionConfig;
+    pub use super::ControllerSectionMarker;
+    pub use super::ControllerSectionPlugin;
+    pub use super::ControllerSectionRotationInput;
+    pub use super::ControllerSectionStableTorquePdController;
+}
+
+#[derive(Default, Clone, Debug)]
+pub struct ControllerSectionConfig {
+    /// The transform of the controller section relative to its parent.
+    pub transform: Transform,
+}
+
+pub fn controller_section(config: ControllerSectionConfig) -> impl Bundle {
+    (
+        Name::new("Controller Section"),
+        ControllerSectionMarker,
+        Collider::cuboid(1.0, 1.0, 1.0),
+        ColliderDensity(1.0),
+        ControllerSectionRotationInput::default(),
+        ControllerSectionStableTorquePdController {
+            frequency: 2.0,
+            damping_ratio: 2.0,
+            max_torque: 1.0,
+        },
+        config.transform,
+        Visibility::Visible,
+    )
+}
+
+#[derive(Component, Clone, Debug, Reflect)]
+pub struct ControllerSectionMarker;
+
+/// The desired rotation of the controller section, in world space.
+#[derive(Component, Debug, Clone, Default, Deref, DerefMut, Reflect)]
+pub struct ControllerSectionRotationInput(pub Quat);
+
+#[derive(Component, Debug, Clone, Reflect)]
+/// A Proportional-Derivative controller that applies torque to reach a target angle in a stable
+/// manner.
+///
+/// When we add the `StableTorquePdController` component to an entity, we also need to add the
+/// `StableTorquePdControllerTarget` component to specify the desired target rotation. We can then
+/// use the target component to update the target rotation as needed. The entity's rotation will be
+/// modified by the controller to reach the target rotation.
+pub struct ControllerSectionStableTorquePdController {
+    /// Frequency in Hz.
+    pub frequency: f32,
+    /// Damping ratio.
+    pub damping_ratio: f32,
+    /// Maximum torque that can be applied.
+    pub max_torque: f32,
+}
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ControllerSectionPluginSet;
+
+pub struct ControllerSectionPlugin;
+
+impl Plugin for ControllerSectionPlugin {
+    fn build(&self, app: &mut App) {
+        // NOTE: How can we check that the TorquePdControllerPlugin is added?
+        app.register_type::<ControllerSectionMarker>();
+        // TODO: Might add a flag for this later
+        app.add_observer(insert_controller_section_render);
+
+        app.add_systems(Update, update_controller_root_torque.in_set(ControllerSectionPluginSet));
+    }
+}
+
+fn update_controller_root_torque(
+    mut q_root: Query<
+        (
+            &AngularVelocity,
+            &ComputedAngularInertia,
+            &Rotation,
+            &mut ExternalTorque,
+        ),
+        With<SpaceshipRootMarker>,
+    >,
+    q_controller: Query<
+        (
+            &ControllerSectionStableTorquePdController,
+            &ControllerSectionRotationInput,
+            &ChildOf,
+        ),
+        With<ControllerSectionMarker>,
+    >,
+) {
+    for (controller, controller_input, &ChildOf(root)) in &q_controller {
+        let Ok((angular_velocity, angular_inertia, rotation, mut torque)) = q_root.get_mut(root)
+        else {
+            warn!("ControllerSection's root entity does not have a SpaceshipRootMaker component");
+            continue;
+        };
+
+        let (principal, local_frame) = angular_inertia.principal_angular_inertia_with_local_frame();
+
+        **torque = compute_pd_torque(
+            controller.frequency,
+            controller.damping_ratio,
+            controller.max_torque,
+            **rotation,
+            **controller_input,
+            **angular_velocity,
+            principal,
+            local_frame,
+        );
+    }
+}
+
+fn insert_controller_section_render(
+    trigger: Trigger<OnAdd, ControllerSectionMarker>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let entity = trigger.target();
+    debug!("Inserting render for ControllerSection: {:?}", entity);
+
+    commands.entity(entity).insert((children![
+        (
+            Name::new("Controller Section Body"),
+            Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
+            MeshMaterial3d(materials.add(Color::srgb(0.2, 0.7, 0.9))),
+        ),
+        (
+            Name::new("Controller Section Window"),
+            Mesh3d(meshes.add(Cylinder::new(0.2, 0.1))),
+            MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 1.0))),
+            Transform::from_xyz(0.0, 0.5, 0.0),
+        )
+    ],));
+}
+
+fn compute_pd_torque(
+    frequency: f32,
+    damping_ratio: f32,
+    max_torque: f32,
+    from_rotation: Quat,
+    to_rotation: Quat,
+    angular_velocity: Vec3,
+    inertia_principal: Vec3,
+    inertia_local_frame: Quat,
+) -> Vec3 {
+    // PD gains
+    let kp = (6.0 * frequency).powi(2) * 0.25;
+    let kd = 4.5 * frequency * damping_ratio;
+    trace!("PD gains: kp = {:.3}, kd = {:.3}", kp, kd);
+
+    let mut delta = to_rotation * from_rotation.conjugate();
+    if delta.w < 0.0 {
+        delta = Quat::from_xyzw(-delta.x, -delta.y, -delta.z, -delta.w);
+    }
+
+    let (mut axis, mut angle) = delta.to_axis_angle();
+    axis = axis.normalize_or_zero();
+    if angle > std::f32::consts::PI {
+        angle -= 2.0 * std::f32::consts::PI;
+    }
+
+    // Normalize axis (avoid NaNs if angle is zero)
+    axis = axis.normalize_or_zero();
+
+    trace!(
+        "Rotation error: angle_rad = {:.6} rad (~{:.2}°), axis = {:?}",
+        angle,
+        angle.to_degrees(),
+        axis
+    );
+
+    // PD control (raw torque)
+    let raw = axis * (kp * angle) - angular_velocity * kd;
+    trace!("Raw torque (before inertia scaling) = {:?}", raw);
+
+    let rot_inertia_to_world = inertia_local_frame * from_rotation;
+    let torque_local = rot_inertia_to_world.inverse() * raw;
+    let torque_scaled = torque_local * inertia_principal;
+    let final_torque = rot_inertia_to_world * torque_scaled;
+
+    trace!("Torque after scaling by inertia = {:?}", final_torque);
+
+    // Optionally clamp final torque magnitude
+    let torque_to_apply = {
+        if final_torque.length_squared() > max_torque * max_torque {
+            final_torque.normalize() * max_torque
+        } else {
+            final_torque
+        }
+    };
+
+    trace!("Torque to apply (clamped) = {:?}", torque_to_apply);
+
+    torque_to_apply
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_compute_pd_torque_zero_error() {
+        let torque = compute_pd_torque(
+            1.0,
+            1.0,
+            10.0,
+            Quat::IDENTITY,
+            Quat::IDENTITY,
+            Vec3::ZERO,
+            Vec3::ONE,
+            Quat::IDENTITY,
+        );
+        assert!(torque.abs_diff_eq(Vec3::ZERO, 1e-6));
+    }
+
+    #[test]
+    fn test_compute_pd_torque_small_angle() {
+        let torque = compute_pd_torque(
+            1.0,
+            1.0,
+            10.0,
+            Quat::IDENTITY,
+            Quat::from_axis_angle(Vec3::Y, 0.1),
+            Vec3::ZERO,
+            Vec3::ONE,
+            Quat::IDENTITY,
+        );
+        assert!(torque.length() > 0.0);
+    }
+
+    #[test]
+    fn test_compute_pd_torque_large_angle() {
+        let torque = compute_pd_torque(
+            1.0,
+            1.0,
+            10.0,
+            Quat::IDENTITY,
+            Quat::from_axis_angle(Vec3::Y, std::f32::consts::PI),
+            Vec3::ZERO,
+            Vec3::ONE,
+            Quat::IDENTITY,
+        );
+        assert!(torque.length() > 0.0);
+    }
+
+    #[test]
+    fn test_compute_pd_torque_with_angular_velocity() {
+        let torque = compute_pd_torque(
+            1.0,
+            1.0,
+            10.0,
+            Quat::IDENTITY,
+            Quat::from_axis_angle(Vec3::Y, 0.5),
+            Vec3::new(0.0, 2.0, 0.0),
+            Vec3::ONE,
+            Quat::IDENTITY,
+        );
+        assert!(torque.length() > 0.0);
+    }
+}

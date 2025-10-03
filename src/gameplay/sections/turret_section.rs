@@ -62,6 +62,9 @@ pub struct TurretSectionRotatorMarker;
 #[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
 pub struct TurretSectionTargetInput(pub Option<Vec3>);
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TurretSectionPluginSet;
+
 pub struct TurretSectionPlugin;
 
 impl Plugin for TurretSectionPlugin {
@@ -75,7 +78,10 @@ impl Plugin for TurretSectionPlugin {
 
         app.add_systems(
             Update,
-            (update_turret_target_system, sync_turret_transform_system),
+            // TODO: put the turret plugin between
+            (update_turret_target_system, sync_turret_transform_system)
+                .chain()
+                .in_set(TurretSectionPluginSet),
         );
     }
 }

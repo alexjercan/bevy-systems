@@ -30,6 +30,9 @@ pub fn hull_section(config: HullSectionConfig) -> impl Bundle {
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct HullSectionMarker;
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct HullSectionPluginSet;
+
 pub struct HullSectionPlugin;
 
 impl Plugin for HullSectionPlugin {

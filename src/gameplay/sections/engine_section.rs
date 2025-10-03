@@ -3,7 +3,7 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-use crate::prelude::RootSectionMarker;
+use super::SpaceshipRootMarker;
 
 pub mod prelude {
     pub use super::engine_section;
@@ -50,6 +50,9 @@ pub struct EngineThrustMagnitude(pub f32);
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct EngineThrustInput(pub f32);
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EngineSectionPluginSet;
+
 pub struct EngineSectionPlugin;
 
 impl Plugin for EngineSectionPlugin {
@@ -59,7 +62,8 @@ impl Plugin for EngineSectionPlugin {
             .register_type::<EngineThrustInput>();
         // TODO: Might add a flag for this later
         app.add_observer(insert_engine_section_render);
-        app.add_systems(Update, engine_thrust_system);
+
+        app.add_systems(Update, engine_thrust_system.in_set(EngineSectionPluginSet));
     }
 }
 
@@ -73,7 +77,7 @@ fn engine_thrust_system(
         ),
         With<EngineSectionMarker>,
     >,
-    mut q_root: Query<&mut ExternalImpulse, With<RootSectionMarker>>,
+    mut q_root: Query<&mut ExternalImpulse, With<SpaceshipRootMarker>>,
 ) {
     for (transform, &ChildOf(root), magnitude, input) in &q_engines {
         let Ok(mut force) = q_root.get_mut(root) else {
