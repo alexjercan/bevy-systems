@@ -119,15 +119,15 @@ mod debug {
     }
 
     fn setup(mut commands: Commands) {
-        commands.spawn((
-            Camera2d,
-            Camera {
-                order: 2,
-                ..default()
-            },
-            Name::new("Debug Camera"),
-            RenderLayers::layer(2),
-        ));
+        // commands.spawn((
+        //     Camera2d,
+        //     Camera {
+        //         order: 2,
+        //         ..default()
+        //     },
+        //     Name::new("Debug Camera"),
+        //     RenderLayers::layer(2),
+        // ));
     }
 
     fn inspector_ui(world: &mut World) {

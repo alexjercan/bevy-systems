@@ -25,7 +25,7 @@ fn main() {
 
     // We need to enable the physics plugins to have access to RigidBody and other components.
     // We will also disable gravity for this example, since we are in space, duh.
-    app.add_plugins(PhysicsPlugins::default());
+    app.add_plugins(PhysicsPlugins::default().set(PhysicsInterpolationPlugin::interpolate_all()));
     #[cfg(feature = "dev")]
     app.add_plugins(PhysicsDebugPlugin::default());
     app.insert_resource(Gravity::ZERO);
@@ -66,18 +66,16 @@ fn main() {
         Update,
         (
             update_chase_camera_input.before(ChaseCameraPluginSet),
-            sync_spaceship_control_mode,
-        ),
+            (
+                update_spaceship_target_rotation_torque,
+                update_turret_target_input,
+            )
+                .before(SpaceshipPluginSet),
+        )
+            .chain(),
     );
 
-    app.add_systems(
-        Update,
-        (
-            update_spaceship_target_rotation_torque,
-            update_turret_target_input,
-        )
-            .before(SpaceshipPluginSet),
-    );
+    app.add_systems(Update, sync_spaceship_control_mode);
 
     app.run();
 }
@@ -145,14 +143,14 @@ fn update_spaceship_target_rotation_torque(
 
 fn update_chase_camera_input(
     camera: Single<&mut ChaseCameraInput, With<ChaseCamera>>,
-    spaceship: Single<&GlobalTransform, With<SpaceshipRootMarker>>,
+    spaceship: Single<&Transform, With<SpaceshipRootMarker>>,
     point_rotation: Single<&PointRotationOutput, With<SpaceshipRotationInputActiveMarker>>,
 ) {
     let mut camera_input = camera.into_inner();
     let spaceship_transform = spaceship.into_inner();
     let rotation = point_rotation.into_inner();
 
-    camera_input.anchor_pos = spaceship_transform.translation();
+    camera_input.anchor_pos = spaceship_transform.translation;
     camera_input.achor_rot = **rotation;
 }
 
@@ -228,6 +226,7 @@ fn sync_spaceship_control_mode(
             commands.entity(camera).insert(ChaseCamera {
                 offset: Vec3::new(0.0, 5.0, -20.0),
                 focus_offset: Vec3::new(0.0, 0.0, 20.0),
+                ..default()
             });
         }
         SpaceshipControlMode::FreeLook => {
@@ -246,6 +245,7 @@ fn sync_spaceship_control_mode(
             commands.entity(camera).insert(ChaseCamera {
                 offset: Vec3::new(0.0, 10.0, -30.0),
                 focus_offset: Vec3::new(0.0, 0.0, 0.0),
+                ..default()
             });
         }
         SpaceshipControlMode::Combat => {
@@ -264,6 +264,7 @@ fn sync_spaceship_control_mode(
             commands.entity(camera).insert(ChaseCamera {
                 offset: Vec3::new(0.0, 5.0, -10.0),
                 focus_offset: Vec3::new(0.0, 0.0, 50.0),
+                ..default()
             });
         }
     }
@@ -431,10 +432,7 @@ fn on_thruster_input_completed(
     }
 }
 
-fn on_free_mode_input_started(
-    _: On<Start<FreeLookInput>>,
-    mut mode: ResMut<SpaceshipControlMode>,
-) {
+fn on_free_mode_input_started(_: On<Start<FreeLookInput>>, mut mode: ResMut<SpaceshipControlMode>) {
     *mode = SpaceshipControlMode::FreeLook;
 }
 
@@ -445,16 +443,10 @@ fn on_free_mode_input_completed(
     *mode = SpaceshipControlMode::Normal;
 }
 
-fn on_combat_input_started(
-    _: On<Start<CombatInput>>,
-    mut mode: ResMut<SpaceshipControlMode>,
-) {
+fn on_combat_input_started(_: On<Start<CombatInput>>, mut mode: ResMut<SpaceshipControlMode>) {
     *mode = SpaceshipControlMode::Combat;
 }
 
-fn on_combat_input_completed(
-    _: On<Complete<CombatInput>>,
-    mut mode: ResMut<SpaceshipControlMode>,
-) {
+fn on_combat_input_completed(_: On<Complete<CombatInput>>, mut mode: ResMut<SpaceshipControlMode>) {
     *mode = SpaceshipControlMode::Normal;
 }

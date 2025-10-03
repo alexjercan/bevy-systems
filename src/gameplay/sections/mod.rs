@@ -67,7 +67,15 @@ impl Plugin for SpaceshipPlugin {
             engine_section::EngineSectionPluginSet.in_set(SpaceshipPluginSet),
         );
         app.configure_sets(
+            FixedUpdate,
+            engine_section::EngineSectionPluginSet.in_set(SpaceshipPluginSet),
+        );
+        app.configure_sets(
             Update,
+            controller_section::ControllerSectionPluginSet.in_set(SpaceshipPluginSet),
+        );
+        app.configure_sets(
+            FixedUpdate,
             controller_section::ControllerSectionPluginSet.in_set(SpaceshipPluginSet),
         );
         app.configure_sets(
@@ -75,7 +83,15 @@ impl Plugin for SpaceshipPlugin {
             turret_section::TurretSectionPluginSet.in_set(SpaceshipPluginSet),
         );
         app.configure_sets(
+            FixedUpdate,
+            turret_section::TurretSectionPluginSet.in_set(SpaceshipPluginSet),
+        );
+        app.configure_sets(
             Update,
+            hull_section::HullSectionPluginSet.in_set(SpaceshipPluginSet),
+        );
+        app.configure_sets(
+            FixedUpdate,
             hull_section::HullSectionPluginSet.in_set(SpaceshipPluginSet),
         );
     }

@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::prelude::LerpSnap;
+
 pub mod prelude {
     pub use super::{ChaseCamera, ChaseCameraInput, ChaseCameraPlugin, ChaseCameraPluginSet};
 }
@@ -16,6 +18,8 @@ pub struct ChaseCamera {
     pub offset: Vec3,
     /// How far ahead of the target to look
     pub focus_offset: Vec3,
+    /// Smoothing factor for camera movement (0.0 = no smoothing, 1.0 = very smooth)
+    pub smoothing: f32,
 }
 
 impl Default for ChaseCamera {
@@ -23,6 +27,7 @@ impl Default for ChaseCamera {
         Self {
             offset: Vec3::new(0.0, 5.0, -20.0),
             focus_offset: Vec3::new(0.0, 0.0, 20.0),
+            smoothing: 0.1,
         }
     }
 }
@@ -36,9 +41,16 @@ pub struct ChaseCameraInput {
     pub anchor_pos: Vec3,
 }
 
+#[derive(Component, Default, Debug, Reflect)]
+struct ChaseCameraState {
+    anchor_pos: Vec3,
+}
+
+/// The SystemSet for the ChaseCameraPlugin
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ChaseCameraPluginSet;
 
+/// Plugin to manage entities with `ChaseCamera` component.
 pub struct ChaseCameraPlugin;
 
 impl Plugin for ChaseCameraPlugin {
@@ -46,32 +58,73 @@ impl Plugin for ChaseCameraPlugin {
         app.add_observer(initialize_chase_camera);
         app.add_systems(
             Update,
-            chase_camera_update_system.in_set(ChaseCameraPluginSet),
+            (
+                chase_camera_update_state_system,
+                chase_camera_sync_transform_system,
+            )
+                .chain()
+                .in_set(ChaseCameraPluginSet),
         );
     }
 }
 
 /// Initialize camera state and target from config
-fn initialize_chase_camera(insert: On<Insert, ChaseCamera>, mut commands: Commands) {
+fn initialize_chase_camera(
+    insert: On<Insert, ChaseCamera>,
+    mut commands: Commands,
+    q_state: Query<Has<ChaseCameraState>, With<ChaseCamera>>,
+) {
     let entity = insert.entity;
+    let Ok(has_state) = q_state.get(entity) else {
+        warn!("initialize_chase_camera: entity does not have ChaseCamera component");
+        return;
+    };
+
     commands
         .entity(entity)
         .insert((ChaseCameraInput::default(),));
+
+    if !has_state {
+        commands.entity(entity).insert(ChaseCameraState::default());
+    }
 }
 
-fn chase_camera_update_system(
-    mut q_camera: Query<(&ChaseCamera, &ChaseCameraInput, &mut Transform), With<ChaseCamera>>,
+fn chase_camera_update_state_system(
+    time: Res<Time>,
+    mut q_camera: Query<
+        (&ChaseCamera, &ChaseCameraInput, &mut ChaseCameraState),
+        With<ChaseCamera>,
+    >,
 ) {
-    for (chase, input, mut transform) in q_camera.iter_mut() {
+    let dt = time.delta_secs();
+    for (chase, input, mut state) in q_camera.iter_mut() {
         let target_pos = input.anchor_pos;
         let desired_pos = target_pos
             + input.achor_rot * Vec3::NEG_Z * chase.offset.z
             + input.achor_rot * Vec3::Y * chase.offset.y
             + input.achor_rot * Vec3::X * chase.offset.x;
 
-        transform.translation = desired_pos;
+        state.anchor_pos = state
+            .anchor_pos
+            .lerp_and_snap(desired_pos, chase.smoothing, dt);
+    }
+}
 
-        let focus = target_pos
+fn chase_camera_sync_transform_system(
+    mut q_camera: Query<
+        (
+            &ChaseCamera,
+            &ChaseCameraInput,
+            &ChaseCameraState,
+            &mut Transform,
+        ),
+        With<ChaseCamera>,
+    >,
+) {
+    for (chase, input, state, mut transform) in q_camera.iter_mut() {
+        transform.translation = state.anchor_pos;
+
+        let focus = input.anchor_pos
             + input.achor_rot * Vec3::NEG_Z * chase.focus_offset.z
             + input.achor_rot * Vec3::Y * chase.focus_offset.y
             + input.achor_rot * Vec3::X * chase.focus_offset.x;
