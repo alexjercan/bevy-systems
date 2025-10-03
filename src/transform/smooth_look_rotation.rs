@@ -1,8 +1,3 @@
-//! A Bevy plugin that provides smooth look rotation functionality for entities. To rotate around
-//! the local axes, use `Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0)`. This provides a
-//! component to configure the rotation speeds and limits, a target component to set desired
-//! yaw and pitch, and an output component that holds the current yaw and pitch.
-
 use bevy::prelude::*;
 
 pub mod prelude {
@@ -12,14 +7,18 @@ pub mod prelude {
     };
 }
 
-/// Component to configure smooth look rotation parameters. Add this to an entity to enable smooth
-/// look rotation.
+/// Component that makes an entity smoothly rotate to look along a specified axis.
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 pub struct SmoothLookRotation {
+    /// The axis to rotate around (e.g., Vec3::Y for yaw).
     pub axis: Vec3,
+    /// The initial angle in radians.
     pub initial: f32,
+    /// The speed of rotation in radians per second.
     pub speed: f32,
+    /// Optional minimum angle limit in radians.
     pub min: Option<f32>,
+    /// Optional maximum angle limit in radians.
     pub max: Option<f32>,
 }
 
@@ -35,12 +34,15 @@ impl Default for SmoothLookRotation {
     }
 }
 
+/// The target angle that the entity should smoothly rotate towards.
 #[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
 pub struct SmoothLookRotationTarget(pub f32);
 
+/// The current output angle of the smooth look rotation.
 #[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
 pub struct SmoothLookRotationOutput(pub f32);
 
+/// A plugin that will enable the SmoothLookRotation system.
 pub struct SmoothLookRotationPlugin;
 
 impl Plugin for SmoothLookRotationPlugin {

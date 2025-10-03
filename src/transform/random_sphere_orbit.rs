@@ -1,3 +1,5 @@
+// TODO: Move this to a debug section later
+
 use bevy::prelude::*;
 use rand::prelude::*;
 
@@ -5,9 +7,9 @@ pub mod prelude {
     pub use super::{RandomSphereOrbit, SphereRandomOrbitPlugin};
 }
 
+/// Component to define a spherical orbit around a center point.
 #[derive(Component, Clone, Debug, Reflect)]
 #[require(RandomSphereOrbitState, Transform)]
-/// Component to define a spherical orbit around a center point.
 pub struct RandomSphereOrbit {
     /// Radius of the sphere (distance from origin or from a center)
     pub radius: f32,
@@ -30,6 +32,7 @@ struct RandomSphereOrbitNext {
     phi: f32,
 }
 
+/// Plugin to manage entities with `RandomSphereOrbit` component.
 pub struct SphereRandomOrbitPlugin;
 
 impl Plugin for SphereRandomOrbitPlugin {

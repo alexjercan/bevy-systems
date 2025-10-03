@@ -1,8 +1,3 @@
-//! A bevy plugin for rotating an object around its center point based on input.
-//! The idea is that we have a point that is facing in a certain direction, that we inially set up.
-//! And then we can use theta and phi deltas to rotate the facing direction such that we get a new
-//! rotation. We want this rotation to be around the local axes.
-
 use bevy::prelude::*;
 
 pub mod prelude {
@@ -34,6 +29,7 @@ pub struct PointRotationInput(pub Vec2);
 #[derive(Component, Clone, Copy, Debug, Default, Deref, DerefMut, Reflect)]
 pub struct PointRotationOutput(pub Quat);
 
+/// A plugin that will enable the PointRotation system.
 pub struct PointRotationPlugin;
 
 impl Plugin for PointRotationPlugin {

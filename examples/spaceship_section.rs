@@ -8,7 +8,7 @@ use bevy::{core_pipeline::Skybox, prelude::*};
 use bevy_enhanced_input::prelude::*;
 use bevy_systems::prelude::*;
 use clap::Parser;
-use helpers::prelude::*;
+use helpers::*;
 
 #[derive(Parser)]
 #[command(name = "spaceship_section")]
