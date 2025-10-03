@@ -174,8 +174,8 @@ fn update_turret_target_system(
             continue;
         };
 
-        let world_to_yaw_base = yaw_base_transform.compute_matrix().inverse();
-        let world_to_pitch_base = pitch_base_transform.compute_matrix().inverse();
+        let world_to_yaw_base = yaw_base_transform.to_matrix().inverse();
+        let world_to_pitch_base = pitch_base_transform.to_matrix().inverse();
         let world_pos = target_input;
 
         let yaw_local_pos = world_to_yaw_base.transform_point3(world_pos);
@@ -225,12 +225,12 @@ fn sync_turret_rotator_pitch_system(
 }
 
 fn insert_turret_section_render(
-    trigger: Trigger<OnAdd, TurretSectionRotatorMarker>,
+    add: On<Add, TurretSectionRotatorMarker>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let entity = trigger.target();
+    let entity = add.entity;
     debug!("Inserting render for TurretSection: {:?}", entity);
 
     commands.entity(entity).insert((
@@ -245,12 +245,12 @@ fn insert_turret_section_render(
 }
 
 fn insert_turret_yaw_rotator_render(
-    trigger: Trigger<OnAdd, TurretSectionRotatorYawMarker>,
+    add: On<Add, TurretSectionRotatorYawMarker>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let entity = trigger.target();
+    let entity = add.entity;
     debug!("Inserting render for TurretSection: {:?}", entity);
 
     commands.entity(entity).insert((
@@ -270,12 +270,12 @@ fn insert_turret_yaw_rotator_render(
 }
 
 fn insert_turret_pitch_rotator_render(
-    trigger: Trigger<OnAdd, TurretSectionRotatorPitchMarker>,
+    add: On<Add, TurretSectionRotatorPitchMarker>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let entity = trigger.target();
+    let entity = add.entity;
     debug!("Inserting render for TurretSection: {:?}", entity);
 
     commands.entity(entity).insert((

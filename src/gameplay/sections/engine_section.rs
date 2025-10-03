@@ -83,7 +83,7 @@ fn engine_thrust_system(
         ),
         With<EngineSectionMarker>,
     >,
-    mut q_root: Query<&mut ExternalImpulse, With<SpaceshipRootMarker>>,
+    mut q_root: Query<Forces, With<SpaceshipRootMarker>>,
 ) {
     for (transform, &ChildOf(root), magnitude, input) in &q_engines {
         let Ok(mut force) = q_root.get_mut(root) else {
@@ -94,17 +94,17 @@ fn engine_thrust_system(
         let thrust_direction = transform.forward(); // Local -Z axis
         let thrust_force = thrust_direction * **magnitude * **input;
 
-        force.apply_impulse(thrust_force);
+        force.apply_linear_impulse(thrust_force);
     }
 }
 
 fn insert_engine_section_render(
-    trigger: Trigger<OnAdd, EngineSectionMarker>,
+    add: On<Add, EngineSectionMarker>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let entity = trigger.target();
+    let entity = add.entity;
     debug!("Inserting render for EngineSection: {:?}", entity);
 
     commands.entity(entity).insert((children![

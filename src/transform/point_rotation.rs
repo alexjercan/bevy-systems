@@ -38,21 +38,17 @@ pub struct PointRotationPlugin;
 
 impl Plugin for PointRotationPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<PointRotation>()
-            .register_type::<PointRotationInput>()
-            .register_type::<PointRotationOutput>();
-
         app.add_observer(initialize_point_rotation_system);
         app.add_systems(Update, point_rotation_update_system);
     }
 }
 
 fn initialize_point_rotation_system(
-    trigger: Trigger<OnInsert, PointRotation>,
+    insert: On<Insert, PointRotation>,
     mut commands: Commands,
     q_point: Query<&PointRotation, With<PointRotation>>,
 ) {
-    let entity = trigger.target();
+    let entity = insert.entity;
     let Ok(point) = q_point.get(entity) else {
         warn!("initialize_point_rotation_system: entity does not have PointRotation component");
         return;
