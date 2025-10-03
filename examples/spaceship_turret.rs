@@ -315,6 +315,8 @@ fn setup(
                             Name::new("Turret Rotator"),
                             TurretRotatorMarker,
                             SmoothLookRotation {
+                                initial_yaw: 0.0,
+                                initial_pitch: 0.0,
                                 yaw_speed: std::f32::consts::PI,   // 180 degrees per second
                                 pitch_speed: std::f32::consts::PI, // 180 degrees per second
                                 min_pitch: Some(-std::f32::consts::FRAC_PI_6),
@@ -493,7 +495,13 @@ impl Plugin for TurretPlugin {
             .register_type::<TurretRotatorMarker>()
             .register_type::<TurretTargetInput>();
 
-        app.add_systems(Update, (update_turret_target_system,));
+        app.add_systems(
+            Update,
+            (
+                update_turret_target_system,
+                sync_turret_transform_system,
+            )
+        );
     }
 }
 
@@ -518,10 +526,17 @@ fn update_turret_target_system(
 
         let dir_local = local_pos.normalize_or_zero();
 
-        let (yaw, pitch, _) =
-            Quat::from_rotation_arc(Vec3::NEG_Z, dir_local).to_euler(EulerRot::YXZ);
+        let (yaw, pitch, _) = Quat::from_rotation_arc(Vec3::NEG_Z, dir_local).to_euler(EulerRot::YXZ);
 
         rotator_target.yaw = yaw;
         rotator_target.pitch = pitch;
+    }
+}
+
+fn sync_turret_transform_system(
+    mut q_rotator: Query<(&SmoothLookRotationOutput, &mut Transform), With<TurretRotatorMarker>>,
+) {
+    for (output, mut transform) in &mut q_rotator {
+        *transform = Transform::from_rotation(Quat::from_euler(EulerRot::YXZ, output.yaw, output.pitch, 0.0));
     }
 }

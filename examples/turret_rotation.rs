@@ -330,6 +330,7 @@ impl Plugin for TurretPlugin {
             Update,
             (
                 update_turret_target_system,
+                sync_turret_transform_system,
             )
         );
     }
@@ -360,5 +361,13 @@ fn update_turret_target_system(
 
         rotator_target.yaw = yaw;
         rotator_target.pitch = pitch;
+    }
+}
+
+fn sync_turret_transform_system(
+    mut q_rotator: Query<(&SmoothLookRotationOutput, &mut Transform), With<TurretRotatorMarker>>,
+) {
+    for (output, mut transform) in &mut q_rotator {
+        *transform = Transform::from_rotation(Quat::from_euler(EulerRot::YXZ, output.yaw, output.pitch, 0.0));
     }
 }
