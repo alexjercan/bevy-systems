@@ -69,7 +69,7 @@ impl Plugin for EngineSectionPlugin {
         // TODO: Might add a flag for this later
         app.add_observer(insert_engine_section_render);
 
-        app.add_systems(Update, engine_thrust_system.in_set(EngineSectionPluginSet));
+        app.add_systems(FixedUpdate, engine_thrust_system.in_set(EngineSectionPluginSet));
     }
 }
 
