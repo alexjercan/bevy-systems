@@ -1,4 +1,4 @@
-//! A module for defining engine sections that provide thrust to a ship.
+//! Defines an engine section for a spaceship, which provides thrust in a specified direction.
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
@@ -14,6 +14,7 @@ pub mod prelude {
     pub use super::EngineThrustMagnitude;
 }
 
+/// Configuration for an engine section of a spaceship.
 #[derive(Default, Clone, Debug)]
 pub struct EngineSectionConfig {
     /// The magnitude of the thrust produced by this engine section.
@@ -23,7 +24,10 @@ pub struct EngineSectionConfig {
     pub transform: Transform,
 }
 
+/// Helper function to create an engine section entity bundle.
 pub fn engine_section(config: EngineSectionConfig) -> impl Bundle {
+    debug!("Creating engine section with config: {:?}", config);
+
     (
         Name::new("Engine Section"),
         EngineSectionMarker,
@@ -36,12 +40,12 @@ pub fn engine_section(config: EngineSectionConfig) -> impl Bundle {
     )
 }
 
+/// Marker component for engine sections.
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct EngineSectionMarker;
 
 /// The thrust magnitude produced by this engine section. This is a simple scalar value that can be
-/// used to determine the thrust force applied to the ship. The direction of the thrust is assumed
-/// to be along the local -Z axis of the engine section.
+/// used to determine the thrust force applied to the ship.
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct EngineThrustMagnitude(pub f32);
 
@@ -50,6 +54,7 @@ pub struct EngineThrustMagnitude(pub f32);
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct EngineThrustInput(pub f32);
 
+/// A system set that will contain all the systems related to the engine section plugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EngineSectionPluginSet;
 

@@ -26,6 +26,7 @@ fn main() {
     // We need to enable the physics plugins to have access to RigidBody and other components.
     // We will also disable gravity for this example, since we are in space, duh.
     app.add_plugins(PhysicsPlugins::default());
+    #[cfg(feature = "dev")]
     app.add_plugins(PhysicsDebugPlugin::default());
     app.insert_resource(Gravity::ZERO);
 
@@ -87,6 +88,9 @@ fn setup_spaceship(mut commands: Commands) {
         children![
             (controller_section(ControllerSectionConfig {
                 transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                frequency: 4.0,
+                damping_ratio: 4.0,
+                max_torque: 10.0,
                 ..default()
             }),),
             (hull_section(HullSectionConfig {
@@ -107,6 +111,25 @@ fn setup_spaceship(mut commands: Commands) {
                     .with_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
                 ..default()
             }),),
+            // (turret_section(TurretSectionConfig {
+            //     transform: Transform::from_xyz(0.0, 1.0, -1.0),
+            //     ..default()
+            // }),),
+            // (turret_section(TurretSectionConfig {
+            //     transform: Transform::from_xyz(0.0, -1.0, -1.0)
+            //         .with_rotation(Quat::from_rotation_x(std::f32::consts::PI)),
+            //     ..default()
+            // }),),
+            // (turret_section(TurretSectionConfig {
+            //     transform: Transform::from_xyz(-1.0, 0.0, -1.0)
+            //         .with_rotation(Quat::from_rotation_z(std::f32::consts::FRAC_PI_2)),
+            //     ..default()
+            // }),),
+            // (turret_section(TurretSectionConfig {
+            //     transform: Transform::from_xyz(1.0, 0.0, -1.0)
+            //         .with_rotation(Quat::from_rotation_z(-std::f32::consts::FRAC_PI_2)),
+            //     ..default()
+            // }),),
         ],
     ));
 }
@@ -240,7 +263,7 @@ fn sync_spaceship_control_mode(
                 .insert(SpaceshipRotationInputActiveMarker);
             commands.entity(camera).insert(ChaseCamera {
                 offset: Vec3::new(0.0, 5.0, -10.0),
-                focus_offset: Vec3::new(0.0, 0.0, 0.0),
+                focus_offset: Vec3::new(0.0, 0.0, 50.0),
             });
         }
     }

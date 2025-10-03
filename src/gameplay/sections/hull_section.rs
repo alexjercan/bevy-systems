@@ -1,5 +1,4 @@
-//! A hull section is a modular part of a ship's hull. It just adds a physical body to which other
-//! can connect. It represents the basic building block of a ship's structure.
+//! Module for defining hull sections in a 3D environment using Bevy and Avian3D.
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
@@ -11,12 +10,17 @@ pub mod prelude {
     pub use super::HullSectionPlugin;
 }
 
+/// Configuration for a hull section.
 #[derive(Default, Clone, Debug)]
 pub struct HullSectionConfig {
+    /// The transform of the hull section relative to its parent.
     pub transform: Transform,
 }
 
+/// Helper function to create a hull section entity bundle.
 pub fn hull_section(config: HullSectionConfig) -> impl Bundle {
+    debug!("Creating hull section with config: {:?}", config);
+
     (
         Name::new("Hull Section"),
         HullSectionMarker,
@@ -27,6 +31,7 @@ pub fn hull_section(config: HullSectionConfig) -> impl Bundle {
     )
 }
 
+/// Marker component for hull sections.
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct HullSectionMarker;
 

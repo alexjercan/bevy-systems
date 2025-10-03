@@ -1,3 +1,5 @@
+//! A section of a spaceship that can control its rotation using a PD controller.
+
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
@@ -12,13 +14,33 @@ pub mod prelude {
     pub use super::ControllerSectionStableTorquePdController;
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct ControllerSectionConfig {
     /// The transform of the controller section relative to its parent.
     pub transform: Transform,
+    /// The frequency of the PD controller in Hz.
+    pub frequency: f32,
+    /// The damping ratio of the PD controller.
+    pub damping_ratio: f32,
+    /// The maximum torque that can be applied by the PD controller.
+    pub max_torque: f32,
 }
 
+impl Default for ControllerSectionConfig {
+    fn default() -> Self {
+        Self {
+            transform: Transform::default(),
+            frequency: 2.0,
+            damping_ratio: 2.0,
+            max_torque: 1.0,
+        }
+    }
+}
+
+/// Helper function to create a controller section entity bundle.
 pub fn controller_section(config: ControllerSectionConfig) -> impl Bundle {
+    debug!("Creating controller section with config: {:?}", config);
+
     (
         Name::new("Controller Section"),
         ControllerSectionMarker,
@@ -26,15 +48,16 @@ pub fn controller_section(config: ControllerSectionConfig) -> impl Bundle {
         ColliderDensity(1.0),
         ControllerSectionRotationInput::default(),
         ControllerSectionStableTorquePdController {
-            frequency: 2.0,
-            damping_ratio: 2.0,
-            max_torque: 1.0,
+            frequency: config.frequency,
+            damping_ratio: config.damping_ratio,
+            max_torque: config.max_torque,
         },
         config.transform,
         Visibility::Visible,
     )
 }
 
+/// Marker component for controller sections.
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct ControllerSectionMarker;
 
@@ -42,14 +65,8 @@ pub struct ControllerSectionMarker;
 #[derive(Component, Debug, Clone, Default, Deref, DerefMut, Reflect)]
 pub struct ControllerSectionRotationInput(pub Quat);
 
+/// A stable PD controller that applies torque to maintain a desired rotation.
 #[derive(Component, Debug, Clone, Reflect)]
-/// A Proportional-Derivative controller that applies torque to reach a target angle in a stable
-/// manner.
-///
-/// When we add the `StableTorquePdController` component to an entity, we also need to add the
-/// `StableTorquePdControllerTarget` component to specify the desired target rotation. We can then
-/// use the target component to update the target rotation as needed. The entity's rotation will be
-/// modified by the controller to reach the target rotation.
 pub struct ControllerSectionStableTorquePdController {
     /// Frequency in Hz.
     pub frequency: f32,
@@ -59,6 +76,7 @@ pub struct ControllerSectionStableTorquePdController {
     pub max_torque: f32,
 }
 
+/// A system set that will contain all the systems related to the controller section plugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ControllerSectionPluginSet;
 
@@ -71,7 +89,10 @@ impl Plugin for ControllerSectionPlugin {
         // TODO: Might add a flag for this later
         app.add_observer(insert_controller_section_render);
 
-        app.add_systems(Update, update_controller_root_torque.in_set(ControllerSectionPluginSet));
+        app.add_systems(
+            Update,
+            update_controller_root_torque.in_set(ControllerSectionPluginSet),
+        );
     }
 }
 

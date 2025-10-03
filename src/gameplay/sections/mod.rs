@@ -22,24 +22,31 @@ pub mod prelude {
 }
 
 #[derive(Default, Clone, Debug)]
-pub struct SpaceshipConfig {}
+pub struct SpaceshipConfig {
+    pub transform: Transform,
+}
 
-pub fn spaceship_root(_config: SpaceshipConfig) -> impl Bundle {
+/// Helper function to create a spaceship root entity bundle.
+pub fn spaceship_root(config: SpaceshipConfig) -> impl Bundle {
     (
         Name::new("Spaceship Root"),
         SpaceshipRootMarker,
         RigidBody::Dynamic,
-        Transform::default(),
+        config.transform,
         Visibility::Visible,
     )
 }
 
+/// This will be the root component for the entire spaceship. All other sections will be children
+/// of this entity.
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct SpaceshipRootMarker;
 
+/// A system set that will contain all the systems related to the spaceship plugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SpaceshipPluginSet;
 
+/// A plugin that adds all the spaceship sections and their related systems.
 pub struct SpaceshipPlugin;
 
 impl Plugin for SpaceshipPlugin {
@@ -55,19 +62,19 @@ impl Plugin for SpaceshipPlugin {
 
         app.configure_sets(
             Update,
-            engine_section::EngineSectionPluginSet.after(SpaceshipPluginSet),
+            engine_section::EngineSectionPluginSet.in_set(SpaceshipPluginSet),
         );
         app.configure_sets(
             Update,
-            controller_section::ControllerSectionPluginSet.after(SpaceshipPluginSet),
+            controller_section::ControllerSectionPluginSet.in_set(SpaceshipPluginSet),
         );
         app.configure_sets(
             Update,
-            turret_section::TurretSectionPluginSet.after(SpaceshipPluginSet),
+            turret_section::TurretSectionPluginSet.in_set(SpaceshipPluginSet),
         );
         app.configure_sets(
             Update,
-            hull_section::HullSectionPluginSet.after(SpaceshipPluginSet),
+            hull_section::HullSectionPluginSet.in_set(SpaceshipPluginSet),
         );
     }
 }

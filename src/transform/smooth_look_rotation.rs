@@ -16,48 +16,30 @@ pub mod prelude {
 /// look rotation.
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 pub struct SmoothLookRotation {
-    /// Initial yaw in radians.
-    pub initial_yaw: f32,
-    /// Initial pitch in radians.
-    pub initial_pitch: f32,
-    /// Yaw rotation speed in radians per second.
-    pub yaw_speed: f32,
-    /// Pitch rotation speed in radians per second.
-    pub pitch_speed: f32,
-    /// Optional minimum pitch angle in radians.
-    pub min_pitch: Option<f32>,
-    /// Optional maximum pitch angle in radians.
-    pub max_pitch: Option<f32>,
+    pub axis: Vec3,
+    pub initial: f32,
+    pub speed: f32,
+    pub min: Option<f32>,
+    pub max: Option<f32>,
 }
 
 impl Default for SmoothLookRotation {
     fn default() -> Self {
         Self {
-            initial_yaw: 0.0,
-            initial_pitch: 0.0,
-            yaw_speed: std::f32::consts::PI, // 180 degrees per second
-            pitch_speed: std::f32::consts::PI, // 180 degrees per second
-            min_pitch: None,
-            max_pitch: None,
+            axis: Vec3::Y,
+            initial: 0.0,
+            speed: std::f32::consts::PI, // 180 degrees per second
+            min: None,
+            max: None,
         }
     }
 }
 
-/// Component to set the target yaw and pitch angles in radians. Update this component to change
-/// the desired look direction.
-#[derive(Component, Clone, Copy, Debug, Reflect)]
-pub struct SmoothLookRotationTarget {
-    pub yaw: f32,
-    pub pitch: f32,
-}
+#[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
+pub struct SmoothLookRotationTarget(pub f32);
 
-/// Component that holds the current yaw and pitch angles in radians. This is updated smoothly
-/// over time based on the target and speed settings.
-#[derive(Component, Clone, Copy, Debug, Reflect)]
-pub struct SmoothLookRotationOutput {
-    pub yaw: f32,
-    pub pitch: f32,
-}
+#[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
+pub struct SmoothLookRotationOutput(pub f32);
 
 pub struct SmoothLookRotationPlugin;
 
@@ -86,12 +68,9 @@ fn initialize_smooth_look_system(
         return;
     };
 
-    let yaw = look.initial_yaw;
-    let pitch = look.initial_pitch;
-
     commands.entity(entity).insert((
-        SmoothLookRotationTarget { yaw, pitch },
-        SmoothLookRotationOutput { yaw, pitch },
+        SmoothLookRotationTarget(look.initial),
+        SmoothLookRotationOutput(look.initial),
     ));
 }
 
@@ -105,29 +84,19 @@ fn smooth_look_rotation_update_system(
 ) {
     let dt = time.delta_secs();
     for (look, target, mut state) in &mut q_look {
-        let yaw_diff = (target.yaw - state.yaw + std::f32::consts::PI)
-            .rem_euclid(2.0 * std::f32::consts::PI)
-            - std::f32::consts::PI;
-        let max_yaw_change = look.yaw_speed * dt;
-        if yaw_diff.abs() <= max_yaw_change {
-            state.yaw = target.yaw;
+        let angle_diff = **target - **state;
+        let max_angle_change = look.speed * dt;
+        if angle_diff.abs() <= max_angle_change {
+            **state = **target;
         } else {
-            state.yaw += yaw_diff.signum() * max_yaw_change;
+            **state += angle_diff.signum() * max_angle_change;
         }
 
-        let pitch_diff = target.pitch - state.pitch;
-        let max_pitch_change = look.pitch_speed * dt;
-        if pitch_diff.abs() <= max_pitch_change {
-            state.pitch = target.pitch;
-        } else {
-            state.pitch += pitch_diff.signum() * max_pitch_change;
+        if let Some(min) = look.min {
+            **state = state.max(min);
         }
-
-        if let Some(min_pitch) = look.min_pitch {
-            state.pitch = state.pitch.max(min_pitch);
-        }
-        if let Some(max_pitch) = look.max_pitch {
-            state.pitch = state.pitch.min(max_pitch);
+        if let Some(max) = look.max {
+            **state = state.min(max);
         }
     }
 }
