@@ -399,16 +399,16 @@ struct FreeLookInput;
 struct CombatInput;
 
 fn on_rotation_input(
-    trigger: Trigger<Fired<CameraInputRotate>>,
+    fire: On<Fire<CameraInputRotate>>,
     mut q_input: Query<&mut PointRotationInput, With<SpaceshipRotationInputActiveMarker>>,
 ) {
     for mut input in &mut q_input {
-        **input = trigger.value;
+        **input = fire.value;
     }
 }
 
 fn on_rotation_input_completed(
-    _: Trigger<Completed<CameraInputRotate>>,
+    _: On<Complete<CameraInputRotate>>,
     mut q_input: Query<&mut PointRotationInput>,
 ) {
     for mut input in &mut q_input {
@@ -416,14 +416,14 @@ fn on_rotation_input_completed(
     }
 }
 
-fn on_thruster_input(_: Trigger<Fired<ThrusterInput>>, mut q_input: Query<&mut EngineThrustInput>) {
+fn on_thruster_input(_: On<Fire<ThrusterInput>>, mut q_input: Query<&mut EngineThrustInput>) {
     for mut input in &mut q_input {
         **input = 1.0;
     }
 }
 
 fn on_thruster_input_completed(
-    _: Trigger<Completed<ThrusterInput>>,
+    _: On<Complete<ThrusterInput>>,
     mut q_input: Query<&mut EngineThrustInput>,
 ) {
     for mut input in &mut q_input {
@@ -432,28 +432,28 @@ fn on_thruster_input_completed(
 }
 
 fn on_free_mode_input_started(
-    _: Trigger<Started<FreeLookInput>>,
+    _: On<Start<FreeLookInput>>,
     mut mode: ResMut<SpaceshipControlMode>,
 ) {
     *mode = SpaceshipControlMode::FreeLook;
 }
 
 fn on_free_mode_input_completed(
-    _: Trigger<Completed<FreeLookInput>>,
+    _: On<Complete<FreeLookInput>>,
     mut mode: ResMut<SpaceshipControlMode>,
 ) {
     *mode = SpaceshipControlMode::Normal;
 }
 
 fn on_combat_input_started(
-    _: Trigger<Started<CombatInput>>,
+    _: On<Start<CombatInput>>,
     mut mode: ResMut<SpaceshipControlMode>,
 ) {
     *mode = SpaceshipControlMode::Combat;
 }
 
 fn on_combat_input_completed(
-    _: Trigger<Completed<CombatInput>>,
+    _: On<Complete<CombatInput>>,
     mut mode: ResMut<SpaceshipControlMode>,
 ) {
     *mode = SpaceshipControlMode::Normal;

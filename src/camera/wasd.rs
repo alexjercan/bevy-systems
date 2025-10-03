@@ -54,12 +54,7 @@ pub struct WASDCameraPlugin;
 
 impl Plugin for WASDCameraPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<WASDCamera>()
-            .register_type::<WASDCameraInput>()
-            .register_type::<WASDCameraTarget>()
-            .register_type::<WASDCameraState>();
-
-        app.add_observer(initialize);
+        app.add_observer(initialize_wasd_camera);
         app.add_systems(
             Update,
             (update_target, update_state, sync_transform).chain(),
@@ -67,12 +62,12 @@ impl Plugin for WASDCameraPlugin {
     }
 }
 
-fn initialize(
-    trigger: Trigger<OnAdd, WASDCamera>,
+fn initialize_wasd_camera(
+    insert: On<Insert, WASDCamera>,
     mut commands: Commands,
     q_transform: Query<&Transform, With<WASDCamera>>,
 ) {
-    let entity = trigger.target();
+    let entity = insert.entity;
     let Ok(transform) = q_transform.get(entity) else {
         warn!("WASDCamera added to entity without Transform");
         return;

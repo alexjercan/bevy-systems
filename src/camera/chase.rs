@@ -43,17 +43,17 @@ pub struct ChaseCameraPlugin;
 
 impl Plugin for ChaseCameraPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<ChaseCamera>()
-            .register_type::<ChaseCameraInput>();
-
         app.add_observer(initialize_chase_camera);
-        app.add_systems(Update, chase_camera_update_system.in_set(ChaseCameraPluginSet));
+        app.add_systems(
+            Update,
+            chase_camera_update_system.in_set(ChaseCameraPluginSet),
+        );
     }
 }
 
 /// Initialize camera state and target from config
-fn initialize_chase_camera(trigger: Trigger<OnInsert, ChaseCamera>, mut commands: Commands) {
-    let entity = trigger.target();
+fn initialize_chase_camera(insert: On<Insert, ChaseCamera>, mut commands: Commands) {
+    let entity = insert.entity;
     commands
         .entity(entity)
         .insert((ChaseCameraInput::default(),));

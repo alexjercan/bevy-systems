@@ -50,12 +50,12 @@ impl Plugin for HullSectionPlugin {
 }
 
 fn insert_hull_section_render(
-    trigger: Trigger<OnAdd, HullSectionMarker>,
+    add: On<Add, HullSectionMarker>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let entity = trigger.target();
+    let entity = add.entity;
     debug!("Inserting render for HullSection: {:?}", entity);
 
     commands.entity(entity).insert((

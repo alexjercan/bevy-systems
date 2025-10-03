@@ -51,21 +51,17 @@ pub struct SmoothLookRotationPlugin;
 
 impl Plugin for SmoothLookRotationPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<SmoothLookRotation>()
-            .register_type::<SmoothLookRotationTarget>()
-            .register_type::<SmoothLookRotationOutput>();
-
         app.add_observer(initialize_smooth_look_system);
         app.add_systems(Update, smooth_look_rotation_update_system);
     }
 }
 
 fn initialize_smooth_look_system(
-    trigger: Trigger<OnInsert, SmoothLookRotation>,
+    insert: On<Insert, SmoothLookRotation>,
     q_look: Query<&SmoothLookRotation>,
     mut commands: Commands,
 ) {
-    let entity = trigger.target();
+    let entity = insert.entity;
     let Ok(look) = q_look.get(entity) else {
         warn!(
             "initialize_smooth_look_system: entity {:?} is not setup correctly",

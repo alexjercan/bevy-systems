@@ -6,7 +6,7 @@ use bevy::{
     app::ScheduleRunnerPlugin,
     log::{Level, LogPlugin},
     prelude::*,
-    window::{CursorGrabMode, PresentMode, PrimaryWindow},
+    window::{CursorGrabMode, CursorOptions, PresentMode, PrimaryWindow},
     winit::WinitPlugin,
 };
 
@@ -17,7 +17,7 @@ fn window_plugin() -> WindowPlugin {
     WindowPlugin {
         primary_window: Some(Window {
             title: format!("Survicraft - {}", env!("CARGO_PKG_VERSION")),
-            resolution: (1024., 768.).into(),
+            resolution: (1024, 768).into(),
             present_mode: PresentMode::AutoVsync,
             // set to true if we want to capture tab etc in wasm
             prevent_default_event_handling: true,
@@ -75,33 +75,31 @@ pub fn new_headless_app() -> App {
 }
 
 fn lock_on_left_click(
-    mut windows: Query<&mut Window, With<PrimaryWindow>>,
+    primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>,
     mouse: Res<ButtonInput<MouseButton>>,
 ) {
     // TODO: Not for UI
     if mouse.just_pressed(MouseButton::Right) {
-        if let Ok(mut window) = windows.single_mut() {
-            window.cursor_options.grab_mode = CursorGrabMode::Locked;
-            window.cursor_options.visible = false;
-        }
+        let mut primary_cursor_options = primary_cursor_options.into_inner();
+        primary_cursor_options.grab_mode = CursorGrabMode::Locked;
+        primary_cursor_options.visible = false;
     }
 }
 
 fn unlock_on_escape(
-    mut windows: Query<&mut Window, With<PrimaryWindow>>,
+    primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
     if keys.just_pressed(KeyCode::Escape) {
-        if let Ok(mut window) = windows.single_mut() {
-            window.cursor_options.grab_mode = CursorGrabMode::None;
-            window.cursor_options.visible = true;
-        }
+        let mut primary_cursor_options = primary_cursor_options.into_inner();
+        primary_cursor_options.grab_mode = CursorGrabMode::None;
+        primary_cursor_options.visible = true;
     }
 }
 
 #[cfg(feature = "debug")]
 mod debug {
-    use bevy::{prelude::*, render::view::RenderLayers};
+    use bevy::{camera::visibility::RenderLayers, prelude::*};
     use bevy_inspector_egui::{
         bevy_egui::{EguiContext, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext},
         bevy_inspector, egui, DefaultInspectorConfigPlugin,
