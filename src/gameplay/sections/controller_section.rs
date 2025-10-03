@@ -14,6 +14,7 @@ pub mod prelude {
     pub use super::ControllerSectionStableTorquePdController;
 }
 
+/// Configuration for a controller section.
 #[derive(Clone, Debug)]
 pub struct ControllerSectionConfig {
     /// The transform of the controller section relative to its parent.
@@ -80,6 +81,7 @@ pub struct ControllerSectionStableTorquePdController {
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ControllerSectionPluginSet;
 
+/// A plugin that will enable the ControllerSection.
 pub struct ControllerSectionPlugin;
 
 impl Plugin for ControllerSectionPlugin {

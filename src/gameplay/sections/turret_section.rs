@@ -110,6 +110,7 @@ pub struct TurretSectionTargetInput(pub Option<Vec3>);
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TurretSectionPluginSet;
 
+/// A plugin that enables the TurretSection component and its related systems.
 pub struct TurretSectionPlugin;
 
 impl Plugin for TurretSectionPlugin {

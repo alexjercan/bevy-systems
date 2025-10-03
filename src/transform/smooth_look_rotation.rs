@@ -43,6 +43,10 @@ pub struct SmoothLookRotationTarget(pub f32);
 pub struct SmoothLookRotationOutput(pub f32);
 
 /// A plugin that will enable the SmoothLookRotation system.
+///
+/// SmoothLookRotation allows an entity to smoothly rotate to face a target angle around a
+/// specified axis. This is useful for creating smooth camera or object rotations
+/// based on user input or other dynamic targets.
 pub struct SmoothLookRotationPlugin;
 
 impl Plugin for SmoothLookRotationPlugin {

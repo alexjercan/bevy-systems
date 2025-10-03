@@ -21,8 +21,10 @@ pub mod prelude {
     pub use super::SpaceshipRootMarker;
 }
 
+/// Configuration for the spaceship root entity.
 #[derive(Default, Clone, Debug)]
 pub struct SpaceshipConfig {
+    /// The transform of the spaceship root entity.
     pub transform: Transform,
 }
 

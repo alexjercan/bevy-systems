@@ -38,6 +38,7 @@ pub struct HullSectionMarker;
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct HullSectionPluginSet;
 
+/// A plugin that enables the HullSection component and its related systems.
 pub struct HullSectionPlugin;
 
 impl Plugin for HullSectionPlugin {

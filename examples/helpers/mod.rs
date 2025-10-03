@@ -143,7 +143,7 @@ pub fn setup_simple_scene(
             GlobalTransform::default(),
             Mesh3d(meshes.add(Cuboid::new(size, size, size))),
             MeshMaterial3d(materials.add(color)),
-            Collider::cuboid(size / 2.0, size / 2.0, size / 2.0),
+            Collider::cuboid(size, size, size),
             ColliderDensity(1.0),
             RigidBody::Dynamic,
         ));

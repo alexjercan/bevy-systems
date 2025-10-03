@@ -58,6 +58,7 @@ pub struct EngineThrustInput(pub f32);
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EngineSectionPluginSet;
 
+/// A plugin that enables the EngineSection component and its related systems.
 pub struct EngineSectionPlugin;
 
 impl Plugin for EngineSectionPlugin {

@@ -1,4 +1,4 @@
-// TODO: Move this to a debug section later
+// TODO: Refactor to not apply the Transform directly, but rather have an output component
 
 use bevy::prelude::*;
 use rand::prelude::*;
@@ -33,6 +33,9 @@ struct RandomSphereOrbitNext {
 }
 
 /// Plugin to manage entities with `RandomSphereOrbit` component.
+///
+/// RandomSphereOrbit allows an entity to orbit around a point on the surface of a sphere,
+/// randomly picking new target angles to move toward over time.
 pub struct SphereRandomOrbitPlugin;
 
 impl Plugin for SphereRandomOrbitPlugin {
