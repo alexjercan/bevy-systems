@@ -10,13 +10,10 @@ use bevy::{
     winit::WinitPlugin,
 };
 
-#[cfg(feature = "debug")]
-use self::debug::InpsectorDebugPlugin;
-
 fn window_plugin() -> WindowPlugin {
     WindowPlugin {
         primary_window: Some(Window {
-            title: format!("Survicraft - {}", env!("CARGO_PKG_VERSION")),
+            title: format!("SpaceGame - {}", env!("CARGO_PKG_VERSION")),
             resolution: (1024, 768).into(),
             present_mode: PresentMode::AutoVsync,
             // set to true if we want to capture tab etc in wasm
@@ -30,8 +27,16 @@ fn window_plugin() -> WindowPlugin {
 fn log_plugin() -> LogPlugin {
     LogPlugin {
         level: Level::INFO,
-        filter: "wgpu=error,bevy_render=info,bevy_ecs=warn,bevy_time=warn,naga=warn,bevy_systems=debug".to_string(),
+        filter: log_filter_str().to_string(),
         ..default()
+    }
+}
+
+fn log_filter_str<'a>() -> &'a str {
+    if cfg!(feature = "debug") {
+        "wgpu=error,bevy_render=info,bevy_ecs=warn,bevy_time=warn,naga=warn,bevy_systems=debug"
+    } else {
+        "wgpu=error,bevy_render=info,bevy_ecs=warn,bevy_time=warn,naga=warn,bevy_systems=info"
     }
 }
 
@@ -48,8 +53,9 @@ pub fn new_gui_app() -> App {
             .set(window_plugin()),
     );
 
-    #[cfg(feature = "debug")]
-    app.add_plugins(InpsectorDebugPlugin);
+    if cfg!(feature = "debug") {
+        app.add_plugins(debug::InpsectorDebugPlugin);
+    }
 
     // NOTE: Just for non UI, lock cursor on left click and unlock on escape
     app.add_systems(Update, (lock_on_left_click, unlock_on_escape));
@@ -97,7 +103,6 @@ fn unlock_on_escape(
     }
 }
 
-#[cfg(feature = "debug")]
 mod debug {
     use bevy::prelude::*;
     use bevy_inspector_egui::{
