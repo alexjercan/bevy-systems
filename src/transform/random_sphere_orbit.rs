@@ -11,7 +11,7 @@ pub mod prelude {
 }
 
 /// Component to define a spherical orbit around a center point.
-#[derive(Component, Clone, Debug, Reflect)]
+#[derive(Component, Clone, Debug, Default, Reflect)]
 pub struct RandomSphereOrbit {
     /// Radius of the sphere (distance from origin or from a center)
     pub radius: f32,
@@ -25,7 +25,7 @@ pub struct RandomSphereOrbit {
     pub initial_phi: f32,
 }
 
-#[derive(Component, Clone, Debug, Default, Reflect)]
+#[derive(Component, Clone, Debug, Default, Deref, DerefMut, Reflect)]
 pub struct RandomSphereOrbitOutput(pub Vec3);
 
 #[derive(Component, Clone, Debug, Default, Reflect)]

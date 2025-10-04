@@ -99,7 +99,7 @@ fn unlock_on_escape(
 
 #[cfg(feature = "debug")]
 mod debug {
-    use bevy::{camera::visibility::RenderLayers, prelude::*};
+    use bevy::prelude::*;
     use bevy_inspector_egui::{
         bevy_egui::{EguiContext, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext},
         bevy_inspector, egui, DefaultInspectorConfigPlugin,
@@ -118,7 +118,7 @@ mod debug {
         }
     }
 
-    fn setup(mut commands: Commands) {
+    fn setup(mut _commands: Commands) {
         // commands.spawn((
         //     Camera2d,
         //     Camera {
