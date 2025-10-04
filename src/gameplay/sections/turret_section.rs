@@ -11,8 +11,6 @@ pub mod prelude {
     pub use super::TurretSectionConfig;
     pub use super::TurretSectionMarker;
     pub use super::TurretSectionPlugin;
-    pub use super::TurretSectionRotatorPitchMarker;
-    pub use super::TurretSectionRotatorYawMarker;
     pub use super::TurretSectionTargetInput;
 }
 
@@ -52,41 +50,53 @@ pub fn turret_section(config: TurretSectionConfig) -> impl Bundle {
         config.transform,
         Visibility::Visible,
         children![(
-            Name::new("Turret Base"),
-            TurretSectionRotatorMarker,
-            SmoothLookRotation {
-                axis: Vec3::Y,
-                initial: 0.0,
-                speed: std::f32::consts::PI,
-                ..default()
-            },
+            Name::new("Turret Rotator Base"),
+            TurretRotatorBaseMarker,
             Transform::from_xyz(0.0, -0.5, 0.0),
             Visibility::Inherited,
             children![(
-                Name::new("Turret Rotator Yaw"),
-                TurretSectionRotatorYawMarker,
+                Name::new("Turret Rotator Yaw Base"),
+                TurretSectionRotatorYawBaseMarker,
                 SmoothLookRotation {
-                    axis: Vec3::X,
+                    axis: Vec3::Y,
                     initial: 0.0,
                     speed: std::f32::consts::PI,
-                    min: config.min_pitch,
-                    max: config.max_pitch,
+                    ..default()
                 },
                 Transform::from_xyz(0.0, 0.1, 0.0),
                 Visibility::Inherited,
                 children![(
-                    Name::new("Turret Rotator Pitch"),
-                    TurretSectionRotatorPitchMarker,
-                    Transform::from_xyz(0.0, 0.2, 0.0),
+                    Name::new("Turret Rotator Yaw"),
+                    TurretSectionRotatorYawMarker,
+                    Transform::default(),
                     Visibility::Inherited,
                     children![(
-                        Name::new("Turret Rotator Barrel"),
-                        TurretSectionRotatorBarrelMarker,
-                        Transform::from_xyz(0.1, 0.2, 0.0),
+                        Name::new("Turret Rotator Pitch Base"),
+                        TurretSectionRotatorPitchBaseMarker,
+                        SmoothLookRotation {
+                            axis: Vec3::X,
+                            initial: 0.0,
+                            speed: std::f32::consts::PI,
+                            min: config.min_pitch,
+                            max: config.max_pitch,
+                        },
+                        Transform::from_xyz(0.0, 0.2, 0.0),
                         Visibility::Inherited,
-                    ),],
-                )],
-            ),],
+                        children![(
+                            Name::new("Turret Rotator Pitch"),
+                            TurretSectionRotatorPitchMarker,
+                            Transform::default(),
+                            Visibility::Inherited,
+                            children![(
+                                Name::new("Turret Rotator Barrel"),
+                                TurretSectionRotatorBarrelMarker,
+                                Transform::from_xyz(0.1, 0.2, 0.0),
+                                Visibility::Inherited,
+                            ),],
+                        ),],
+                    )],
+                ),],
+            )],
         )],
     )
 }
@@ -95,21 +105,28 @@ pub fn turret_section(config: TurretSectionConfig) -> impl Bundle {
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct TurretSectionMarker;
 
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+struct TurretRotatorBaseMarker;
+
 /// Marker component for the turret section rotator.
 #[derive(Component, Clone, Copy, Debug, Reflect)]
-pub struct TurretSectionRotatorMarker;
+struct TurretSectionRotatorYawBaseMarker;
 
 /// Marker component for the yaw part of the turret section rotator.
 #[derive(Component, Clone, Copy, Debug, Reflect)]
-pub struct TurretSectionRotatorYawMarker;
+struct TurretSectionRotatorYawMarker;
 
 /// Marker component for the pitch part of the turret section rotator.
 #[derive(Component, Clone, Copy, Debug, Reflect)]
-pub struct TurretSectionRotatorPitchMarker;
+struct TurretSectionRotatorPitchBaseMarker;
+
+/// Marker component for the pitch part of the turret section rotator.
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+struct TurretSectionRotatorPitchMarker;
 
 /// Marker component for the barrel part of the turret section rotator.
 #[derive(Component, Clone, Copy, Debug, Reflect)]
-pub struct TurretSectionRotatorBarrelMarker;
+struct TurretSectionRotatorBarrelMarker;
 
 /// The target input for the turret section. This is a world-space position that the turret will
 /// aim at. If None, the turret will not rotate.
@@ -158,48 +175,57 @@ impl Plugin for TurretSectionPlugin {
 
 fn update_turret_target_system(
     q_turret: Query<&TurretSectionTargetInput, With<TurretSectionMarker>>,
-    mut q_yaw_rotator_base: Query<
-        (&GlobalTransform, &mut SmoothLookRotationTarget, &ChildOf),
-        With<TurretSectionRotatorMarker>,
-    >,
-    mut q_pitch_rotator_base: Query<
+    q_base: Query<&ChildOf, With<TurretRotatorBaseMarker>>,
+    mut q_rotator_yaw_base: Query<
         (&GlobalTransform, &mut SmoothLookRotationTarget, &ChildOf),
         (
-            With<TurretSectionRotatorYawMarker>,
-            Without<TurretSectionRotatorMarker>,
+            With<TurretSectionRotatorYawBaseMarker>,
+            Without<TurretSectionRotatorPitchBaseMarker>,
         ),
     >,
-    q_barrel_base: Query<
-        (&GlobalTransform, &ChildOf),
+    q_rotator_yaw: Query<&ChildOf, With<TurretSectionRotatorYawMarker>>,
+    mut q_rotator_pitch_base: Query<
+        (&GlobalTransform, &mut SmoothLookRotationTarget, &ChildOf),
         (
-            With<TurretSectionRotatorPitchMarker>,
-            Without<TurretSectionRotatorYawMarker>,
+            With<TurretSectionRotatorPitchBaseMarker>,
+            Without<TurretSectionRotatorYawBaseMarker>,
         ),
     >,
+    q_rotator_pitch: Query<&ChildOf, With<TurretSectionRotatorPitchMarker>>,
     q_barrel: Query<(&GlobalTransform, &ChildOf), With<TurretSectionRotatorBarrelMarker>>,
 ) {
     for (barrel_transform, &ChildOf(entity)) in &q_barrel {
-        let Ok((_, &ChildOf(entity))) = q_barrel_base.get(entity) else {
+        let Ok(&ChildOf(entity)) = q_rotator_pitch.get(entity) else {
             warn!("TurretSectionRotatorBarrel's parent does not have a TurretSectionRotatorPitchMarker component");
             continue;
         };
 
         let Ok((pitch_base_transform, mut pitch_rotator_target, &ChildOf(entity))) =
-            q_pitch_rotator_base.get_mut(entity)
+            q_rotator_pitch_base.get_mut(entity)
         else {
-            warn!("TurretSectionRotatorPitch's parent does not have a TurretSectionRotatorYawMarker component");
+            warn!("TurretSectionRotatorPitch's parent does not have a TurretSectionRotatorPitchBaseMarker component");
+            continue;
+        };
+
+        let Ok(&ChildOf(entity)) = q_rotator_yaw.get(entity) else {
+            warn!("TurretSectionRotatorPitchBase's parent does not have a TurretSectionRotatorYawMarker component");
             continue;
         };
 
         let Ok((yaw_base_transform, mut yaw_rotator_target, &ChildOf(entity))) =
-            q_yaw_rotator_base.get_mut(entity)
+            q_rotator_yaw_base.get_mut(entity)
         else {
-            warn!("TurretSectionRotatorPitch's parent does not have a TurretSectionRotatorMarker component");
+            warn!("TurretSectionRotatorYaw's parent does not have a TurretSectionRotatorYawBaseMarker component");
+            continue;
+        };
+
+        let Ok(&ChildOf(entity)) = q_base.get(entity) else {
+            warn!("TurretSectionRotatorYawBase's parent does not have a TurretRotatorBaseMarker component");
             continue;
         };
 
         let Ok(target_input) = q_turret.get(entity) else {
-            warn!("TurretSectionRotator's parent does not have a TurretSectionMarker component");
+            warn!("TurretRotatorBase's parent does not have a TurretSectionMarker component");
             continue;
         };
 
@@ -243,7 +269,7 @@ fn update_turret_target_system(
 }
 
 fn sync_turret_rotator_yaw_system(
-    q_base: Query<&SmoothLookRotationOutput, With<TurretSectionRotatorMarker>>,
+    q_base: Query<&SmoothLookRotationOutput, With<TurretSectionRotatorYawBaseMarker>>,
     mut q_yaw_rotator: Query<(&mut Transform, &ChildOf), With<TurretSectionRotatorYawMarker>>,
 ) {
     for (mut yaw_transform, &ChildOf(entity)) in &mut q_yaw_rotator {
@@ -258,12 +284,12 @@ fn sync_turret_rotator_yaw_system(
 }
 
 fn sync_turret_rotator_pitch_system(
-    q_yaw: Query<&SmoothLookRotationOutput, With<TurretSectionRotatorYawMarker>>,
+    q_base: Query<&SmoothLookRotationOutput, With<TurretSectionRotatorPitchBaseMarker>>,
     mut q_pitch_rotator: Query<(&mut Transform, &ChildOf), With<TurretSectionRotatorPitchMarker>>,
 ) {
     for (mut pitch_transform, &ChildOf(entity)) in &mut q_pitch_rotator {
-        let Ok(rotator_output) = q_yaw.get(entity) else {
-            warn!("TurretSectionRotatorPitch's parent does not have a TurretSectionRotatorYawMarker component");
+        let Ok(rotator_output) = q_base.get(entity) else {
+            warn!("TurretSectionRotatorPitch's parent does not have a TurretSectionRotatorPitchBaseMarker component");
             continue;
         };
 
@@ -273,13 +299,16 @@ fn sync_turret_rotator_pitch_system(
 }
 
 fn insert_turret_section_render(
-    add: On<Add, TurretSectionRotatorMarker>,
+    add: On<Add, TurretRotatorBaseMarker>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let entity = add.entity;
-    debug!("Inserting render for TurretSection: {:?}", entity);
+    debug!(
+        "Inserting render for TurretRotatorBaseMarker: {:?}",
+        entity
+    );
 
     commands.entity(entity).insert((
         Visibility::Inherited,
@@ -299,7 +328,10 @@ fn insert_turret_yaw_rotator_render(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let entity = add.entity;
-    debug!("Inserting render for TurretSection: {:?}", entity);
+    debug!(
+        "Inserting render for TurretSectionRotatorYawMarker: {:?}",
+        entity
+    );
 
     let base_mat = materials.add(Color::srgb(0.4, 0.4, 0.4));
     let ridge_mat = materials.add(Color::srgb(0.3, 0.3, 0.3));
@@ -351,7 +383,10 @@ fn insert_turret_pitch_rotator_render(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let entity = add.entity;
-    debug!("Inserting render for TurretSection: {:?}", entity);
+    debug!(
+        "Inserting render for TurretSectionRotatorPitchMarker: {:?}",
+        entity
+    );
 
     let base_mat = materials.add(Color::srgb(0.5, 0.5, 0.5));
     let ridge_mat = materials.add(Color::srgb(0.3, 0.3, 0.3));
@@ -404,7 +439,10 @@ fn insert_turret_barrel_render(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let entity = add.entity;
-    debug!("Inserting render for TurretSection: {:?}", entity);
+    debug!(
+        "Inserting render for TurretSectionRotatorBarrelMarker: {:?}",
+        entity
+    );
 
     let body_mat = materials.add(Color::srgb(0.2, 0.2, 0.5));
     let barrel_mat = materials.add(Color::srgb(0.2, 0.2, 0.7));
