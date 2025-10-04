@@ -142,11 +142,11 @@ pub struct TurretSectionPlugin;
 
 impl Plugin for TurretSectionPlugin {
     fn build(&self, app: &mut App) {
+        if cfg!(feature = "debug") {
+            app.add_plugins(debug::DebugTurretSectionPlugin);
+        }
+
         // NOTE: How can we check that the SmoothLookRotationPlugin is added?
-        app.register_type::<TurretSectionMarker>()
-            .register_type::<TurretSectionTargetInput>()
-            .register_type::<TurretSectionRotatorYawMarker>()
-            .register_type::<TurretSectionRotatorPitchMarker>();
         // TODO: Might add a flag for this later
         app.add_observer(insert_turret_section_render);
         app.add_observer(insert_turret_yaw_rotator_render);
@@ -162,12 +162,6 @@ impl Plugin for TurretSectionPlugin {
                 sync_turret_rotator_pitch_system,
             )
                 .chain()
-                .in_set(TurretSectionPluginSet),
-        );
-
-        app.add_systems(
-            Update,
-            (debug_draw_barrel_direction, debug_gizmos_turret_forward)
                 .in_set(TurretSectionPluginSet),
         );
     }
@@ -278,7 +272,6 @@ fn sync_turret_rotator_yaw_system(
             continue;
         };
 
-        // Sync yaw rotator
         yaw_transform.rotation = Quat::from_euler(EulerRot::YXZ, **rotator_output, 0.0, 0.0);
     }
 }
@@ -293,7 +286,6 @@ fn sync_turret_rotator_pitch_system(
             continue;
         };
 
-        // Sync pitch rotator
         pitch_transform.rotation = Quat::from_euler(EulerRot::YXZ, 0.0, **rotator_output, 0.0);
     }
 }
@@ -305,10 +297,7 @@ fn insert_turret_section_render(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let entity = add.entity;
-    debug!(
-        "Inserting render for TurretRotatorBaseMarker: {:?}",
-        entity
-    );
+    debug!("Inserting render for TurretRotatorBaseMarker: {:?}", entity);
 
     commands.entity(entity).insert((
         Visibility::Inherited,
@@ -490,34 +479,48 @@ fn insert_turret_barrel_render(
     });
 }
 
-const DEBUG_LINE_LENGTH: f32 = 100.0;
+mod debug {
+    use super::*;
 
-fn debug_draw_barrel_direction(
-    q_barrel: Query<&GlobalTransform, With<TurretSectionRotatorBarrelMarker>>,
-    mut gizmos: Gizmos,
-) {
-    for barrel_transform in &q_barrel {
-        let barrel_pos = barrel_transform.translation();
-        let barrel_dir = barrel_transform.forward();
+    pub struct DebugTurretSectionPlugin;
 
-        let line_length = DEBUG_LINE_LENGTH;
-        let line_end = barrel_pos + barrel_dir * line_length;
-
-        gizmos.line(barrel_pos, line_end, Color::srgb(1.0, 0.0, 0.0));
-        gizmos.sphere(barrel_pos, 0.05, Color::srgb(1.0, 0.0, 0.0));
-        gizmos.sphere(line_end, 0.05, Color::srgb(1.0, 0.0, 0.0));
+    impl Plugin for DebugTurretSectionPlugin {
+        fn build(&self, app: &mut App) {
+            app.add_systems(
+                Update,
+                (debug_draw_barrel_direction, debug_gizmos_turret_forward)
+                    .in_set(TurretSectionPluginSet),
+            );
+        }
     }
-}
 
-fn debug_gizmos_turret_forward(
-    mut gizmos: Gizmos,
-    q_turret: Query<(&GlobalTransform, &TurretSectionTargetInput), With<TurretSectionMarker>>,
-) {
-    for (transform, target) in &q_turret {
-        if let Some(target) = **target {
-            let origin = transform.translation();
-            let dir = (target - origin).normalize() * DEBUG_LINE_LENGTH;
-            gizmos.line(origin, origin + dir, Color::srgb(0.9, 0.9, 0.1));
+    const DEBUG_LINE_LENGTH: f32 = 100.0;
+
+    fn debug_draw_barrel_direction(
+        q_barrel: Query<&GlobalTransform, With<TurretSectionRotatorBarrelMarker>>,
+        mut gizmos: Gizmos,
+    ) {
+        for barrel_transform in &q_barrel {
+            let barrel_pos = barrel_transform.translation();
+            let barrel_dir = barrel_transform.forward();
+
+            let line_length = DEBUG_LINE_LENGTH;
+            let line_end = barrel_pos + barrel_dir * line_length;
+
+            gizmos.line(barrel_pos, line_end, Color::srgb(1.0, 0.0, 0.0));
+        }
+    }
+
+    fn debug_gizmos_turret_forward(
+        mut gizmos: Gizmos,
+        q_turret: Query<(&GlobalTransform, &TurretSectionTargetInput), With<TurretSectionMarker>>,
+    ) {
+        for (transform, target) in &q_turret {
+            if let Some(target) = **target {
+                let origin = transform.translation();
+                let dir = (target - origin).normalize() * DEBUG_LINE_LENGTH;
+                gizmos.line(origin, origin + dir, Color::srgb(0.9, 0.9, 0.1));
+            }
         }
     }
 }

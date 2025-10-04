@@ -26,8 +26,9 @@ fn main() {
     // We need to enable the physics plugins to have access to RigidBody and other components.
     // We will also disable gravity for this example, since we are in space, duh.
     app.add_plugins(PhysicsPlugins::default().set(PhysicsInterpolationPlugin::interpolate_all()));
-    #[cfg(feature = "dev")]
-    app.add_plugins(PhysicsDebugPlugin::default());
+    if cfg!(feature = "debug") {
+        app.add_plugins(PhysicsDebugPlugin::default());
+    }
     app.insert_resource(Gravity::ZERO);
 
     // Setup the scene with some entities, to have something to look at.
@@ -109,25 +110,25 @@ fn setup_spaceship(mut commands: Commands) {
                     .with_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
                 ..default()
             }),),
-            // (turret_section(TurretSectionConfig {
-            //     transform: Transform::from_xyz(0.0, 1.0, -1.0),
-            //     ..default()
-            // }),),
-            // (turret_section(TurretSectionConfig {
-            //     transform: Transform::from_xyz(0.0, -1.0, -1.0)
-            //         .with_rotation(Quat::from_rotation_x(std::f32::consts::PI)),
-            //     ..default()
-            // }),),
-            // (turret_section(TurretSectionConfig {
-            //     transform: Transform::from_xyz(-1.0, 0.0, -1.0)
-            //         .with_rotation(Quat::from_rotation_z(std::f32::consts::FRAC_PI_2)),
-            //     ..default()
-            // }),),
-            // (turret_section(TurretSectionConfig {
-            //     transform: Transform::from_xyz(1.0, 0.0, -1.0)
-            //         .with_rotation(Quat::from_rotation_z(-std::f32::consts::FRAC_PI_2)),
-            //     ..default()
-            // }),),
+            (turret_section(TurretSectionConfig {
+                transform: Transform::from_xyz(0.0, 1.0, -1.0),
+                ..default()
+            }),),
+            (turret_section(TurretSectionConfig {
+                transform: Transform::from_xyz(0.0, -1.0, -1.0)
+                    .with_rotation(Quat::from_rotation_x(std::f32::consts::PI)),
+                ..default()
+            }),),
+            (turret_section(TurretSectionConfig {
+                transform: Transform::from_xyz(-1.0, 0.0, -1.0)
+                    .with_rotation(Quat::from_rotation_z(std::f32::consts::FRAC_PI_2)),
+                ..default()
+            }),),
+            (turret_section(TurretSectionConfig {
+                transform: Transform::from_xyz(1.0, 0.0, -1.0)
+                    .with_rotation(Quat::from_rotation_z(-std::f32::consts::FRAC_PI_2)),
+                ..default()
+            }),),
         ],
     ));
 }
