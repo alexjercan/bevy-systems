@@ -51,21 +51,17 @@ pub struct SmoothLookRotationPlugin;
 
 impl Plugin for SmoothLookRotationPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<SmoothLookRotation>()
-            .register_type::<SmoothLookRotationTarget>()
-            .register_type::<SmoothLookRotationOutput>();
-
         app.add_observer(initialize_smooth_look_system);
         app.add_systems(Update, smooth_look_rotation_update_system);
     }
 }
 
 fn initialize_smooth_look_system(
-    trigger: Trigger<OnInsert, SmoothLookRotation>,
+    insert: On<Insert, SmoothLookRotation>,
     q_look: Query<&SmoothLookRotation>,
     mut commands: Commands,
 ) {
-    let entity = trigger.target();
+    let entity = insert.entity;
     let Ok(look) = q_look.get(entity) else {
         warn!(
             "initialize_smooth_look_system: entity {:?} is not setup correctly",
@@ -91,6 +87,8 @@ fn smooth_look_rotation_update_system(
     let dt = time.delta_secs();
     for (look, target, mut state) in &mut q_look {
         let angle_diff = **target - **state;
+        let angle_diff = normalize_angle(angle_diff);
+
         let max_angle_change = look.speed * dt;
         if angle_diff.abs() <= max_angle_change {
             **state = **target;
@@ -105,4 +103,12 @@ fn smooth_look_rotation_update_system(
             **state = state.min(max);
         }
     }
+}
+
+fn normalize_angle(angle: f32) -> f32 {
+    let mut a = (angle + std::f32::consts::PI) % std::f32::consts::TAU;
+    if a < 0.0 {
+        a += std::f32::consts::TAU;
+    }
+    a - std::f32::consts::PI
 }

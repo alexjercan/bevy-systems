@@ -92,7 +92,7 @@ impl Plugin for ControllerSectionPlugin {
         app.add_observer(insert_controller_section_render);
 
         app.add_systems(
-            Update,
+            FixedUpdate,
             update_controller_root_torque.in_set(ControllerSectionPluginSet),
         );
     }
@@ -101,10 +101,9 @@ impl Plugin for ControllerSectionPlugin {
 fn update_controller_root_torque(
     mut q_root: Query<
         (
-            &AngularVelocity,
             &ComputedAngularInertia,
             &Rotation,
-            &mut ExternalTorque,
+            Forces,
         ),
         With<SpaceshipRootMarker>,
     >,
@@ -118,7 +117,7 @@ fn update_controller_root_torque(
     >,
 ) {
     for (controller, controller_input, &ChildOf(root)) in &q_controller {
-        let Ok((angular_velocity, angular_inertia, rotation, mut torque)) = q_root.get_mut(root)
+        let Ok((angular_inertia, rotation, mut forces)) = q_root.get_mut(root)
         else {
             warn!("ControllerSection's root entity does not have a SpaceshipRootMaker component");
             continue;
@@ -126,26 +125,28 @@ fn update_controller_root_torque(
 
         let (principal, local_frame) = angular_inertia.principal_angular_inertia_with_local_frame();
 
-        **torque = compute_pd_torque(
+        let torque = compute_pd_torque(
             controller.frequency,
             controller.damping_ratio,
             controller.max_torque,
             **rotation,
             **controller_input,
-            **angular_velocity,
+            forces.angular_velocity(),
             principal,
             local_frame,
         );
+
+        forces.apply_torque(torque);
     }
 }
 
 fn insert_controller_section_render(
-    trigger: Trigger<OnAdd, ControllerSectionMarker>,
+    add: On<Add, ControllerSectionMarker>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let entity = trigger.target();
+    let entity = add.entity;
     debug!("Inserting render for ControllerSection: {:?}", entity);
 
     commands.entity(entity).insert((children![
