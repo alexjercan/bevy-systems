@@ -93,8 +93,9 @@ fn engine_thrust_system(
 
         let thrust_direction = transform.forward(); // Local -Z axis
         let thrust_force = thrust_direction * **magnitude * **input;
+        let world_point = transform.translation();
 
-        force.apply_linear_impulse(thrust_force);
+        force.apply_linear_impulse_at_point(thrust_force, world_point);
     }
 }
 

@@ -67,6 +67,12 @@ fn setup_spaceship(mut commands: Commands) {
                 transform: Transform::from_xyz(0.0, 0.0, 1.0),
                 ..default()
             }),),
+            (engine_section(EngineSectionConfig {
+                thrust_magnitude: 1.0,
+                transform: Transform::from_xyz(-1.0, 0.0, 0.0)
+                    .with_rotation(Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)),
+                ..default()
+            }),),
         ],
     ));
 }
