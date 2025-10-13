@@ -45,7 +45,7 @@ fn main() {
     app.insert_resource(Gravity::ZERO);
 
     // Add sections plugins
-    app.add_plugins(SpaceshipPlugin);
+    app.add_plugins(SpaceshipPlugin { render: true });
 
     app.add_systems(
         OnEnter(GameStates::Playing),

@@ -58,13 +58,17 @@ pub struct HullSectionPluginSet;
 
 /// A plugin that enables the HullSection component and its related systems.
 #[derive(Default)]
-pub struct HullSectionPlugin;
+pub struct HullSectionPlugin {
+    pub render: bool,
+}
 
 impl Plugin for HullSectionPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<HullSectionMarker>();
-        // TODO: Might add a flag for this later
-        app.add_observer(insert_hull_section_render);
+
+        if self.render {
+            app.add_observer(insert_hull_section_render);
+        }
     }
 }
 

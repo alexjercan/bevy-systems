@@ -60,7 +60,7 @@ fn main() {
     app.add_plugins(SmoothLookRotationPlugin);
 
     // Add sections plugins
-    app.add_plugins(SpaceshipPlugin);
+    app.add_plugins(SpaceshipPlugin { render: true });
 
     app.add_systems(
         Update,

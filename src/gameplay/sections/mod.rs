@@ -49,14 +49,17 @@ pub struct SpaceshipRootMarker;
 pub struct SpaceshipPluginSet;
 
 /// A plugin that adds all the spaceship sections and their related systems.
-pub struct SpaceshipPlugin;
+#[derive(Default, Clone, Debug)]
+pub struct SpaceshipPlugin {
+    pub render: bool,
+}
 
 impl Plugin for SpaceshipPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<SpaceshipRootMarker>();
 
         app.add_plugins((
-            hull_section::HullSectionPlugin::default(),
+            hull_section::HullSectionPlugin { render: self.render, ..default() },
             engine_section::EngineSectionPlugin,
             turret_section::TurretSectionPlugin,
             controller_section::ControllerSectionPlugin,
