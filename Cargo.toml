@@ -32,6 +32,7 @@ bevy = { version = "0.17.2", features = [
   # "webgpu",
   "x11",
   "bevy_gizmos",
+  "reflect_auto_register",
 ], default-features = false}
 bevy-inspector-egui = { version = "0.34" }
 bevy_asset_loader = { version = "0.24.0-rc.1" }

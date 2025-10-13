@@ -38,6 +38,8 @@ impl Plugin for GameAssetsPlugin {
 pub struct GameAssets {
     #[asset(path = "textures/cubemap.png")]
     pub cubemap: Handle<Image>,
+    #[asset(path = "gltf/hull-01.glb#Scene0")]
+    pub hull_01: Handle<Scene>,
 }
 
 /// A Plugin for the skybox

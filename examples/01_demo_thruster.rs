@@ -16,6 +16,7 @@ struct Cli;
 #[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
 pub enum SceneStates {
     #[default]
+    None,
     Simple,
     Thruster,
     Complex,
@@ -51,14 +52,17 @@ fn main() {
         (setup_scene, setup_simple_scene),
     );
 
-    app.add_systems(OnEnter(SceneStates::Simple), setup_spaceship_simple);
-    app.add_systems(OnEnter(SceneStates::Thruster), setup_spaceship_thruster);
-    app.add_systems(OnEnter(SceneStates::Complex), setup_spaceship_complex);
-    app.add_systems(OnEnter(SceneStates::Spinner), setup_spaceship_spinner);
+    app.add_systems(OnEnter(SceneStates::Simple), setup_spaceship_simple.run_if(in_state(GameStates::Playing)));
+    app.add_systems(OnEnter(SceneStates::Thruster), setup_spaceship_thruster.run_if(in_state(GameStates::Playing)));
+    app.add_systems(OnEnter(SceneStates::Complex), setup_spaceship_complex.run_if(in_state(GameStates::Playing)));
+    app.add_systems(OnEnter(SceneStates::Spinner), setup_spaceship_spinner.run_if(in_state(GameStates::Playing)));
     app.add_systems(
         OnEnter(SceneStates::Exagerating),
-        setup_spaceship_exagerating,
+        setup_spaceship_exagerating.run_if(in_state(GameStates::Playing)),
     );
+    app.add_systems(OnEnter(GameStates::Playing), |mut state: ResMut<NextState<SceneStates>>| {
+        state.set(SceneStates::Simple);
+    });
     app.add_systems(Update, switch_scene.run_if(in_state(GameStates::Playing)));
 
     app.add_systems(Update, on_thruster_input);
@@ -74,24 +78,26 @@ fn setup_scene(mut commands: Commands) {
     ));
 }
 
-fn setup_spaceship_simple(mut commands: Commands) {
+fn setup_spaceship_simple(mut commands: Commands, game_assets: Res<GameAssets>) {
     commands.spawn((
         DespawnOnExit(SceneStates::Simple),
         spaceship_root(SpaceshipConfig { ..default() }),
         children![(hull_section(HullSectionConfig {
             transform: Transform::from_xyz(0.0, 0.0, 0.0),
+            render_mesh: Some(game_assets.hull_01.clone()),
             ..default()
         }),),],
     ));
 }
 
-fn setup_spaceship_thruster(mut commands: Commands) {
+fn setup_spaceship_thruster(mut commands: Commands, game_assets: Res<GameAssets>) {
     commands.spawn((
         DespawnOnExit(SceneStates::Thruster),
         spaceship_root(SpaceshipConfig { ..default() }),
         children![
             (hull_section(HullSectionConfig {
                 transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                render_mesh: Some(game_assets.hull_01.clone()),
                 ..default()
             }),),
             (
@@ -106,21 +112,24 @@ fn setup_spaceship_thruster(mut commands: Commands) {
     ));
 }
 
-fn setup_spaceship_complex(mut commands: Commands) {
+fn setup_spaceship_complex(mut commands: Commands, game_assets: Res<GameAssets>) {
     commands.spawn((
         DespawnOnExit(SceneStates::Complex),
         spaceship_root(SpaceshipConfig { ..default() }),
         children![
             (hull_section(HullSectionConfig {
                 transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                render_mesh: Some(game_assets.hull_01.clone()),
                 ..default()
             }),),
             (hull_section(HullSectionConfig {
                 transform: Transform::from_xyz(0.0, 0.0, 1.0),
+                render_mesh: Some(game_assets.hull_01.clone()),
                 ..default()
             }),),
             (hull_section(HullSectionConfig {
                 transform: Transform::from_xyz(0.0, 0.0, -1.0),
+                render_mesh: Some(game_assets.hull_01.clone()),
                 ..default()
             }),),
             (
@@ -171,21 +180,24 @@ fn setup_spaceship_complex(mut commands: Commands) {
     ));
 }
 
-fn setup_spaceship_spinner(mut commands: Commands) {
+fn setup_spaceship_spinner(mut commands: Commands, game_assets: Res<GameAssets>) {
     commands.spawn((
         DespawnOnExit(SceneStates::Spinner),
         spaceship_root(SpaceshipConfig { ..default() }),
         children![
             (hull_section(HullSectionConfig {
                 transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                render_mesh: Some(game_assets.hull_01.clone()),
                 ..default()
             }),),
             (hull_section(HullSectionConfig {
                 transform: Transform::from_xyz(0.0, 0.0, 1.0),
+                render_mesh: Some(game_assets.hull_01.clone()),
                 ..default()
             }),),
             (hull_section(HullSectionConfig {
                 transform: Transform::from_xyz(0.0, 0.0, -1.0),
+                render_mesh: Some(game_assets.hull_01.clone()),
                 ..default()
             }),),
             (
@@ -210,7 +222,7 @@ fn setup_spaceship_spinner(mut commands: Commands) {
     ));
 }
 
-fn setup_spaceship_exagerating(mut commands: Commands) {
+fn setup_spaceship_exagerating(mut commands: Commands, game_assets: Res<GameAssets>) {
     let entity = commands
         .spawn((
             DespawnOnExit(SceneStates::Exagerating),
@@ -229,6 +241,7 @@ fn setup_spaceship_exagerating(mut commands: Commands) {
                             y as f32 * 1.0,
                             z as f32 * 1.0,
                         ),
+                        render_mesh: Some(game_assets.hull_01.clone()),
                         ..default()
                     }),));
                 });
