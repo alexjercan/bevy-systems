@@ -1,13 +1,15 @@
 #![allow(dead_code)]
 
+use avian3d::prelude::*;
 use bevy::{
+    core_pipeline::Skybox,
     prelude::*,
     render::render_resource::{TextureViewDescriptor, TextureViewDimension},
 };
 use bevy_asset_loader::prelude::*;
-use avian3d::prelude::*;
+use bevy_enhanced_input::prelude::*;
+use nova_protocol::prelude::*;
 use rand::prelude::*;
-
 
 /// Game states for the application.
 #[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
@@ -29,8 +31,6 @@ impl Plugin for GameAssetsPlugin {
                 .continue_to_state(GameStates::Playing)
                 .load_collection::<GameAssets>(),
         );
-
-        app.add_systems(OnEnter(GameStates::Playing), setup);
     }
 }
 
@@ -40,7 +40,22 @@ pub struct GameAssets {
     pub cubemap: Handle<Image>,
 }
 
-fn setup(game_assets: Res<GameAssets>, mut images: ResMut<Assets<Image>>) {
+/// A Plugin for the skybox
+pub struct GameSkyboxPlugin;
+
+impl Plugin for GameSkyboxPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(OnEnter(GameStates::Playing), (setup_skybox_asset).chain());
+
+        app.add_observer(setup_skybox_camera);
+    }
+}
+
+fn setup_skybox_asset(
+    game_assets: Res<GameAssets>,
+    mut images: ResMut<Assets<Image>>,
+    mut skyboxes: Query<&mut Skybox>,
+) {
     let image = images.get_mut(&game_assets.cubemap).unwrap();
     if image.texture_descriptor.array_layer_count() == 1 {
         image.reinterpret_stacked_2d_as_array(image.height() / image.width());
@@ -49,6 +64,22 @@ fn setup(game_assets: Res<GameAssets>, mut images: ResMut<Assets<Image>>) {
             ..default()
         });
     }
+
+    for mut skybox in &mut skyboxes {
+        skybox.image = game_assets.cubemap.clone();
+    }
+}
+
+fn setup_skybox_camera(
+    insert: On<Insert, Camera3d>,
+    mut commands: Commands,
+    game_assets: Res<GameAssets>,
+) {
+    commands.entity(insert.entity).insert((Skybox {
+        image: game_assets.cubemap.clone(),
+        brightness: 1000.0,
+        ..default()
+    },));
 }
 
 /// A plugin that draws debug gizmos for entities.
@@ -80,7 +111,7 @@ fn draw_debug_gizmos_axis(
     }
 }
 
-/// A simple scene setup with random planets and satellites.
+/// A simple scene setup_skybox_asset with random planets and satellites.
 pub fn setup_simple_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -94,7 +125,12 @@ pub fn setup_simple_scene(
             illuminance: 10000.0,
             ..default()
         },
-        Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -std::f32::consts::FRAC_PI_2, 0.0, 0.0)),
+        Transform::from_rotation(Quat::from_euler(
+            EulerRot::XYZ,
+            -std::f32::consts::FRAC_PI_2,
+            0.0,
+            0.0,
+        )),
         GlobalTransform::default(),
     ));
 
@@ -147,5 +183,141 @@ pub fn setup_simple_scene(
             ColliderDensity(1.0),
             RigidBody::Dynamic,
         ));
+    }
+}
+
+/// A plugin that sets up WASD and mouse controls for a camera.
+pub struct WASDCameraControllerPlugin;
+
+impl Plugin for WASDCameraControllerPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins(WASDCameraPlugin);
+
+        app.add_input_context::<WASDCameraInputMarker>();
+        app.add_systems(Startup, setup_wasd_camera_controls);
+
+        app.add_observer(setup_wasd_camera);
+        app.add_observer(on_wasd_input);
+        app.add_observer(on_wasd_input_completed);
+        app.add_observer(on_mouse_input);
+        app.add_observer(on_mouse_input_completed);
+        app.add_observer(on_enable_look_input);
+        app.add_observer(on_enable_look_input_completed);
+    }
+}
+
+#[derive(Component, Debug, Clone)]
+struct WASDCameraInputMarker;
+
+#[derive(InputAction)]
+#[action_output(Vec2)]
+struct WASDCameraInputMove;
+
+#[derive(InputAction)]
+#[action_output(Vec2)]
+struct WASDCameraInputLook;
+
+#[derive(InputAction)]
+#[action_output(bool)]
+struct WASDCameraInputEnableLook;
+
+#[derive(Component, Clone, Copy, Debug, Default, Deref, DerefMut, Reflect)]
+struct WASDCameraLookEnabled(bool);
+
+#[derive(Component, Clone, Copy, Debug, Default, Reflect)]
+pub struct WASDCameraController;
+
+fn setup_wasd_camera_controls(mut commands: Commands) {
+    commands.spawn((
+        Name::new("WASD Camera Input"),
+        WASDCameraInputMarker,
+        actions!(
+            WASDCameraInputMarker[
+                (
+                    Action::<WASDCameraInputMove>::new(),
+                    Bindings::spawn((
+                        Cardinal::wasd_keys().with(Scale::splat(1.0)),
+                        Axial::left_stick().with(Scale::splat(1.0)),
+                    )),
+                ),
+                (
+                    Action::<WASDCameraInputLook>::new(),
+                    Bindings::spawn((
+                        // Bevy requires single entities to be wrapped in `Spawn`.
+                        // You can attach modifiers to individual bindings as well.
+                        Spawn((Binding::mouse_motion(), Scale::splat(0.01), Negate::none())),
+                        Axial::right_stick().with((Scale::splat(2.0), Negate::none())),
+                    )),
+                ),
+                (
+                    Action::<WASDCameraInputEnableLook>::new(),
+                    bindings![MouseButton::Right],
+                ),
+            ]
+        ),
+    ));
+}
+
+fn setup_wasd_camera(insert: On<Insert, WASDCameraController>, mut commands: Commands) {
+    commands.entity(insert.entity).insert((
+        Camera3d::default(),
+        WASDCamera::default(),
+        WASDCameraLookEnabled(false),
+    ));
+}
+
+fn on_wasd_input(fire: On<Fire<WASDCameraInputMove>>, mut q_input: Query<&mut WASDCameraInput>) {
+    for mut input in &mut q_input {
+        input.wasd = fire.value;
+    }
+}
+
+fn on_wasd_input_completed(
+    _: On<Complete<WASDCameraInputMove>>,
+    mut q_input: Query<&mut WASDCameraInput>,
+) {
+    for mut input in &mut q_input {
+        input.wasd = Vec2::ZERO;
+    }
+}
+
+fn on_mouse_input(
+    fire: On<Fire<WASDCameraInputLook>>,
+    mut q_input: Query<(&mut WASDCameraInput, &WASDCameraLookEnabled)>,
+) {
+    for (mut input, enabled) in &mut q_input {
+        if !**enabled {
+            continue;
+        }
+
+        input.pan = fire.value;
+    }
+}
+
+fn on_mouse_input_completed(
+    _: On<Complete<WASDCameraInputLook>>,
+    mut q_input: Query<&mut WASDCameraInput>,
+) {
+    for mut input in &mut q_input {
+        input.pan = Vec2::ZERO;
+    }
+}
+
+fn on_enable_look_input(
+    _: On<Fire<WASDCameraInputEnableLook>>,
+    mut q_look_enabled: Query<&mut WASDCameraLookEnabled>,
+) {
+    for mut look_enabled in &mut q_look_enabled {
+        **look_enabled = true;
+    }
+}
+
+fn on_enable_look_input_completed(
+    _: On<Complete<WASDCameraInputEnableLook>>,
+    mut q_look_enabled: Query<(&mut WASDCameraInput, &mut WASDCameraLookEnabled)>,
+) {
+    for (mut input, mut look_enabled) in &mut q_look_enabled {
+        input.pan = Vec2::ZERO;
+        **look_enabled = false;
     }
 }
