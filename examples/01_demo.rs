@@ -22,7 +22,7 @@ fn main() {
     app.add_plugins(GameSkyboxPlugin);
     app.add_plugins(WASDCameraControllerPlugin);
 
-    // app.add_systems(OnEnter(GameStates::Playing), setup_scene);
+    app.add_systems(OnEnter(GameStates::Playing), setup_scene);
 
     app.run();
 }
