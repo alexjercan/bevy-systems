@@ -36,10 +36,15 @@ fn main() {
 
     app.add_systems(
         OnEnter(GameStates::Playing),
-        (setup_scene, setup_simple_scene, setup_input, setup_spaceship),
+        (
+            setup_scene,
+            setup_simple_scene,
+            setup_spaceship,
+        ),
     );
 
     app.add_input_context::<PlayerInputMarker>();
+    app.add_observer(setup_input);
     app.add_observer(on_thruster_input);
     app.add_observer(on_thruster_input_completed);
 
@@ -62,33 +67,60 @@ fn setup_spaceship(mut commands: Commands) {
                 transform: Transform::from_xyz(0.0, 0.0, 0.0),
                 ..default()
             }),),
-            (engine_section(EngineSectionConfig {
-                thrust_magnitude: 1.0,
+            (hull_section(HullSectionConfig {
                 transform: Transform::from_xyz(0.0, 0.0, 1.0),
                 ..default()
             }),),
-            (engine_section(EngineSectionConfig {
-                thrust_magnitude: 1.0,
-                transform: Transform::from_xyz(-1.0, 0.0, 0.0)
-                    .with_rotation(Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)),
+            (hull_section(HullSectionConfig {
+                transform: Transform::from_xyz(0.0, 0.0, -1.0),
                 ..default()
             }),),
+            (engine_section(EngineSectionConfig {
+                thrust_magnitude: 1.0,
+                transform: Transform::from_xyz(0.0, 0.0, 2.0),
+                ..default()
+            }), ThrusterInputKey(KeyCode::Digit1)),
+            (engine_section(EngineSectionConfig {
+                thrust_magnitude: 0.1,
+                transform: Transform::from_xyz(-1.0, 0.0, 1.0)
+                    .with_rotation(Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)),
+                ..default()
+            }), ThrusterInputKey(KeyCode::Digit2)),
+            (engine_section(EngineSectionConfig {
+                thrust_magnitude: 0.1,
+                transform: Transform::from_xyz(1.0, 0.0, 1.0)
+                    .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
+                ..default()
+            }), ThrusterInputKey(KeyCode::Digit3)),
+            (engine_section(EngineSectionConfig {
+                thrust_magnitude: 0.1,
+                transform: Transform::from_xyz(-1.0, 0.0, -1.0)
+                    .with_rotation(Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)),
+                ..default()
+            }), ThrusterInputKey(KeyCode::Digit2)),
+            (engine_section(EngineSectionConfig {
+                thrust_magnitude: 0.1,
+                transform: Transform::from_xyz(1.0, 0.0, -1.0)
+                    .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
+                ..default()
+            }), ThrusterInputKey(KeyCode::Digit3)),
         ],
     ));
 }
 
-fn setup_input(
-    mut commands: Commands,
-) {
-    // Spawn a player input controller entity to hold the input from the player
-    commands.spawn((
-        Name::new("Player Input Controller"),
+#[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]
+struct ThrusterInputKey(KeyCode);
+
+fn setup_input(insert: On<Insert, ThrusterInputKey>, mut commands: Commands, q_key: Query<&ThrusterInputKey>) {
+    let entity = insert.entity;
+    let ThrusterInputKey(key) = q_key.get(entity).unwrap();
+    commands.entity(entity).insert((
         PlayerInputMarker,
         actions!(
             PlayerInputMarker[
                 (
                     Action::<ThrusterInput>::new(),
-                    bindings![KeyCode::Digit1, GamepadButton::RightTrigger],
+                    bindings![*key],
                 ),
             ]
         ),
@@ -102,17 +134,19 @@ struct PlayerInputMarker;
 #[action_output(bool)]
 struct ThrusterInput;
 
-fn on_thruster_input(_: On<Fire<ThrusterInput>>, mut q_input: Query<&mut EngineThrustInput>) {
-    for mut input in &mut q_input {
+fn on_thruster_input(fire: On<Fire<ThrusterInput>>, mut q_input: Query<&mut EngineThrustInput>) {
+    let entity = fire.event().event_target();
+    if let Ok(mut input) = q_input.get_mut(entity) {
         **input = 1.0;
     }
 }
 
 fn on_thruster_input_completed(
-    _: On<Complete<ThrusterInput>>,
+    complete: On<Complete<ThrusterInput>>,
     mut q_input: Query<&mut EngineThrustInput>,
 ) {
-    for mut input in &mut q_input {
+    let entity = complete.event().event_target();
+    if let Ok(mut input) = q_input.get_mut(entity) {
         **input = 0.0;
     }
 }
