@@ -36,8 +36,12 @@ fn main() {
 
     app.add_systems(
         OnEnter(GameStates::Playing),
-        (setup_scene, setup_simple_scene, setup_spaceship),
+        (setup_scene, setup_simple_scene, setup_input, setup_spaceship),
     );
+
+    app.add_input_context::<PlayerInputMarker>();
+    app.add_observer(on_thruster_input);
+    app.add_observer(on_thruster_input_completed);
 
     app.run();
 }
@@ -58,13 +62,31 @@ fn setup_spaceship(mut commands: Commands) {
                 transform: Transform::from_xyz(0.0, 0.0, 0.0),
                 ..default()
             }),),
+            (engine_section(EngineSectionConfig {
+                thrust_magnitude: 1.0,
+                transform: Transform::from_xyz(0.0, 0.0, 1.0),
+                ..default()
+            }),),
         ],
     ));
 }
 
 fn setup_input(
+    mut commands: Commands,
 ) {
-
+    // Spawn a player input controller entity to hold the input from the player
+    commands.spawn((
+        Name::new("Player Input Controller"),
+        PlayerInputMarker,
+        actions!(
+            PlayerInputMarker[
+                (
+                    Action::<ThrusterInput>::new(),
+                    bindings![KeyCode::Digit1, GamepadButton::RightTrigger],
+                ),
+            ]
+        ),
+    ));
 }
 
 #[derive(Component, Debug, Clone)]
@@ -73,3 +95,18 @@ struct PlayerInputMarker;
 #[derive(InputAction)]
 #[action_output(bool)]
 struct ThrusterInput;
+
+fn on_thruster_input(_: On<Fire<ThrusterInput>>, mut q_input: Query<&mut EngineThrustInput>) {
+    for mut input in &mut q_input {
+        **input = 1.0;
+    }
+}
+
+fn on_thruster_input_completed(
+    _: On<Complete<ThrusterInput>>,
+    mut q_input: Query<&mut EngineThrustInput>,
+) {
+    for mut input in &mut q_input {
+        **input = 0.0;
+    }
+}

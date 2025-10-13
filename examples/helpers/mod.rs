@@ -252,7 +252,7 @@ fn setup_wasd_camera_controls(mut commands: Commands) {
                         // Bevy requires single entities to be wrapped in `Spawn`.
                         // You can attach modifiers to individual bindings as well.
                         Spawn((Binding::mouse_motion(), Scale::splat(0.01), Negate::none())),
-                        Axial::right_stick().with((Scale::splat(2.0), Negate::none())),
+                        Axial::right_stick().with((Scale::splat(1.0), Negate::none())),
                     )),
                 ),
                 (
@@ -277,7 +277,10 @@ fn setup_wasd_camera_controls(mut commands: Commands) {
 fn setup_wasd_camera(insert: On<Insert, WASDCameraController>, mut commands: Commands) {
     commands.entity(insert.entity).insert((
         Camera3d::default(),
-        WASDCamera::default(),
+        WASDCamera {
+            wasd_sensitivity: 0.1,
+            ..default()
+        },
         WASDCameraLookEnabled(false),
     ));
 }
