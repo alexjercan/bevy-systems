@@ -203,6 +203,8 @@ impl Plugin for WASDCameraControllerPlugin {
         app.add_observer(on_mouse_input_completed);
         app.add_observer(on_enable_look_input);
         app.add_observer(on_enable_look_input_completed);
+        app.add_observer(on_vertical_input);
+        app.add_observer(on_vertical_input_completed);
     }
 }
 
@@ -220,6 +222,10 @@ struct WASDCameraInputLook;
 #[derive(InputAction)]
 #[action_output(bool)]
 struct WASDCameraInputEnableLook;
+
+#[derive(InputAction)]
+#[action_output(f32)]
+struct WASDCameraInputVertical;
 
 #[derive(Component, Clone, Copy, Debug, Default, Deref, DerefMut, Reflect)]
 struct WASDCameraLookEnabled(bool);
@@ -253,9 +259,19 @@ fn setup_wasd_camera_controls(mut commands: Commands) {
                     Action::<WASDCameraInputEnableLook>::new(),
                     bindings![MouseButton::Right],
                 ),
+                (
+                    Action::<WASDCameraInputVertical>::new(),
+                    Bindings::spawn((
+                        Bidirectional::<Binding, Binding> {
+                            positive: KeyCode::Space.into(),
+                            negative: KeyCode::ShiftLeft.into(),
+                        },
+                    )),
+                ),
             ]
         ),
     ));
+
 }
 
 fn setup_wasd_camera(insert: On<Insert, WASDCameraController>, mut commands: Commands) {
@@ -319,5 +335,23 @@ fn on_enable_look_input_completed(
     for (mut input, mut look_enabled) in &mut q_look_enabled {
         input.pan = Vec2::ZERO;
         **look_enabled = false;
+    }
+}
+
+fn on_vertical_input(
+    fire: On<Fire<WASDCameraInputVertical>>,
+    mut q_input: Query<&mut WASDCameraInput>,
+) {
+    for mut input in &mut q_input {
+        input.vertical = fire.value;
+    }
+}
+
+fn on_vertical_input_completed(
+    _: On<Complete<WASDCameraInputVertical>>,
+    mut q_input: Query<&mut WASDCameraInput>,
+) {
+    for mut input in &mut q_input {
+        input.vertical = 0.0;
     }
 }
