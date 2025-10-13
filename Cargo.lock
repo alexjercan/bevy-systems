@@ -473,20 +473,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy-systems"
-version = "0.1.0"
-dependencies = [
- "avian3d",
- "bevy",
- "bevy-inspector-egui",
- "bevy_asset_loader",
- "bevy_enhanced_input",
- "clap",
- "embed-resource",
- "rand",
-]
-
-[[package]]
 name = "bevy_a11y"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3490,6 +3476,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bf23ab2b905654b4cb177e30b629937b3868311d4e1cba859f899c041046e69b"
 dependencies = [
  "windows-sys 0.61.1",
+]
+
+[[package]]
+name = "nova-protocol"
+version = "0.1.0"
+dependencies = [
+ "avian3d",
+ "bevy",
+ "bevy-inspector-egui",
+ "bevy_asset_loader",
+ "bevy_enhanced_input",
+ "clap",
+ "embed-resource",
+ "rand",
 ]
 
 [[package]]

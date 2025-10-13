@@ -1,11 +1,11 @@
 [package]
-name = "bevy-systems"
+name = "nova-protocol"
 version = "0.1.0"
 authors = ["jercan_alex27@yahoo.com"]
 edition = "2021"
 license = "MIT"
-homepage = "https://github.com/alexjercan/bevy-systems"
-description = "Random systems that I think are interesting."
+homepage = "https://github.com/alexjercan/nova-protocol"
+description = "A 3D space shooter game made with Bevy"
 categories = ["games"]
 exclude = ["dist", "build", "assets", "credits"]
 

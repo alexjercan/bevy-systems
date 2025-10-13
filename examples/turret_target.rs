@@ -6,7 +6,7 @@ mod helpers;
 use avian3d::prelude::*;
 use bevy::{core_pipeline::Skybox, prelude::*};
 use bevy_enhanced_input::prelude::*;
-use bevy_systems::prelude::*;
+use nova_protocol::prelude::*;
 use clap::Parser;
 use helpers::*;
 
