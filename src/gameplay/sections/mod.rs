@@ -56,7 +56,7 @@ impl Plugin for SpaceshipPlugin {
         app.register_type::<SpaceshipRootMarker>();
 
         app.add_plugins((
-            hull_section::HullSectionPlugin,
+            hull_section::HullSectionPlugin::default(),
             engine_section::EngineSectionPlugin,
             turret_section::TurretSectionPlugin,
             controller_section::ControllerSectionPlugin,

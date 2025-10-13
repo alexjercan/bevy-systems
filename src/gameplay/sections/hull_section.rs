@@ -11,10 +11,21 @@ pub mod prelude {
 }
 
 /// Configuration for a hull section.
-#[derive(Default, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct HullSectionConfig {
     /// The transform of the hull section relative to its parent.
     pub transform: Transform,
+    /// The collider density / mass of the hull section.
+    pub collider_density: f32,
+}
+
+impl Default for HullSectionConfig {
+    fn default() -> Self {
+        Self {
+            transform: Transform::default(),
+            collider_density: 1.0,
+        }
+    }
 }
 
 /// Helper function to create a hull section entity bundle.
@@ -25,7 +36,7 @@ pub fn hull_section(config: HullSectionConfig) -> impl Bundle {
         Name::new("Hull Section"),
         HullSectionMarker,
         Collider::cuboid(1.0, 1.0, 1.0),
-        ColliderDensity(1.0),
+        ColliderDensity(config.collider_density),
         config.transform,
         Visibility::Visible,
     )
@@ -39,6 +50,7 @@ pub struct HullSectionMarker;
 pub struct HullSectionPluginSet;
 
 /// A plugin that enables the HullSection component and its related systems.
+#[derive(Default)]
 pub struct HullSectionPlugin;
 
 impl Plugin for HullSectionPlugin {
@@ -65,4 +77,31 @@ fn insert_hull_section_render(
             MeshMaterial3d(materials.add(Color::srgb(0.8, 0.8, 0.8))),
         ),],
     ));
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_hull_section_config_default() {
+        let config = HullSectionConfig::default();
+        assert_eq!(config.transform, Transform::default());
+        assert_eq!(config.collider_density, 1.0);
+    }
+
+    #[test]
+    fn spawns_hull_with_default_config() {
+        // Arrange
+        let mut app = App::new();
+        let id = app.world_mut()
+            .spawn(hull_section(HullSectionConfig::default())).id();
+
+        // Act
+        app.update();
+
+        // Assert
+        assert!(app.world().get::<HullSectionMarker>(id).is_some());
+        assert!(**app.world().get::<ColliderDensity>(id).unwrap() == 1.0);
+    }
 }
