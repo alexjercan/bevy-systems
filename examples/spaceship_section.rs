@@ -4,7 +4,7 @@
 mod helpers;
 
 use avian3d::prelude::*;
-use bevy::{core_pipeline::Skybox, prelude::*};
+use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 use nova_protocol::prelude::*;
 use clap::Parser;
@@ -21,7 +21,10 @@ fn main() {
 
     let mut app = new_gui_app();
     app.add_plugins(GameAssetsPlugin);
-    app.add_plugins(DebugGizmosPlugin);
+    app.add_plugins(GameSkyboxPlugin);
+    if cfg!(feature = "debug") {
+        app.add_plugins(DebugGizmosPlugin);
+    }
 
     // We need to enable the physics plugins to have access to RigidBody and other components.
     // We will also disable gravity for this example, since we are in space, duh.
@@ -34,7 +37,7 @@ fn main() {
     // Setup the scene with some entities, to have something to look at.
     app.add_systems(
         OnEnter(GameStates::Playing),
-        (setup, setup_spaceship, setup_simple_scene),
+        (setup_scene, setup_spaceship, setup_simple_scene),
     );
 
     // Setup the input system to get input from the mouse and keyboard.
@@ -274,9 +277,8 @@ fn sync_spaceship_control_mode(
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 struct PDCTurretTargetMarker;
 
-fn setup(
+fn setup_scene(
     mut commands: Commands,
-    game_assets: Res<GameAssets>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -339,19 +341,9 @@ fn setup(
     commands.spawn((
         Name::new("Camera"),
         Camera3d::default(),
-        Camera {
-            order: 0,
-            ..default()
-        },
         Transform::from_xyz(0.0, 10.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
         GlobalTransform::default(),
         ChaseCamera::default(),
-        Visibility::Visible,
-        Skybox {
-            image: game_assets.cubemap.clone(),
-            brightness: 1000.0,
-            ..default()
-        },
     ));
 
     // Spawn a target entity to visualize the target rotation
