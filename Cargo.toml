@@ -13,7 +13,7 @@ exclude = ["dist", "build", "assets", "credits"]
 path = "src/lib.rs"
 
 [dependencies]
-avian3d = { git = "https://github.com/Jondolf/avian", branch = "main" }
+avian3d = { version = "0.4" }
 bevy = { version = "0.17.2", features = [
   "serialize",
   "bevy_asset",
