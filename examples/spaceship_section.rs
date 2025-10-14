@@ -103,8 +103,8 @@ fn setup_spaceship(mut commands: Commands) {
                 transform: Transform::from_xyz(0.0, 0.0, 1.0),
                 ..default()
             }),),
-            (engine_section(EngineSectionConfig {
-                thrust_magnitude: 1.0,
+            (thruster_section(ThrusterSectionConfig {
+                magnitude: 1.0,
                 transform: Transform::from_xyz(0.0, 0.0, 2.0),
                 ..default()
             }),),
@@ -410,7 +410,7 @@ fn on_rotation_input_completed(
     }
 }
 
-fn on_thruster_input(_: On<Fire<ThrusterInput>>, mut q_input: Query<&mut EngineThrustInput>) {
+fn on_thruster_input(_: On<Fire<ThrusterInput>>, mut q_input: Query<&mut ThrusterSectionInput>) {
     for mut input in &mut q_input {
         **input = 1.0;
     }
@@ -418,7 +418,7 @@ fn on_thruster_input(_: On<Fire<ThrusterInput>>, mut q_input: Query<&mut EngineT
 
 fn on_thruster_input_completed(
     _: On<Complete<ThrusterInput>>,
-    mut q_input: Query<&mut EngineThrustInput>,
+    mut q_input: Query<&mut ThrusterSectionInput>,
 ) {
     for mut input in &mut q_input {
         **input = 0.0;

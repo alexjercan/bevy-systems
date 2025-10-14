@@ -101,8 +101,8 @@ fn setup_spaceship_thruster(mut commands: Commands, game_assets: Res<GameAssets>
                 ..default()
             }),),
             (
-                engine_section(EngineSectionConfig {
-                    thrust_magnitude: 1.0,
+                thruster_section(ThrusterSectionConfig {
+                    magnitude: 1.0,
                     transform: Transform::from_xyz(0.0, 0.0, 1.0),
                     ..default()
                 }),
@@ -133,16 +133,16 @@ fn setup_spaceship_complex(mut commands: Commands, game_assets: Res<GameAssets>)
                 ..default()
             }),),
             (
-                engine_section(EngineSectionConfig {
-                    thrust_magnitude: 1.0,
+                thruster_section(ThrusterSectionConfig {
+                    magnitude: 1.0,
                     transform: Transform::from_xyz(0.0, 0.0, 2.0),
                     ..default()
                 }),
                 ThrusterInputKey(KeyCode::Digit1)
             ),
             (
-                engine_section(EngineSectionConfig {
-                    thrust_magnitude: 0.1,
+                thruster_section(ThrusterSectionConfig {
+                    magnitude: 0.1,
                     transform: Transform::from_xyz(-1.0, 0.0, 1.0)
                         .with_rotation(Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)),
                     ..default()
@@ -150,8 +150,8 @@ fn setup_spaceship_complex(mut commands: Commands, game_assets: Res<GameAssets>)
                 ThrusterInputKey(KeyCode::Digit2)
             ),
             (
-                engine_section(EngineSectionConfig {
-                    thrust_magnitude: 0.1,
+                thruster_section(ThrusterSectionConfig {
+                    magnitude: 0.1,
                     transform: Transform::from_xyz(1.0, 0.0, 1.0)
                         .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
                     ..default()
@@ -159,8 +159,8 @@ fn setup_spaceship_complex(mut commands: Commands, game_assets: Res<GameAssets>)
                 ThrusterInputKey(KeyCode::Digit3)
             ),
             (
-                engine_section(EngineSectionConfig {
-                    thrust_magnitude: 0.1,
+                thruster_section(ThrusterSectionConfig {
+                    magnitude: 0.1,
                     transform: Transform::from_xyz(-1.0, 0.0, -1.0)
                         .with_rotation(Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)),
                     ..default()
@@ -168,8 +168,8 @@ fn setup_spaceship_complex(mut commands: Commands, game_assets: Res<GameAssets>)
                 ThrusterInputKey(KeyCode::Digit3)
             ),
             (
-                engine_section(EngineSectionConfig {
-                    thrust_magnitude: 0.1,
+                thruster_section(ThrusterSectionConfig {
+                    magnitude: 0.1,
                     transform: Transform::from_xyz(1.0, 0.0, -1.0)
                         .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
                     ..default()
@@ -201,8 +201,8 @@ fn setup_spaceship_spinner(mut commands: Commands, game_assets: Res<GameAssets>)
                 ..default()
             }),),
             (
-                engine_section(EngineSectionConfig {
-                    thrust_magnitude: 1.0,
+                thruster_section(ThrusterSectionConfig {
+                    magnitude: 1.0,
                     transform: Transform::from_xyz(1.0, 0.0, 1.0)
                         .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
                     ..default()
@@ -210,8 +210,8 @@ fn setup_spaceship_spinner(mut commands: Commands, game_assets: Res<GameAssets>)
                 ThrusterInputKey(KeyCode::Digit1)
             ),
             (
-                engine_section(EngineSectionConfig {
-                    thrust_magnitude: 1.0,
+                thruster_section(ThrusterSectionConfig {
+                    magnitude: 1.0,
                     transform: Transform::from_xyz(-1.0, 0.0, -1.0)
                         .with_rotation(Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)),
                     ..default()
@@ -254,8 +254,8 @@ fn setup_spaceship_exagerating(mut commands: Commands, game_assets: Res<GameAsse
         for y in -cube_size..=cube_size {
             commands.entity(entity).with_children(|parent| {
                 parent.spawn((
-                    engine_section(EngineSectionConfig {
-                        thrust_magnitude: 1.0,
+                    thruster_section(ThrusterSectionConfig {
+                        magnitude: 1.0,
                         transform: Transform::from_xyz(
                             x as f32 * 1.0,
                             y as f32 * 1.0,
@@ -274,7 +274,7 @@ fn setup_spaceship_exagerating(mut commands: Commands, game_assets: Res<GameAsse
 struct ThrusterInputKey(KeyCode);
 
 fn on_thruster_input(
-    mut q_input: Query<(&mut EngineThrustInput, &ThrusterInputKey)>,
+    mut q_input: Query<(&mut ThrusterSectionInput, &ThrusterInputKey)>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
     for (mut input, key) in &mut q_input {
