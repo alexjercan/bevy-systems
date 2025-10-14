@@ -81,15 +81,20 @@ pub struct ThrusterSectionInput(pub f32);
 pub struct ThrusterSectionPluginSet;
 
 /// A plugin that enables the ThrusterSection component and its related systems.
-pub struct ThrusterSectionPlugin;
+#[derive(Default)]
+pub struct ThrusterSectionPlugin {
+    pub render: bool,
+}
 
 impl Plugin for ThrusterSectionPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<ThrusterSectionMarker>()
             .register_type::<ThrusterSectionMagnitude>()
             .register_type::<ThrusterSectionInput>();
-        // TODO: Might add a flag for this later
-        app.add_observer(insert_thruster_section_render);
+
+        if self.render {
+            app.add_observer(insert_thruster_section_render);
+        }
 
         app.add_systems(
             FixedUpdate,

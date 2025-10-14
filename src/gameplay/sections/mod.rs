@@ -63,7 +63,10 @@ impl Plugin for SpaceshipPlugin {
                 render: self.render,
                 ..default()
             },
-            thruster_section::ThrusterSectionPlugin,
+            thruster_section::ThrusterSectionPlugin {
+                render: self.render,
+                ..default()
+            },
             turret_section::TurretSectionPlugin,
             controller_section::ControllerSectionPlugin,
         ));
