@@ -21,7 +21,6 @@ fn main() {
 
     let mut app = new_gui_app();
     app.add_plugins(GameAssetsPlugin);
-    app.add_plugins(GameSkyboxPlugin);
     if cfg!(feature = "debug") {
         app.add_plugins(DebugGizmosPlugin);
     }
@@ -62,6 +61,10 @@ fn main() {
     app.add_plugins(SphereRandomOrbitPlugin);
     // Rotation Plugin for the turret facing direction
     app.add_plugins(SmoothLookRotationPlugin);
+
+    // Render Plugins
+    app.add_plugins(SkyboxPlugin);
+    app.add_plugins(PostProcessingDefaultPlugin);
 
     // Add sections plugins
     app.add_plugins(SpaceshipPlugin { render: true });
@@ -281,6 +284,7 @@ fn setup_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    game_assets: Res<GameAssets>,
 ) {
     // Spawn a player input controller entity to hold the input from the player
     commands.spawn((
@@ -344,17 +348,16 @@ fn setup_scene(
         Transform::from_xyz(0.0, 10.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
         GlobalTransform::default(),
         ChaseCamera::default(),
+        SkyboxConfig {
+            cubemap: game_assets.cubemap.clone(),
+            brightness: 1000.0,
+        },
     ));
 
     // Spawn a target entity to visualize the target rotation
     commands.spawn((
         Name::new("Turret Target"),
         PDCTurretTargetMarker,
-        // RandomSphereOrbit {
-        //     radius: 5.0,
-        //     angular_speed: 5.0,
-        //     center: Vec3::ZERO,
-        // },
         Transform::from_xyz(0.0, 0.0, -500.0),
         Visibility::Visible,
         Mesh3d(meshes.add(Cuboid::new(3.0, 3.0, 3.0))),

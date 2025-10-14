@@ -33,7 +33,6 @@ fn main() {
 
     // Helper plugins
     app.add_plugins(GameAssetsPlugin);
-    app.add_plugins(GameSkyboxPlugin);
     if cfg!(feature = "debug") {
         app.add_plugins(DebugGizmosPlugin);
     }
@@ -46,6 +45,10 @@ fn main() {
         app.add_plugins(PhysicsDebugPlugin::default());
     }
     app.insert_resource(Gravity::ZERO);
+
+    // Render Plugins
+    app.add_plugins(SkyboxPlugin);
+    app.add_plugins(PostProcessingDefaultPlugin);
 
     // Add sections plugins
     app.add_plugins(SpaceshipPlugin { render: true });
@@ -88,11 +91,15 @@ fn main() {
     app.run();
 }
 
-fn setup_scene(mut commands: Commands) {
+fn setup_scene(mut commands: Commands, game_assets: Res<GameAssets>) {
     commands.spawn((
         Name::new("WASD Camera"),
         WASDCameraController,
         Transform::from_xyz(0.0, 5.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
+        SkyboxConfig {
+            cubemap: game_assets.cubemap.clone(),
+            brightness: 1000.0,
+        },
     ));
 }
 

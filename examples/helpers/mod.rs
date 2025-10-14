@@ -2,11 +2,10 @@
 
 use avian3d::prelude::*;
 use bevy::{
-    core_pipeline::{tonemapping::Tonemapping, Skybox},
+    // core_pipeline::{tonemapping::Tonemapping, Skybox},
     pbr::wireframe::{WireframeConfig, WireframePlugin},
-    post_process::bloom::Bloom,
+    // post_process::bloom::Bloom,
     prelude::*,
-    render::render_resource::{TextureViewDescriptor, TextureViewDimension},
 };
 use bevy_asset_loader::prelude::*;
 use bevy_enhanced_input::prelude::*;
@@ -42,53 +41,6 @@ pub struct GameAssets {
     pub cubemap: Handle<Image>,
     #[asset(path = "gltf/hull-01.glb#Scene0")]
     pub hull_01: Handle<Scene>,
-}
-
-/// A Plugin for the skybox
-pub struct GameSkyboxPlugin;
-
-impl Plugin for GameSkyboxPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameStates::Playing), (setup_skybox_asset).chain());
-
-        app.add_observer(setup_skybox_camera);
-    }
-}
-
-fn setup_skybox_asset(
-    game_assets: Res<GameAssets>,
-    mut images: ResMut<Assets<Image>>,
-    mut skyboxes: Query<&mut Skybox>,
-) {
-    let image = images.get_mut(&game_assets.cubemap).unwrap();
-    if image.texture_descriptor.array_layer_count() == 1 {
-        image.reinterpret_stacked_2d_as_array(image.height() / image.width());
-        image.texture_view_descriptor = Some(TextureViewDescriptor {
-            dimension: Some(TextureViewDimension::Cube),
-            ..default()
-        });
-    }
-
-    for mut skybox in &mut skyboxes {
-        skybox.image = game_assets.cubemap.clone();
-    }
-}
-
-fn setup_skybox_camera(
-    insert: On<Insert, Camera3d>,
-    mut commands: Commands,
-    game_assets: Res<GameAssets>,
-) {
-    commands.entity(insert.entity).insert((
-        Skybox {
-            image: game_assets.cubemap.clone(),
-            brightness: 1000.0,
-            ..default()
-        },
-        // TODO: Might want to move these into a "post-processing" plugin later
-        Tonemapping::TonyMcMapface, // 1. Using a tonemapper that desaturates to white is recommended
-        Bloom::NATURAL,             // 2. Enable bloom for the camera
-    ));
 }
 
 /// A plugin that draws debug gizmos for entities.
