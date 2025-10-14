@@ -27,6 +27,8 @@ pub struct ThrusterSectionConfig {
     pub transform: Transform,
     /// The collider density / mass of the section.
     pub collider_density: f32,
+    /// The render mesh of the section, defaults to prototype mesh if None.
+    pub render_mesh: Option<Handle<Scene>>,
 }
 
 impl Default for ThrusterSectionConfig {
@@ -35,9 +37,13 @@ impl Default for ThrusterSectionConfig {
             magnitude: THRUSTER_SECTION_DEFAULT_MAGNITUDE,
             transform: Transform::default(),
             collider_density: THRUSTER_SECTION_DEFAULT_COLLIDER_DENSITY,
+            render_mesh: None,
         }
     }
 }
+
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+struct ThrusterSectionRenderMesh(Option<Handle<Scene>>);
 
 /// Helper function to create an thruster section entity bundle.
 pub fn thruster_section(config: ThrusterSectionConfig) -> impl Bundle {
@@ -52,6 +58,7 @@ pub fn thruster_section(config: ThrusterSectionConfig) -> impl Bundle {
         ThrusterSectionInput(0.0),
         config.transform,
         Visibility::Visible,
+        ThrusterSectionRenderMesh(config.render_mesh),
     )
 }
 
@@ -122,25 +129,43 @@ fn insert_thruster_section_render(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    q_thruster: Query<&ThrusterSectionRenderMesh, With<ThrusterSectionMarker>>,
 ) {
     let entity = add.entity;
     debug!("Inserting render for ThrusterSection: {:?}", entity);
+    let Ok(render_mesh) = q_thruster.get(entity) else {
+        warn!(
+            "ThrusterSection entity {:?} missing ThrusterRenderMesh component",
+            entity
+        );
+        return;
+    };
 
-    commands.entity(entity).insert((children![
-        (
-            Name::new("Thruster Section Body"),
-            Mesh3d(meshes.add(Cylinder::new(0.4, 0.4))),
-            MeshMaterial3d(materials.add(Color::srgb(0.8, 0.8, 0.8))),
-            Transform::from_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2))
-                .with_translation(Vec3::new(0.0, 0.0, -0.3)),
-        ),
-        (
-            Name::new("Thruster Section Body"),
-            Mesh3d(meshes.add(Cone::new(0.5, 0.5))),
-            MeshMaterial3d(materials.add(Color::srgb(0.9, 0.3, 0.2))),
-            Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
-        ),
-    ],));
+    match &**render_mesh {
+        Some(scene) => {
+            commands.entity(entity).insert((children![(
+                Name::new("Thruster Section Body"),
+                SceneRoot(scene.clone()),
+            ),],));
+        }
+        None => {
+            commands.entity(entity).insert((children![
+                (
+                    Name::new("Thruster Section Body (A)"),
+                    Mesh3d(meshes.add(Cylinder::new(0.4, 0.4))),
+                    MeshMaterial3d(materials.add(Color::srgb(0.8, 0.8, 0.8))),
+                    Transform::from_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2))
+                        .with_translation(Vec3::new(0.0, 0.0, -0.3)),
+                ),
+                (
+                    Name::new("Thruster Section Body (B)"),
+                    Mesh3d(meshes.add(Cone::new(0.5, 0.5))),
+                    MeshMaterial3d(materials.add(Color::srgb(0.9, 0.3, 0.2))),
+                    Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
+                ),
+            ],));
+        }
+    }
 }
 
 #[cfg(test)]
@@ -165,5 +190,26 @@ mod test {
             **app.world().get::<ColliderDensity>(id).unwrap()
                 == THRUSTER_SECTION_DEFAULT_COLLIDER_DENSITY
         );
+    }
+
+    #[test]
+    fn spawns_thruster_with_custom_scene() {
+        // Arrange
+        let mut app = App::new();
+        let custom_scene = Handle::<Scene>::default();
+        let config = ThrusterSectionConfig {
+            render_mesh: Some(custom_scene.clone()),
+            ..default()
+        };
+        let id = app.world_mut().spawn(thruster_section(config)).id();
+
+        // Act
+        app.update();
+
+        // Assert
+        assert!(app.world().get::<ThrusterSectionMarker>(id).is_some());
+        let render_mesh = app.world().get::<ThrusterSectionRenderMesh>(id).unwrap();
+        assert!(render_mesh.0.is_some());
+        assert_eq!(render_mesh.0.as_ref().unwrap(), &custom_scene);
     }
 }

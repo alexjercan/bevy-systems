@@ -34,7 +34,7 @@ impl Default for HullSectionConfig {
 }
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
-struct HullRenderMesh(Option<Handle<Scene>>);
+struct HullSectionRenderMesh(Option<Handle<Scene>>);
 
 /// Helper function to create a hull section entity bundle.
 pub fn hull_section(config: HullSectionConfig) -> impl Bundle {
@@ -47,7 +47,7 @@ pub fn hull_section(config: HullSectionConfig) -> impl Bundle {
         ColliderDensity(config.collider_density),
         config.transform,
         Visibility::Visible,
-        HullRenderMesh(config.render_mesh),
+        HullSectionRenderMesh(config.render_mesh),
     )
 }
 
@@ -79,7 +79,7 @@ fn insert_hull_section_render(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    q_hull: Query<&HullRenderMesh, With<HullSectionMarker>>,
+    q_hull: Query<&HullSectionRenderMesh, With<HullSectionMarker>>,
 ) {
     let entity = add.entity;
     debug!("Inserting render for HullSection: {:?}", entity);
@@ -155,7 +155,7 @@ mod test {
 
         // Assert
         assert!(app.world().get::<HullSectionMarker>(id).is_some());
-        let render_mesh = app.world().get::<HullRenderMesh>(id).unwrap();
+        let render_mesh = app.world().get::<HullSectionRenderMesh>(id).unwrap();
         assert!(render_mesh.0.is_some());
         assert_eq!(render_mesh.0.as_ref().unwrap(), &custom_scene);
     }
