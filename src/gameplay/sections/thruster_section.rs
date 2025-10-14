@@ -1,7 +1,12 @@
 //! Defines a thruster section for a spaceship, which provides thrust in a specified direction.
 
 use avian3d::prelude::*;
-use bevy::prelude::*;
+use bevy::{
+    pbr::{ExtendedMaterial, MaterialExtension},
+    prelude::*,
+    render::render_resource::AsBindGroup,
+    shader::ShaderRef,
+};
 
 use super::SpaceshipRootMarker;
 
@@ -93,9 +98,17 @@ impl Plugin for ThrusterSectionPlugin {
             .register_type::<ThrusterSectionInput>();
 
         if self.render {
+            app.add_plugins(MaterialPlugin::<
+                ExtendedMaterial<StandardMaterial, ThrusterExhaustMaterial>,
+            >::default());
+
             app.add_observer(insert_thruster_section_render);
         }
 
+        app.add_systems(
+            Update,
+            thruster_shader_update_system.in_set(ThrusterSectionPluginSet),
+        );
         app.add_systems(
             FixedUpdate,
             thruster_impulse_system.in_set(ThrusterSectionPluginSet),
@@ -129,11 +142,43 @@ fn thruster_impulse_system(
     }
 }
 
+#[derive(Component, Clone, Debug, Reflect)]
+struct ThrusterSectionExhaustShaderMarker;
+
+fn thruster_shader_update_system(
+    q_thruster: Query<&ThrusterSectionInput, With<ThrusterSectionMarker>>,
+    q_render: Query<
+        (
+            &MeshMaterial3d<ExtendedMaterial<StandardMaterial, ThrusterExhaustMaterial>>,
+            &ChildOf,
+        ),
+        With<ThrusterSectionExhaustShaderMarker>,
+    >,
+    mut materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, ThrusterExhaustMaterial>>>,
+) {
+    for (material, &ChildOf(parent)) in &q_render {
+        let Ok(input) = q_thruster.get(parent) else {
+            warn!("ThrusterSectionExhaustShaderMarker's parent does not have a ThrusterSectionMarker component");
+            continue;
+        };
+
+        let Some(material) = materials.get_mut(&**material) else {
+            warn!("ThrusterSectionExhaustShaderMarker's material not found");
+            continue;
+        };
+
+        material.extension.thruster_input = **input;
+    }
+}
+
 fn insert_thruster_section_render(
     add: On<Add, ThrusterSectionMarker>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut standard_materials: ResMut<Assets<StandardMaterial>>,
+    mut exhaust_materials: ResMut<
+        Assets<ExtendedMaterial<StandardMaterial, ThrusterExhaustMaterial>>,
+    >,
     q_thruster: Query<&ThrusterSectionRenderMesh, With<ThrusterSectionMarker>>,
 ) {
     let entity = add.entity;
@@ -158,18 +203,59 @@ fn insert_thruster_section_render(
                 (
                     Name::new("Thruster Section Body (A)"),
                     Mesh3d(meshes.add(Cylinder::new(0.4, 0.4))),
-                    MeshMaterial3d(materials.add(Color::srgb(0.8, 0.8, 0.8))),
+                    MeshMaterial3d(standard_materials.add(Color::srgb(0.8, 0.8, 0.8))),
                     Transform::from_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2))
                         .with_translation(Vec3::new(0.0, 0.0, -0.3)),
                 ),
                 (
                     Name::new("Thruster Section Body (B)"),
                     Mesh3d(meshes.add(Cone::new(0.5, 0.5))),
-                    MeshMaterial3d(materials.add(Color::srgb(0.9, 0.3, 0.2))),
+                    MeshMaterial3d(standard_materials.add(Color::srgb(0.9, 0.3, 0.2))),
                     Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
+                ),
+                (
+                    Name::new("Thruster Exhaust"),
+                    ThrusterSectionExhaustShaderMarker,
+                    Mesh3d(meshes.add(Cone::new(0.4, 0.1))),
+                    MeshMaterial3d(exhaust_materials.add(ExtendedMaterial {
+                        base: StandardMaterial {
+                            base_color: Color::srgba(1.0, 1.0, 1.0, 1.0),
+                            perceptual_roughness: 1.0,
+                            metallic: 0.0,
+                            emissive: LinearRgba::rgb(0.0, 10.0, 10.0),
+                            ..default()
+                        },
+                        extension: ThrusterExhaustMaterial {
+                            thruster_input: 0.0,
+                            thruster_exhaust_radius: 0.4,
+                            thruster_exhaust_height: 2.0,
+                        },
+                    })),
+                    Transform::from_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2))
+                        .with_translation(Vec3::new(0.0, 0.0, 0.3)),
                 ),
             ],));
         }
+    }
+}
+
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+pub struct ThrusterExhaustMaterial {
+    #[uniform(100)]
+    pub thruster_input: f32,
+    #[uniform(101)]
+    pub thruster_exhaust_radius: f32,
+    #[uniform(102)]
+    pub thruster_exhaust_height: f32,
+}
+
+impl MaterialExtension for ThrusterExhaustMaterial {
+    fn vertex_shader() -> ShaderRef {
+        "shaders/thruster_exhaust.wgsl".into()
+    }
+
+    fn fragment_shader() -> ShaderRef {
+        "shaders/thruster_exhaust.wgsl".into()
     }
 }
 

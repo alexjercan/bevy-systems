@@ -2,7 +2,9 @@
 
 use avian3d::prelude::*;
 use bevy::{
-    core_pipeline::Skybox,
+    core_pipeline::{tonemapping::Tonemapping, Skybox},
+    pbr::wireframe::{WireframeConfig, WireframePlugin},
+    post_process::bloom::Bloom,
     prelude::*,
     render::render_resource::{TextureViewDescriptor, TextureViewDimension},
 };
@@ -77,11 +79,16 @@ fn setup_skybox_camera(
     mut commands: Commands,
     game_assets: Res<GameAssets>,
 ) {
-    commands.entity(insert.entity).insert((Skybox {
-        image: game_assets.cubemap.clone(),
-        brightness: 1000.0,
-        ..default()
-    },));
+    commands.entity(insert.entity).insert((
+        Skybox {
+            image: game_assets.cubemap.clone(),
+            brightness: 1000.0,
+            ..default()
+        },
+        // TODO: Might want to move these into a "post-processing" plugin later
+        Tonemapping::TonyMcMapface, // 1. Using a tonemapper that desaturates to white is recommended
+        Bloom::NATURAL,             // 2. Enable bloom for the camera
+    ));
 }
 
 /// A plugin that draws debug gizmos for entities.
@@ -89,7 +96,13 @@ pub struct DebugGizmosPlugin;
 
 impl Plugin for DebugGizmosPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, draw_debug_gizmos_axis);
+        app.add_plugins(WireframePlugin::default());
+        app.insert_resource(WireframeConfig {
+            global: true,
+            ..default()
+        });
+
+        app.add_systems(Update, (draw_debug_gizmos_axis, toggle_wireframe));
     }
 }
 
@@ -110,6 +123,15 @@ fn draw_debug_gizmos_axis(
         gizmos.line(origin, origin + x_axis, Color::srgb(0.9, 0.1, 0.1));
         gizmos.line(origin, origin + y_axis, Color::srgb(0.1, 0.9, 0.1));
         gizmos.line(origin, origin + z_axis, Color::srgb(0.1, 0.1, 0.9));
+    }
+}
+
+fn toggle_wireframe(
+    mut wireframe_config: ResMut<WireframeConfig>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+) {
+    if keyboard.just_pressed(KeyCode::F11) {
+        wireframe_config.global = !wireframe_config.global;
     }
 }
 

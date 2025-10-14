@@ -34,6 +34,9 @@ fn main() {
     // Helper plugins
     app.add_plugins(GameAssetsPlugin);
     app.add_plugins(GameSkyboxPlugin);
+    if cfg!(feature = "debug") {
+        app.add_plugins(DebugGizmosPlugin);
+    }
     app.add_plugins(WASDCameraControllerPlugin);
 
     // We need to enable the physics plugins to have access to RigidBody and other components.
