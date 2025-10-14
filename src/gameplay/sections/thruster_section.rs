@@ -14,14 +14,29 @@ pub mod prelude {
     pub use super::ThrusterSectionPlugin;
 }
 
+const THRUSTER_SECTION_DEFAULT_MAGNITUDE: f32 = 1.0;
+const THRUSTER_SECTION_DEFAULT_COLLIDER_DENSITY: f32 = 1.0;
+
 /// Configuration for a thruster section of a spaceship.
-#[derive(Default, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct ThrusterSectionConfig {
     /// The magnitude of the force produced by this thruster section.
     pub magnitude: f32,
     /// The transform of the thruster section relative to its parent. This defines the position and
     /// orientation of the thruster section, which in turn defines the direction of the thrust.
     pub transform: Transform,
+    /// The collider density / mass of the section.
+    pub collider_density: f32,
+}
+
+impl Default for ThrusterSectionConfig {
+    fn default() -> Self {
+        Self {
+            magnitude: THRUSTER_SECTION_DEFAULT_MAGNITUDE,
+            transform: Transform::default(),
+            collider_density: THRUSTER_SECTION_DEFAULT_COLLIDER_DENSITY,
+        }
+    }
 }
 
 /// Helper function to create an thruster section entity bundle.
@@ -32,7 +47,7 @@ pub fn thruster_section(config: ThrusterSectionConfig) -> impl Bundle {
         Name::new("Thruster Section"),
         ThrusterSectionMarker,
         Collider::cuboid(1.0, 1.0, 1.0),
-        ColliderDensity(1.0),
+        ColliderDensity(config.collider_density),
         ThrusterSectionMagnitude(config.magnitude),
         ThrusterSectionInput(0.0),
         config.transform,
@@ -126,4 +141,29 @@ fn insert_thruster_section_render(
             Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
         ),
     ],));
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn spawns_thruster_with_default_config() {
+        // Arrange
+        let mut app = App::new();
+        let id = app
+            .world_mut()
+            .spawn(thruster_section(ThrusterSectionConfig::default()))
+            .id();
+
+        // Act
+        app.update();
+
+        // Assert
+        assert!(app.world().get::<ThrusterSectionMarker>(id).is_some());
+        assert!(
+            **app.world().get::<ColliderDensity>(id).unwrap()
+                == THRUSTER_SECTION_DEFAULT_COLLIDER_DENSITY
+        );
+    }
 }

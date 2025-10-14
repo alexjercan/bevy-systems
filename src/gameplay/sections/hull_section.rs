@@ -10,6 +10,8 @@ pub mod prelude {
     pub use super::HullSectionPlugin;
 }
 
+const HULL_SECTION_DEFAULT_COLLIDER_DENSITY: f32 = 1.0;
+
 /// Configuration for a hull section.
 #[derive(Clone, Debug)]
 pub struct HullSectionConfig {
@@ -25,7 +27,7 @@ impl Default for HullSectionConfig {
     fn default() -> Self {
         Self {
             transform: Transform::default(),
-            collider_density: 1.0,
+            collider_density: HULL_SECTION_DEFAULT_COLLIDER_DENSITY,
             render_mesh: None,
         }
     }
@@ -131,7 +133,10 @@ mod test {
 
         // Assert
         assert!(app.world().get::<HullSectionMarker>(id).is_some());
-        assert!(**app.world().get::<ColliderDensity>(id).unwrap() == 1.0);
+        assert!(
+            **app.world().get::<ColliderDensity>(id).unwrap()
+                == HULL_SECTION_DEFAULT_COLLIDER_DENSITY
+        );
     }
 
     #[test]
