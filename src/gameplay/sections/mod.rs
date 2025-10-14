@@ -4,14 +4,14 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 
 mod controller_section;
-mod thruster_section;
 mod hull_section;
+mod thruster_section;
 mod turret_section;
 
 pub mod prelude {
     pub use super::controller_section::prelude::*;
-    pub use super::thruster_section::prelude::*;
     pub use super::hull_section::prelude::*;
+    pub use super::thruster_section::prelude::*;
     pub use super::turret_section::prelude::*;
 
     pub use super::spaceship_root;
@@ -59,7 +59,10 @@ impl Plugin for SpaceshipPlugin {
         app.register_type::<SpaceshipRootMarker>();
 
         app.add_plugins((
-            hull_section::HullSectionPlugin { render: self.render, ..default() },
+            hull_section::HullSectionPlugin {
+                render: self.render,
+                ..default()
+            },
             thruster_section::ThrusterSectionPlugin,
             turret_section::TurretSectionPlugin,
             controller_section::ControllerSectionPlugin,

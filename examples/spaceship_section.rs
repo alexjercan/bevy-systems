@@ -6,9 +6,9 @@ mod helpers;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
-use nova_protocol::prelude::*;
 use clap::Parser;
 use helpers::*;
+use nova_protocol::prelude::*;
 
 #[derive(Parser)]
 #[command(name = "spaceship_section")]

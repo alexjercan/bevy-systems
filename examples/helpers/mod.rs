@@ -273,7 +273,6 @@ fn setup_wasd_camera_controls(mut commands: Commands) {
             ]
         ),
     ));
-
 }
 
 fn setup_wasd_camera(insert: On<Insert, WASDCameraController>, mut commands: Commands) {

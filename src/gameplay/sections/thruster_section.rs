@@ -8,10 +8,10 @@ use super::SpaceshipRootMarker;
 pub mod prelude {
     pub use super::thruster_section;
     pub use super::ThrusterSectionConfig;
-    pub use super::ThrusterSectionMarker;
-    pub use super::ThrusterSectionPlugin;
     pub use super::ThrusterSectionInput;
     pub use super::ThrusterSectionMagnitude;
+    pub use super::ThrusterSectionMarker;
+    pub use super::ThrusterSectionPlugin;
 }
 
 /// Configuration for a thruster section of a spaceship.
@@ -69,7 +69,10 @@ impl Plugin for ThrusterSectionPlugin {
         // TODO: Might add a flag for this later
         app.add_observer(insert_thruster_section_render);
 
-        app.add_systems(FixedUpdate, thruster_impulse_system.in_set(ThrusterSectionPluginSet));
+        app.add_systems(
+            FixedUpdate,
+            thruster_impulse_system.in_set(ThrusterSectionPluginSet),
+        );
     }
 }
 

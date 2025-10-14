@@ -52,17 +52,32 @@ fn main() {
         (setup_scene, setup_simple_scene),
     );
 
-    app.add_systems(OnEnter(SceneStates::Simple), setup_spaceship_simple.run_if(in_state(GameStates::Playing)));
-    app.add_systems(OnEnter(SceneStates::Thruster), setup_spaceship_thruster.run_if(in_state(GameStates::Playing)));
-    app.add_systems(OnEnter(SceneStates::Complex), setup_spaceship_complex.run_if(in_state(GameStates::Playing)));
-    app.add_systems(OnEnter(SceneStates::Spinner), setup_spaceship_spinner.run_if(in_state(GameStates::Playing)));
+    app.add_systems(
+        OnEnter(SceneStates::Simple),
+        setup_spaceship_simple.run_if(in_state(GameStates::Playing)),
+    );
+    app.add_systems(
+        OnEnter(SceneStates::Thruster),
+        setup_spaceship_thruster.run_if(in_state(GameStates::Playing)),
+    );
+    app.add_systems(
+        OnEnter(SceneStates::Complex),
+        setup_spaceship_complex.run_if(in_state(GameStates::Playing)),
+    );
+    app.add_systems(
+        OnEnter(SceneStates::Spinner),
+        setup_spaceship_spinner.run_if(in_state(GameStates::Playing)),
+    );
     app.add_systems(
         OnEnter(SceneStates::Exagerating),
         setup_spaceship_exagerating.run_if(in_state(GameStates::Playing)),
     );
-    app.add_systems(OnEnter(GameStates::Playing), |mut state: ResMut<NextState<SceneStates>>| {
-        state.set(SceneStates::Simple);
-    });
+    app.add_systems(
+        OnEnter(GameStates::Playing),
+        |mut state: ResMut<NextState<SceneStates>>| {
+            state.set(SceneStates::Simple);
+        },
+    );
     app.add_systems(Update, switch_scene.run_if(in_state(GameStates::Playing)));
 
     app.add_systems(Update, on_thruster_input);
