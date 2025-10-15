@@ -546,7 +546,8 @@ mod editor {
         prelude::*,
         reflect::Is,
         ui::{InteractionDisabled, Pressed},
-        ui_widgets::{observe, Activate, Button}, window::{CursorGrabMode, CursorOptions, PrimaryWindow},
+        ui_widgets::{observe, Activate, Button},
+        window::{CursorGrabMode, CursorOptions, PrimaryWindow},
     };
     use nova_protocol::prelude::*;
 
@@ -578,6 +579,10 @@ mod editor {
             OnEnter(super::SceneState::Editor),
             (reset_spaceship, setup_editor_scene, setup_grab_cursor),
         );
+        app.add_systems(
+            Update,
+            lock_on_left_click.run_if(in_state(super::SceneState::Editor)),
+        );
 
         app.add_observer(button_on_interaction::<Add, Pressed>)
             .add_observer(button_on_interaction::<Remove, Pressed>)
@@ -600,6 +605,22 @@ mod editor {
                 *selection = SectionChoice::None;
             },
         );
+    }
+
+    fn lock_on_left_click(
+        primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>,
+        mouse: Res<ButtonInput<MouseButton>>,
+    ) {
+        // TODO: Not for UI
+        if mouse.just_pressed(MouseButton::Right) {
+            let mut primary_cursor_options = primary_cursor_options.into_inner();
+            primary_cursor_options.grab_mode = CursorGrabMode::Locked;
+            primary_cursor_options.visible = false;
+        } else if mouse.just_released(MouseButton::Right) {
+            let mut primary_cursor_options = primary_cursor_options.into_inner();
+            primary_cursor_options.grab_mode = CursorGrabMode::None;
+            primary_cursor_options.visible = true;
+        }
     }
 
     #[derive(Component)]
@@ -847,6 +868,31 @@ mod editor {
                         BackgroundColor(Color::srgb(0.5, 0.5, 0.5)),
                     ),
                     (
+                        Name::new("Spawn Spinner Ship Button"),
+                        button("Spawn Spinner Ship"),
+                        observe(create_new_spaceship_spinner),
+                    ),
+                    (
+                        Name::new("Spawn Huge Ship Button"),
+                        button("Spawn Huge Ship"),
+                        observe(create_new_spaceship_big),
+                    ),
+                    (
+                        Name::new("Spawn Basic Ship Button"),
+                        button("Spawn Basic Ship"),
+                        observe(create_new_spaceship_basic),
+                    ),
+                    (
+                        Name::new("Separator 4"),
+                        Node {
+                            width: percent(80),
+                            height: px(2),
+                            margin: UiRect::all(px(10)),
+                            ..default()
+                        },
+                        BackgroundColor(Color::srgb(0.5, 0.5, 0.5)),
+                    ),
+                    (
                         Name::new("Play Button"),
                         button("Play"),
                         observe(continue_to_simulation),
@@ -889,6 +935,185 @@ mod editor {
         mut game_state: ResMut<NextState<super::SceneState>>,
     ) {
         game_state.set(super::SceneState::Simulation);
+    }
+
+    fn create_new_spaceship_spinner(
+        _activate: On<Activate>,
+        mut commands: Commands,
+        q_spaceship: Query<Entity, With<SpaceshipRootMarker>>,
+        game_assets: Res<GameAssets>,
+    ) {
+        for entity in &q_spaceship {
+            commands.entity(entity).despawn();
+        }
+
+        commands.spawn((
+            spaceship_root(SpaceshipConfig { ..default() }),
+            children![
+                (hull_section(HullSectionConfig {
+                    transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                    render_mesh: Some(game_assets.hull_01.clone()),
+                    ..default()
+                }),),
+                (hull_section(HullSectionConfig {
+                    transform: Transform::from_xyz(0.0, 0.0, 1.0),
+                    render_mesh: Some(game_assets.hull_01.clone()),
+                    ..default()
+                }),),
+                (hull_section(HullSectionConfig {
+                    transform: Transform::from_xyz(0.0, 0.0, -1.0),
+                    render_mesh: Some(game_assets.hull_01.clone()),
+                    ..default()
+                }),),
+                (
+                    thruster_section(ThrusterSectionConfig {
+                        magnitude: 1.0,
+                        transform: Transform::from_xyz(1.0, 0.0, 1.0)
+                            .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
+                        ..default()
+                    }),
+                    super::ThrusterInputKey(KeyCode::Space)
+                ),
+                (
+                    thruster_section(ThrusterSectionConfig {
+                        magnitude: 1.0,
+                        transform: Transform::from_xyz(-1.0, 0.0, -1.0)
+                            .with_rotation(Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)),
+                        ..default()
+                    }),
+                    super::ThrusterInputKey(KeyCode::Space)
+                ),
+            ],
+        ));
+    }
+
+    fn create_new_spaceship_big(
+        _activate: On<Activate>,
+        mut commands: Commands,
+        q_spaceship: Query<Entity, With<SpaceshipRootMarker>>,
+        game_assets: Res<GameAssets>,
+    ) {
+        for entity in &q_spaceship {
+            commands.entity(entity).despawn();
+        }
+        let entity = commands
+            .spawn((spaceship_root(SpaceshipConfig { ..default() }),))
+            .id();
+
+        let cube_size = 5;
+        for x in -cube_size..=cube_size {
+            for y in -cube_size..=cube_size {
+                for z in -cube_size..=cube_size {
+                    commands.entity(entity).with_children(|parent| {
+                        parent.spawn((hull_section(HullSectionConfig {
+                            transform: Transform::from_xyz(
+                                x as f32 * 1.0,
+                                y as f32 * 1.0,
+                                z as f32 * 1.0,
+                            ),
+                            render_mesh: Some(game_assets.hull_01.clone()),
+                            ..default()
+                        }),));
+                    });
+                }
+            }
+        }
+
+        let z = cube_size + 1;
+        for x in -cube_size..=cube_size {
+            for y in -cube_size..=cube_size {
+                commands.entity(entity).with_children(|parent| {
+                    parent.spawn((
+                        thruster_section(ThrusterSectionConfig {
+                            magnitude: 1.0,
+                            transform: Transform::from_xyz(
+                                x as f32 * 1.0,
+                                y as f32 * 1.0,
+                                z as f32 * 1.0,
+                            ),
+                            ..default()
+                        }),
+                        super::ThrusterInputKey(KeyCode::Space),
+                    ));
+                });
+            }
+        }
+    }
+
+    fn create_new_spaceship_basic(
+        _activate: On<Activate>,
+        mut commands: Commands,
+        q_spaceship: Query<Entity, With<SpaceshipRootMarker>>,
+        game_assets: Res<GameAssets>,
+    ) {
+        for entity in &q_spaceship {
+            commands.entity(entity).despawn();
+        }
+
+        commands.spawn((
+            spaceship_root(SpaceshipConfig { ..default() }),
+            children![
+                (hull_section(HullSectionConfig {
+                    transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                    render_mesh: Some(game_assets.hull_01.clone()),
+                    ..default()
+                }),),
+                (hull_section(HullSectionConfig {
+                    transform: Transform::from_xyz(0.0, 0.0, 1.0),
+                    render_mesh: Some(game_assets.hull_01.clone()),
+                    ..default()
+                }),),
+                (hull_section(HullSectionConfig {
+                    transform: Transform::from_xyz(0.0, 0.0, -1.0),
+                    render_mesh: Some(game_assets.hull_01.clone()),
+                    ..default()
+                }),),
+                (
+                    thruster_section(ThrusterSectionConfig {
+                        magnitude: 1.0,
+                        transform: Transform::from_xyz(0.0, 0.0, 2.0),
+                        ..default()
+                    }),
+                    super::ThrusterInputKey(KeyCode::KeyW)
+                ),
+                (
+                    thruster_section(ThrusterSectionConfig {
+                        magnitude: 0.1,
+                        transform: Transform::from_xyz(-1.0, 0.0, 1.0)
+                            .with_rotation(Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)),
+                        ..default()
+                    }),
+                    super::ThrusterInputKey(KeyCode::KeyA)
+                ),
+                (
+                    thruster_section(ThrusterSectionConfig {
+                        magnitude: 0.1,
+                        transform: Transform::from_xyz(1.0, 0.0, 1.0)
+                            .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
+                        ..default()
+                    }),
+                    super::ThrusterInputKey(KeyCode::KeyD)
+                ),
+                (
+                    thruster_section(ThrusterSectionConfig {
+                        magnitude: 0.1,
+                        transform: Transform::from_xyz(-1.0, 0.0, -1.0)
+                            .with_rotation(Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)),
+                        ..default()
+                    }),
+                    super::ThrusterInputKey(KeyCode::KeyD)
+                ),
+                (
+                    thruster_section(ThrusterSectionConfig {
+                        magnitude: 0.1,
+                        transform: Transform::from_xyz(1.0, 0.0, -1.0)
+                            .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
+                        ..default()
+                    }),
+                    super::ThrusterInputKey(KeyCode::KeyA)
+                ),
+            ],
+        ));
     }
 
     fn sections() -> impl Bundle {

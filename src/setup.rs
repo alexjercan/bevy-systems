@@ -6,7 +6,7 @@ use bevy::{
     app::ScheduleRunnerPlugin,
     log::{Level, LogPlugin},
     prelude::*,
-    window::{CursorGrabMode, CursorOptions, PresentMode, PrimaryWindow},
+    window::PresentMode,
     winit::WinitPlugin,
 };
 
@@ -57,9 +57,6 @@ pub fn new_gui_app() -> App {
         app.add_plugins(debug::InpsectorDebugPlugin);
     }
 
-    // NOTE: Just for non UI, lock cursor on left click and unlock on escape
-    app.add_systems(Update, lock_on_left_click);
-
     app
 }
 
@@ -78,22 +75,6 @@ pub fn new_headless_app() -> App {
     ));
 
     app
-}
-
-fn lock_on_left_click(
-    primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>,
-    mouse: Res<ButtonInput<MouseButton>>,
-) {
-    // TODO: Not for UI
-    if mouse.just_pressed(MouseButton::Right) {
-        let mut primary_cursor_options = primary_cursor_options.into_inner();
-        primary_cursor_options.grab_mode = CursorGrabMode::Locked;
-        primary_cursor_options.visible = false;
-    } else if mouse.just_released(MouseButton::Right) {
-        let mut primary_cursor_options = primary_cursor_options.into_inner();
-        primary_cursor_options.grab_mode = CursorGrabMode::None;
-        primary_cursor_options.visible = true;
-    }
 }
 
 mod debug {
