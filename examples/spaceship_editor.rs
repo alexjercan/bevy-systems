@@ -457,7 +457,8 @@ mod editor {
         q_section: Query<&Transform, With<SpaceshipSectionMarker>>,
         selection: Res<SectionChoice>,
         game_assets: Res<GameAssets>,
-        q_preview: Query<Entity, With<SectionPreviewMarker>>
+        q_preview: Query<Entity, With<SectionPreviewMarker>>,
+        keyboard: Res<ButtonInput<KeyCode>>,
     ) {
         if click.button != PointerButton::Primary {
             return;
@@ -497,6 +498,8 @@ mod editor {
                 });
             }
             SectionChoice::ThrusterSection => {
+                let bind = keyboard.get_pressed().next().map_or(KeyCode::Space, |k| *k);
+
                 commands.entity(spaceship).with_children(|parent| {
                     parent.spawn((
                         thruster_section(ThrusterSectionConfig {
@@ -508,7 +511,7 @@ mod editor {
                             },
                             ..default()
                         }),
-                        super::ThrusterInputKey(KeyCode::Digit1),
+                        super::ThrusterInputKey(bind),
                     ));
                 });
             }
