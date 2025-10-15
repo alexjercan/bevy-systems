@@ -16,6 +16,7 @@ struct Cli;
 fn main() {
     let _ = Cli::parse();
     let mut app = new_gui_app();
+
     app.add_plugins(EnhancedInputPlugin);
 
     // Helper plugins
@@ -39,27 +40,38 @@ fn main() {
     app.add_plugins(SkyboxPlugin);
     app.add_plugins(PostProcessingDefaultPlugin);
 
+    // Chase Camera Plugin to have a 3rd person camera following the spaceship
+    app.add_plugins(ChaseCameraPlugin);
+    // Point Rotation Plugin to convert mouse movement to a target rotation
+    app.add_plugins(PointRotationPlugin);
+    // for debug to have a random orbiting object
+    app.add_plugins(SphereRandomOrbitPlugin);
+    // Rotation Plugin for the turret facing direction
+    app.add_plugins(SmoothLookRotationPlugin);
+
     // Add sections plugins
     app.add_plugins(SpaceshipPlugin { render: true });
 
-    app.add_systems(
-        OnEnter(GameStates::Playing),
-        (setup_scene, setup_simple_scene),
-    );
-
     app.init_state::<SceneState>();
 
-    app.add_plugins(editor::editor_plugin);
-    app.add_systems(
-        Update,
-        switch_scene_editor.run_if(in_state(SceneState::Simulation)),
-    );
+    // We start in the editor state
     app.add_systems(
         OnEnter(GameStates::Playing),
         |mut state: ResMut<NextState<SceneState>>| {
             state.set(SceneState::Editor);
         },
     );
+    // On F1 we switch to editor
+    app.add_systems(
+        Update,
+        switch_scene_editor.run_if(in_state(SceneState::Simulation)),
+    );
+
+    // Editor
+    app.add_plugins(editor::editor_plugin);
+
+    // Simulation
+    app.add_plugins(simulation::simulation_plugin);
 
     app.add_systems(
         Update,
@@ -67,19 +79,6 @@ fn main() {
     );
 
     app.run();
-}
-
-fn setup_scene(mut commands: Commands, game_assets: Res<GameAssets>) {
-    commands.spawn((
-        Name::new("WASD Camera"),
-        Camera3d::default(),
-        WASDCameraController,
-        Transform::from_xyz(0.0, 5.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
-        SkyboxConfig {
-            cubemap: game_assets.cubemap.clone(),
-            brightness: 1000.0,
-        },
-    ));
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
@@ -112,10 +111,426 @@ fn on_thruster_input(
     }
 }
 
+mod simulation {
+    use avian3d::prelude::*;
+    use bevy::prelude::*;
+    use bevy_enhanced_input::prelude::*;
+    use nova_protocol::prelude::*;
+    use rand::prelude::*;
+
+    use crate::helpers::GameAssets;
+
+    pub fn simulation_plugin(app: &mut App) {
+        app.add_systems(
+            OnEnter(super::SceneState::Simulation),
+            (setup_scene, setup_simple_scene),
+        );
+
+        // Setup the input system to get input from the mouse and keyboard.
+        app.add_input_context::<PlayerInputMarker>();
+        app.add_observer(on_rotation_input);
+        app.add_observer(on_rotation_input_completed);
+        app.add_observer(on_free_mode_input_started);
+        app.add_observer(on_free_mode_input_completed);
+        app.add_observer(on_combat_input_started);
+        app.add_observer(on_combat_input_completed);
+
+        // Spaceship Control Mode for the Camera/Spaceship
+        app.insert_resource(SpaceshipControlMode::default());
+        app.add_systems(Update, sync_spaceship_control_mode);
+
+        app.add_systems(
+            Update,
+            (
+                update_chase_camera_input.before(ChaseCameraPluginSet),
+                (
+                    update_spaceship_target_rotation_torque,
+                    update_turret_target_input,
+                )
+                    .before(SpaceshipPluginSet),
+            )
+                .chain(),
+        );
+    }
+
+    fn update_chase_camera_input(
+        camera: Single<&mut ChaseCameraInput, With<ChaseCamera>>,
+        spaceship: Single<&Transform, With<SpaceshipRootMarker>>,
+        point_rotation: Single<&PointRotationOutput, With<SpaceshipRotationInputActiveMarker>>,
+    ) {
+        let mut camera_input = camera.into_inner();
+        let spaceship_transform = spaceship.into_inner();
+        let rotation = point_rotation.into_inner();
+
+        camera_input.anchor_pos = spaceship_transform.translation;
+        camera_input.achor_rot = **rotation;
+    }
+
+    fn update_spaceship_target_rotation_torque(
+        point_rotation: Single<&PointRotationOutput, With<SpaceshipRotationInputMarker>>,
+        controller: Single<&mut ControllerSectionRotationInput, With<ControllerSectionMarker>>,
+    ) {
+        let rotation = point_rotation.into_inner();
+        let mut controller_target = controller.into_inner();
+        **controller_target = **rotation;
+    }
+
+    #[derive(Component, Clone, Copy, Debug, Reflect)]
+    struct PDCTurretTargetMarker;
+
+    fn update_turret_target_input(
+        target: Option<Single<&GlobalTransform, With<PDCTurretTargetMarker>>>,
+        mut q_turret: Query<&mut TurretSectionTargetInput, With<TurretSectionMarker>>,
+        mode: Res<SpaceshipControlMode>,
+        point_rotation: Single<&PointRotationOutput, With<CombatRotationInputMarker>>,
+        spaceship: Single<&GlobalTransform, With<SpaceshipRootMarker>>,
+    ) {
+        if matches!(*mode, SpaceshipControlMode::Combat) {
+            let rotation = point_rotation.into_inner();
+            let spaceship_transform = spaceship.into_inner();
+
+            for mut turret in &mut q_turret {
+                let forward = **rotation * -Vec3::Z;
+                let position = spaceship_transform.translation();
+                let distance = 100.0;
+
+                **turret = Some(position + forward * distance);
+            }
+        } else {
+            let Some(target) = target else {
+                return;
+            };
+
+            let target_transform = target.into_inner();
+
+            for mut turret in &mut q_turret {
+                **turret = Some(target_transform.translation());
+            }
+        }
+    }
+
+    fn setup_scene(
+        mut commands: Commands,
+        mut meshes: ResMut<Assets<Mesh>>,
+        mut materials: ResMut<Assets<StandardMaterial>>,
+        game_assets: Res<GameAssets>,
+    ) {
+        // Spawn a player input controller entity to hold the input from the player
+        commands.spawn((
+            DespawnOnExit(super::SceneState::Simulation),
+            Name::new("Player Input Controller"),
+            Transform::default(),
+            GlobalTransform::default(),
+            PlayerInputMarker,
+            actions!(
+                PlayerInputMarker[
+                    (
+                        Action::<CameraInputRotate>::new(),
+                        Bindings::spawn((
+                            // Bevy requires single entities to be wrapped in `Spawn`.
+                            // You can attach modifiers to individual bindings as well.
+                            Spawn((Binding::mouse_motion(), Scale::splat(0.001), Negate::all())),
+                            Axial::right_stick().with((Scale::splat(2.0), Negate::none())),
+                        )),
+                    ),
+                    (
+                        Action::<FreeLookInput>::new(),
+                        bindings![KeyCode::AltLeft, GamepadButton::LeftTrigger],
+                    ),
+                    (
+                        Action::<CombatInput>::new(),
+                        bindings![MouseButton::Right],
+                    ),
+                ]
+            ),
+        ));
+
+        // Spawn a RotationInput to consume the mouse movement and will be used to rotate the spaceship
+        commands.spawn((
+            DespawnOnExit(super::SceneState::Simulation),
+            Name::new("Spaceship Rotation Input"),
+            SpaceshipRotationInputMarker,
+            SpaceshipRotationInputActiveMarker,
+            PointRotation::default(),
+        ));
+
+        // Spawn a RotationInput to consume the mouse movement and will be used to rotate the free look
+        commands.spawn((
+            DespawnOnExit(super::SceneState::Simulation),
+            Name::new("FreeLook Rotation Input"),
+            FreeLookRotationInputMarker,
+            PointRotation::default(),
+        ));
+
+        // Spawn a RotationInput to consume the mouse movement and will be used to rotate the combat
+        commands.spawn((
+            DespawnOnExit(super::SceneState::Simulation),
+            Name::new("Combat Rotation Input"),
+            CombatRotationInputMarker,
+            PointRotation::default(),
+        ));
+
+        // Spawn a 3D camera with a chase camera component
+        commands.spawn((
+            DespawnOnExit(super::SceneState::Simulation),
+            Name::new("Chase Camera"),
+            Camera3d::default(),
+            ChaseCamera::default(),
+            Transform::from_xyz(0.0, 10.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
+            SkyboxConfig {
+                cubemap: game_assets.cubemap.clone(),
+                brightness: 1000.0,
+            },
+        ));
+
+        // Spawn a target entity to visualize the target rotation
+        commands.spawn((
+            Name::new("Turret Target"),
+            PDCTurretTargetMarker,
+            Transform::from_xyz(0.0, 0.0, -500.0),
+            Visibility::Visible,
+            Mesh3d(meshes.add(Cuboid::new(3.0, 3.0, 3.0))),
+            MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 0.2))),
+            Collider::cuboid(3.0, 3.0, 3.0),
+            RigidBody::Static,
+        ));
+    }
+
+    pub fn setup_simple_scene(
+        mut commands: Commands,
+        mut meshes: ResMut<Assets<Mesh>>,
+        mut materials: ResMut<Assets<StandardMaterial>>,
+    ) {
+        let mut rng = rand::rng();
+
+        commands.spawn((
+            DespawnOnExit(super::SceneState::Simulation),
+            DirectionalLight {
+                illuminance: 10000.0,
+                ..default()
+            },
+            Transform::from_rotation(Quat::from_euler(
+                EulerRot::XYZ,
+                -std::f32::consts::FRAC_PI_2,
+                0.0,
+                0.0,
+            )),
+            GlobalTransform::default(),
+        ));
+
+        for i in 0..20 {
+            let pos = Vec3::new(
+                rng.random_range(-100.0..100.0),
+                rng.random_range(-20.0..20.0),
+                rng.random_range(-100.0..100.0),
+            );
+            let radius = rng.random_range(2.0..6.0);
+            let color = Color::srgb(
+                rng.random_range(0.0..1.0),
+                rng.random_range(0.0..1.0),
+                rng.random_range(0.0..1.0),
+            );
+
+            commands.spawn((
+                DespawnOnExit(super::SceneState::Simulation),
+                Name::new(format!("Planet {}", i)),
+                Transform::from_translation(pos),
+                GlobalTransform::default(),
+                Mesh3d(meshes.add(Sphere::new(radius))),
+                MeshMaterial3d(materials.add(color)),
+                Collider::sphere(radius),
+                RigidBody::Static,
+            ));
+        }
+
+        for i in 0..40 {
+            let pos = Vec3::new(
+                rng.random_range(-120.0..120.0),
+                rng.random_range(-30.0..30.0),
+                rng.random_range(-120.0..120.0),
+            );
+            let size = rng.random_range(0.5..1.0);
+            let color = Color::srgb(
+                rng.random_range(0.6..1.0),
+                rng.random_range(0.6..1.0),
+                rng.random_range(0.0..0.6),
+            );
+
+            commands.spawn((
+                DespawnOnExit(super::SceneState::Simulation),
+                Name::new(format!("Satellite {}", i)),
+                Transform::from_translation(pos),
+                GlobalTransform::default(),
+                Mesh3d(meshes.add(Cuboid::new(size, size, size))),
+                MeshMaterial3d(materials.add(color)),
+                Collider::cuboid(size, size, size),
+                ColliderDensity(1.0),
+                RigidBody::Dynamic,
+            ));
+        }
+    }
+
+    #[derive(Resource, Default, Clone, Debug)]
+    enum SpaceshipControlMode {
+        #[default]
+        Normal,
+        FreeLook,
+        Combat,
+    }
+
+    #[derive(Component, Debug, Clone)]
+    struct SpaceshipRotationInputActiveMarker;
+
+    fn sync_spaceship_control_mode(
+        mut commands: Commands,
+        mode: Res<SpaceshipControlMode>,
+        spaceship_input_rotation: Single<
+            (Entity, &PointRotationOutput),
+            With<SpaceshipRotationInputMarker>,
+        >,
+        spaceship_input_free_look: Single<Entity, With<FreeLookRotationInputMarker>>,
+        spaceship_input_combat: Single<Entity, With<CombatRotationInputMarker>>,
+        camera: Single<Entity, With<ChaseCamera>>,
+    ) {
+        if !mode.is_changed() {
+            return;
+        }
+
+        let (spaceship_input_rotation, point_rotation) = spaceship_input_rotation.into_inner();
+        let spaceship_input_free_look = spaceship_input_free_look.into_inner();
+        let spaceship_input_combat = spaceship_input_combat.into_inner();
+        let camera = camera.into_inner();
+
+        match *mode {
+            SpaceshipControlMode::Normal => {
+                commands
+                    .entity(spaceship_input_rotation)
+                    .insert(SpaceshipRotationInputActiveMarker);
+                commands
+                    .entity(spaceship_input_free_look)
+                    .remove::<SpaceshipRotationInputActiveMarker>();
+                commands
+                    .entity(spaceship_input_combat)
+                    .remove::<SpaceshipRotationInputActiveMarker>();
+                commands.entity(camera).insert(ChaseCamera {
+                    offset: Vec3::new(0.0, 5.0, -20.0),
+                    focus_offset: Vec3::new(0.0, 0.0, 20.0),
+                    ..default()
+                });
+            }
+            SpaceshipControlMode::FreeLook => {
+                commands
+                    .entity(spaceship_input_rotation)
+                    .remove::<SpaceshipRotationInputActiveMarker>();
+                commands
+                    .entity(spaceship_input_free_look)
+                    .insert(PointRotation {
+                        initial_rotation: **point_rotation,
+                    })
+                    .insert(SpaceshipRotationInputActiveMarker);
+                commands
+                    .entity(spaceship_input_combat)
+                    .remove::<SpaceshipRotationInputActiveMarker>();
+                commands.entity(camera).insert(ChaseCamera {
+                    offset: Vec3::new(0.0, 10.0, -30.0),
+                    focus_offset: Vec3::new(0.0, 0.0, 0.0),
+                    ..default()
+                });
+            }
+            SpaceshipControlMode::Combat => {
+                commands
+                    .entity(spaceship_input_rotation)
+                    .remove::<SpaceshipRotationInputActiveMarker>();
+                commands
+                    .entity(spaceship_input_free_look)
+                    .remove::<SpaceshipRotationInputActiveMarker>();
+                commands
+                    .entity(spaceship_input_combat)
+                    .insert(PointRotation {
+                        initial_rotation: **point_rotation,
+                    })
+                    .insert(SpaceshipRotationInputActiveMarker);
+                commands.entity(camera).insert(ChaseCamera {
+                    offset: Vec3::new(0.0, 5.0, -10.0),
+                    focus_offset: Vec3::new(0.0, 0.0, 50.0),
+                    ..default()
+                });
+            }
+        }
+    }
+
+    #[derive(Component, Debug, Clone)]
+    struct PlayerInputMarker;
+
+    #[derive(Component, Debug, Clone)]
+    struct SpaceshipRotationInputMarker;
+
+    #[derive(Component, Debug, Clone)]
+    struct FreeLookRotationInputMarker;
+
+    #[derive(Component, Debug, Clone)]
+    struct CombatRotationInputMarker;
+
+    #[derive(InputAction)]
+    #[action_output(Vec2)]
+    struct CameraInputRotate;
+
+    #[derive(InputAction)]
+    #[action_output(bool)]
+    struct FreeLookInput;
+
+    #[derive(InputAction)]
+    #[action_output(bool)]
+    struct CombatInput;
+
+    fn on_rotation_input(
+        fire: On<Fire<CameraInputRotate>>,
+        mut q_input: Query<&mut PointRotationInput, With<SpaceshipRotationInputActiveMarker>>,
+    ) {
+        for mut input in &mut q_input {
+            **input = fire.value;
+        }
+    }
+
+    fn on_rotation_input_completed(
+        _: On<Complete<CameraInputRotate>>,
+        mut q_input: Query<&mut PointRotationInput>,
+    ) {
+        for mut input in &mut q_input {
+            **input = Vec2::ZERO;
+        }
+    }
+
+    fn on_free_mode_input_started(
+        _: On<Start<FreeLookInput>>,
+        mut mode: ResMut<SpaceshipControlMode>,
+    ) {
+        *mode = SpaceshipControlMode::FreeLook;
+    }
+
+    fn on_free_mode_input_completed(
+        _: On<Complete<FreeLookInput>>,
+        mut mode: ResMut<SpaceshipControlMode>,
+    ) {
+        *mode = SpaceshipControlMode::Normal;
+    }
+
+    fn on_combat_input_started(_: On<Start<CombatInput>>, mut mode: ResMut<SpaceshipControlMode>) {
+        *mode = SpaceshipControlMode::Combat;
+    }
+
+    fn on_combat_input_completed(
+        _: On<Complete<CombatInput>>,
+        mut mode: ResMut<SpaceshipControlMode>,
+    ) {
+        *mode = SpaceshipControlMode::Normal;
+    }
+}
+
 mod editor {
     // https://github.com/bevyengine/bevy/blob/release-0.17.2/examples/ui/standard_widgets_observers.rs
 
-    use crate::helpers::GameAssets;
+    use crate::helpers::{GameAssets, WASDCameraController};
 
     use bevy::{
         picking::{hover::Hovered, pointer::PointerInteraction},
@@ -150,7 +565,7 @@ mod editor {
     pub fn editor_plugin(app: &mut App) {
         app.insert_resource(SectionChoice::None);
 
-        app.add_systems(OnEnter(super::SceneState::Editor), editor_menu_setup);
+        app.add_systems(OnEnter(super::SceneState::Editor), setup_editor_scene);
 
         app.add_observer(button_on_interaction::<Add, Pressed>)
             .add_observer(button_on_interaction::<Remove, Pressed>)
@@ -303,7 +718,34 @@ mod editor {
         )
     }
 
-    fn editor_menu_setup(mut commands: Commands) {
+    fn setup_editor_scene(mut commands: Commands, game_assets: Res<GameAssets>) {
+        commands.spawn((
+            DespawnOnExit(super::SceneState::Editor),
+            DirectionalLight {
+                illuminance: 10000.0,
+                ..default()
+            },
+            Transform::from_rotation(Quat::from_euler(
+                EulerRot::XYZ,
+                -std::f32::consts::FRAC_PI_2,
+                0.0,
+                0.0,
+            )),
+            GlobalTransform::default(),
+        ));
+
+        commands.spawn((
+            DespawnOnExit(super::SceneState::Editor),
+            Name::new("WASD Camera"),
+            Camera3d::default(),
+            WASDCameraController,
+            Transform::from_xyz(0.0, 5.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
+            SkyboxConfig {
+                cubemap: game_assets.cubemap.clone(),
+                brightness: 1000.0,
+            },
+        ));
+
         commands.spawn((
             DespawnOnExit(super::SceneState::Editor),
             Name::new("Editor Main Menu"),

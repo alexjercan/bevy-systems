@@ -170,7 +170,6 @@ impl Plugin for WASDCameraControllerPlugin {
         app.add_plugins(WASDCameraPlugin);
 
         app.add_input_context::<WASDCameraInputMarker>();
-        app.add_systems(Startup, setup_wasd_camera_controls);
 
         app.add_observer(setup_wasd_camera);
         app.add_observer(on_wasd_input);
@@ -209,9 +208,14 @@ struct WASDCameraLookEnabled(bool);
 #[derive(Component, Clone, Copy, Debug, Default, Reflect)]
 pub struct WASDCameraController;
 
-fn setup_wasd_camera_controls(mut commands: Commands) {
-    commands.spawn((
-        Name::new("WASD Camera Input"),
+fn setup_wasd_camera(insert: On<Insert, WASDCameraController>, mut commands: Commands) {
+    commands.entity(insert.entity).insert((
+        Camera3d::default(),
+        WASDCamera {
+            wasd_sensitivity: 0.1,
+            ..default()
+        },
+        WASDCameraLookEnabled(false),
         WASDCameraInputMarker,
         actions!(
             WASDCameraInputMarker[
@@ -246,17 +250,6 @@ fn setup_wasd_camera_controls(mut commands: Commands) {
                 ),
             ]
         ),
-    ));
-}
-
-fn setup_wasd_camera(insert: On<Insert, WASDCameraController>, mut commands: Commands) {
-    commands.entity(insert.entity).insert((
-        Camera3d::default(),
-        WASDCamera {
-            wasd_sensitivity: 0.1,
-            ..default()
-        },
-        WASDCameraLookEnabled(false),
     ));
 }
 
