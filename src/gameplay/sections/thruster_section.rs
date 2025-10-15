@@ -229,7 +229,7 @@ fn insert_thruster_section_render(
                         extension: ThrusterExhaustMaterial {
                             thruster_input: 0.0,
                             thruster_exhaust_radius: 0.4,
-                            thruster_exhaust_height: 2.0,
+                            thruster_exhaust_height: 1.0,
                         },
                     })),
                     Transform::from_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2))

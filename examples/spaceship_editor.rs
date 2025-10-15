@@ -166,6 +166,13 @@ mod editor {
             .add_observer(on_hover_spaceship_section)
             .add_observer(on_move_spaceship_section)
             .add_observer(on_out_spaceship_section);
+
+        app.add_systems(
+            OnExit(super::SceneState::Editor),
+            |mut selection: ResMut<SectionChoice>| {
+                *selection = SectionChoice::None;
+            },
+        );
     }
 
     #[derive(Component)]
@@ -439,6 +446,9 @@ mod editor {
         )
     }
 
+    #[derive(Component)]
+    struct SectionPreviewMarker;
+
     fn on_click_spaceship_section(
         click: On<Pointer<Press>>,
         mut commands: Commands,
@@ -447,6 +457,7 @@ mod editor {
         q_section: Query<&Transform, With<SpaceshipSectionMarker>>,
         selection: Res<SectionChoice>,
         game_assets: Res<GameAssets>,
+        q_preview: Query<Entity, With<SectionPreviewMarker>>
     ) {
         if click.button != PointerButton::Primary {
             return;
@@ -471,9 +482,7 @@ mod editor {
         let rotation = Quat::from_rotation_arc(Vec3::Z, normal.normalize());
 
         match *selection {
-            SectionChoice::None => {
-                debug!("No section selected");
-            }
+            SectionChoice::None => {}
             SectionChoice::HullSection => {
                 commands.entity(spaceship).with_children(|parent| {
                     parent.spawn((hull_section(HullSectionConfig {
@@ -505,12 +514,12 @@ mod editor {
             }
             SectionChoice::Delete => {
                 commands.entity(entity).despawn();
+                for preview in &q_preview {
+                    commands.entity(preview).despawn();
+                }
             }
         }
     }
-
-    #[derive(Component)]
-    struct SectionPreviewMarker;
 
     fn on_hover_spaceship_section(
         hover: On<Pointer<Over>>,
@@ -521,10 +530,6 @@ mod editor {
         mut materials: ResMut<Assets<StandardMaterial>>,
         selection: Res<SectionChoice>,
     ) {
-        if matches!(*selection, SectionChoice::Delete | SectionChoice::None) {
-            return;
-        }
-
         let entity = hover.entity;
 
         let Some(normal) = q_pointer
@@ -539,19 +544,37 @@ mod editor {
             return;
         };
 
-        let position = transform.translation() + normal * 1.0;
-        let rotation = Quat::from_rotation_arc(Vec3::Z, normal.normalize());
+        match *selection {
+            SectionChoice::None => {}
+            SectionChoice::Delete => {
+                let position = transform.translation();
 
-        commands.spawn((
-            SectionPreviewMarker,
-            Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
-            MeshMaterial3d(materials.add(Color::srgb(0.2, 0.8, 0.2))),
-            Transform {
-                translation: position,
-                rotation,
-                ..default()
-            },
-        ));
+                commands.spawn((
+                    SectionPreviewMarker,
+                    Mesh3d(meshes.add(Cuboid::new(1.01, 1.01, 1.01))),
+                    MeshMaterial3d(materials.add(Color::srgb(0.8, 0.2, 0.2))),
+                    Transform {
+                        translation: position,
+                        ..default()
+                    },
+                ));
+            }
+            _ => {
+                let position = transform.translation() + normal * 1.0;
+                let rotation = Quat::from_rotation_arc(Vec3::Z, normal.normalize());
+
+                commands.spawn((
+                    SectionPreviewMarker,
+                    Mesh3d(meshes.add(Cuboid::new(1.01, 1.01, 1.01))),
+                    MeshMaterial3d(materials.add(Color::srgb(0.2, 0.8, 0.2))),
+                    Transform {
+                        translation: position,
+                        rotation,
+                        ..default()
+                    },
+                ));
+            }
+        }
     }
 
     fn on_move_spaceship_section(
@@ -559,7 +582,12 @@ mod editor {
         q_pointer: Query<&PointerInteraction>,
         q_section: Query<&GlobalTransform, With<SpaceshipSectionMarker>>,
         preview: Single<&mut Transform, With<SectionPreviewMarker>>,
+        selection: Res<SectionChoice>,
     ) {
+        if matches!(*selection, SectionChoice::Delete | SectionChoice::None) {
+            return;
+        }
+
         let entity = move_.entity;
 
         let Some(normal) = q_pointer
