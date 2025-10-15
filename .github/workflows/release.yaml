@@ -12,8 +12,8 @@ on:
         type: string
 
 env:
-  GAME_EXECUTABLE_NAME: nova-protocol
-  GAME_OSX_APP_NAME: NovaProtocol
+  GAME_EXECUTABLE_NAME: spaceship_editor
+  GAME_OSX_APP_NAME: SpaceshipEditor
 
 permissions:
   contents: write
@@ -98,18 +98,16 @@ jobs:
           cargo build --example spaceship_editor --profile dist
       - name: Prepare release
         run: |
-          mkdir target/dist/assets && cp -r assets target/dist/assets
-          mkdir target/dist/credits && cp -r credits target/dist/credits
           chmod +x target/dist/${{ env.GAME_EXECUTABLE_NAME }}
+          mv target/dist/${{ env.GAME_EXECUTABLE_NAME }} .
       - name: Bundle release
         run: |
-          cd target/dist
           tar -czf ${{ env.GAME_EXECUTABLE_NAME }}_linux.tar.gz ${{ env.GAME_EXECUTABLE_NAME }} assets credits
       - name: Upload release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: target/dist/${{ env.GAME_EXECUTABLE_NAME }}_linux.tar.gz
+          file: ${{ env.GAME_EXECUTABLE_NAME }}_linux.tar.gz
           asset_name: ${{ env.GAME_EXECUTABLE_NAME }}_${{ env.VERSION }}_linux.tar.gz
           release_name: ${{ env.VERSION }}
           tag: ${{ env.VERSION }}
@@ -128,6 +126,11 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
+      - name: Install dotnet
+        if: ${{ env.BUILD_INSTALLER }}
+        uses: actions/setup-dotnet@v3
+        with:
+          global-json-file: build/windows/installer/global.json
       - name: Build release
         run: |
           cargo build --example spaceship_editor --profile dist
@@ -140,11 +143,28 @@ jobs:
         with:
           files: target/dist/assets/ target/dist/credits/ target/dist/${{ env.GAME_EXECUTABLE_NAME }}.exe
           dest: ${{ env.GAME_EXECUTABLE_NAME }}_windows.zip
+      - name: Create Installer
+        if: ${{ env.BUILD_INSTALLER }}
+        shell: bash
+        run: |
+          tag=${{ env.VERSION }}
+          version="${tag#v}"
+          dotnet build -p:Version=$version -c Release build/windows/installer/Installer.wixproj --output installer
       - name: Upload release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.GAME_EXECUTABLE_NAME }}_windows.zip
           asset_name: ${{ env.GAME_EXECUTABLE_NAME }}_${{ env.VERSION }}_windows.zip
+          tag: ${{ env.VERSION }}
+          overwrite: true
+      - name: Upload installer
+        if: ${{ env.BUILD_INSTALLER }}
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: installer/en-US/installer.msi
+          asset_name: ${{ env.GAME_EXECUTABLE_NAME }}_${{ env.VERSION }}_windows.msi
+          release_name: ${{ env.VERSION }}
           tag: ${{ env.VERSION }}
           overwrite: true
