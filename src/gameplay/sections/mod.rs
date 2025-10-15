@@ -4,14 +4,14 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 
 mod controller_section;
-mod engine_section;
 mod hull_section;
+mod thruster_section;
 mod turret_section;
 
 pub mod prelude {
     pub use super::controller_section::prelude::*;
-    pub use super::engine_section::prelude::*;
     pub use super::hull_section::prelude::*;
+    pub use super::thruster_section::prelude::*;
     pub use super::turret_section::prelude::*;
 
     pub use super::spaceship_root;
@@ -19,6 +19,7 @@ pub mod prelude {
     pub use super::SpaceshipPlugin;
     pub use super::SpaceshipPluginSet;
     pub use super::SpaceshipRootMarker;
+    pub use super::SpaceshipSectionMarker;
 }
 
 /// Configuration for the spaceship root entity.
@@ -44,31 +45,44 @@ pub fn spaceship_root(config: SpaceshipConfig) -> impl Bundle {
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct SpaceshipRootMarker;
 
+/// This will be a generic marker for all spaceship sections.
+#[derive(Component, Clone, Debug, Reflect)]
+pub struct SpaceshipSectionMarker;
+
 /// A system set that will contain all the systems related to the spaceship plugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SpaceshipPluginSet;
 
 /// A plugin that adds all the spaceship sections and their related systems.
-pub struct SpaceshipPlugin;
+#[derive(Default, Clone, Debug)]
+pub struct SpaceshipPlugin {
+    pub render: bool,
+}
 
 impl Plugin for SpaceshipPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<SpaceshipRootMarker>();
 
         app.add_plugins((
-            hull_section::HullSectionPlugin,
-            engine_section::EngineSectionPlugin,
+            hull_section::HullSectionPlugin {
+                render: self.render,
+                ..default()
+            },
+            thruster_section::ThrusterSectionPlugin {
+                render: self.render,
+                ..default()
+            },
             turret_section::TurretSectionPlugin,
             controller_section::ControllerSectionPlugin,
         ));
 
         app.configure_sets(
             Update,
-            engine_section::EngineSectionPluginSet.in_set(SpaceshipPluginSet),
+            thruster_section::ThrusterSectionPluginSet.in_set(SpaceshipPluginSet),
         );
         app.configure_sets(
             FixedUpdate,
-            engine_section::EngineSectionPluginSet.in_set(SpaceshipPluginSet),
+            thruster_section::ThrusterSectionPluginSet.in_set(SpaceshipPluginSet),
         );
         app.configure_sets(
             Update,

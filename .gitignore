@@ -3,3 +3,7 @@ target/
 .DS_Store
 
 dist/
+
+*.blend1
+*.blend2
+*.blend@

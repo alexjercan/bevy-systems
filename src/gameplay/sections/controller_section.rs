@@ -44,6 +44,7 @@ pub fn controller_section(config: ControllerSectionConfig) -> impl Bundle {
 
     (
         Name::new("Controller Section"),
+        super::SpaceshipSectionMarker,
         ControllerSectionMarker,
         Collider::cuboid(1.0, 1.0, 1.0),
         ColliderDensity(1.0),
@@ -99,14 +100,7 @@ impl Plugin for ControllerSectionPlugin {
 }
 
 fn update_controller_root_torque(
-    mut q_root: Query<
-        (
-            &ComputedAngularInertia,
-            &Rotation,
-            Forces,
-        ),
-        With<SpaceshipRootMarker>,
-    >,
+    mut q_root: Query<(&ComputedAngularInertia, &Rotation, Forces), With<SpaceshipRootMarker>>,
     q_controller: Query<
         (
             &ControllerSectionStableTorquePdController,
@@ -117,8 +111,7 @@ fn update_controller_root_torque(
     >,
 ) {
     for (controller, controller_input, &ChildOf(root)) in &q_controller {
-        let Ok((angular_inertia, rotation, mut forces)) = q_root.get_mut(root)
-        else {
+        let Ok((angular_inertia, rotation, mut forces)) = q_root.get_mut(root) else {
             warn!("ControllerSection's root entity does not have a SpaceshipRootMaker component");
             continue;
         };

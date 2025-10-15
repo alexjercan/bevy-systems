@@ -2,9 +2,10 @@
 
 use avian3d::prelude::*;
 use bevy::{
-    core_pipeline::Skybox,
+    // core_pipeline::{tonemapping::Tonemapping, Skybox},
+    pbr::wireframe::{WireframeConfig, WireframePlugin},
+    // post_process::bloom::Bloom,
     prelude::*,
-    render::render_resource::{TextureViewDescriptor, TextureViewDimension},
 };
 use bevy_asset_loader::prelude::*;
 use bevy_enhanced_input::prelude::*;
@@ -38,48 +39,8 @@ impl Plugin for GameAssetsPlugin {
 pub struct GameAssets {
     #[asset(path = "textures/cubemap.png")]
     pub cubemap: Handle<Image>,
-}
-
-/// A Plugin for the skybox
-pub struct GameSkyboxPlugin;
-
-impl Plugin for GameSkyboxPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameStates::Playing), (setup_skybox_asset).chain());
-
-        app.add_observer(setup_skybox_camera);
-    }
-}
-
-fn setup_skybox_asset(
-    game_assets: Res<GameAssets>,
-    mut images: ResMut<Assets<Image>>,
-    mut skyboxes: Query<&mut Skybox>,
-) {
-    let image = images.get_mut(&game_assets.cubemap).unwrap();
-    if image.texture_descriptor.array_layer_count() == 1 {
-        image.reinterpret_stacked_2d_as_array(image.height() / image.width());
-        image.texture_view_descriptor = Some(TextureViewDescriptor {
-            dimension: Some(TextureViewDimension::Cube),
-            ..default()
-        });
-    }
-
-    for mut skybox in &mut skyboxes {
-        skybox.image = game_assets.cubemap.clone();
-    }
-}
-
-fn setup_skybox_camera(
-    insert: On<Insert, Camera3d>,
-    mut commands: Commands,
-    game_assets: Res<GameAssets>,
-) {
-    commands.entity(insert.entity).insert((Skybox {
-        image: game_assets.cubemap.clone(),
-        brightness: 1000.0,
-        ..default()
-    },));
+    #[asset(path = "gltf/hull-01.glb#Scene0")]
+    pub hull_01: Handle<Scene>,
 }
 
 /// A plugin that draws debug gizmos for entities.
@@ -87,7 +48,13 @@ pub struct DebugGizmosPlugin;
 
 impl Plugin for DebugGizmosPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, draw_debug_gizmos_axis);
+        app.add_plugins(WireframePlugin::default());
+        app.insert_resource(WireframeConfig {
+            global: true,
+            ..default()
+        });
+
+        app.add_systems(Update, (draw_debug_gizmos_axis, toggle_wireframe));
     }
 }
 
@@ -108,6 +75,15 @@ fn draw_debug_gizmos_axis(
         gizmos.line(origin, origin + x_axis, Color::srgb(0.9, 0.1, 0.1));
         gizmos.line(origin, origin + y_axis, Color::srgb(0.1, 0.9, 0.1));
         gizmos.line(origin, origin + z_axis, Color::srgb(0.1, 0.1, 0.9));
+    }
+}
+
+fn toggle_wireframe(
+    mut wireframe_config: ResMut<WireframeConfig>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+) {
+    if keyboard.just_pressed(KeyCode::F11) {
+        wireframe_config.global = !wireframe_config.global;
     }
 }
 
@@ -194,7 +170,6 @@ impl Plugin for WASDCameraControllerPlugin {
         app.add_plugins(WASDCameraPlugin);
 
         app.add_input_context::<WASDCameraInputMarker>();
-        app.add_systems(Startup, setup_wasd_camera_controls);
 
         app.add_observer(setup_wasd_camera);
         app.add_observer(on_wasd_input);
@@ -233,9 +208,14 @@ struct WASDCameraLookEnabled(bool);
 #[derive(Component, Clone, Copy, Debug, Default, Reflect)]
 pub struct WASDCameraController;
 
-fn setup_wasd_camera_controls(mut commands: Commands) {
-    commands.spawn((
-        Name::new("WASD Camera Input"),
+fn setup_wasd_camera(insert: On<Insert, WASDCameraController>, mut commands: Commands) {
+    commands.entity(insert.entity).insert((
+        Camera3d::default(),
+        WASDCamera {
+            wasd_sensitivity: 0.1,
+            ..default()
+        },
+        WASDCameraLookEnabled(false),
         WASDCameraInputMarker,
         actions!(
             WASDCameraInputMarker[
@@ -270,18 +250,6 @@ fn setup_wasd_camera_controls(mut commands: Commands) {
                 ),
             ]
         ),
-    ));
-
-}
-
-fn setup_wasd_camera(insert: On<Insert, WASDCameraController>, mut commands: Commands) {
-    commands.entity(insert.entity).insert((
-        Camera3d::default(),
-        WASDCamera {
-            wasd_sensitivity: 0.1,
-            ..default()
-        },
-        WASDCameraLookEnabled(false),
     ));
 }
 
