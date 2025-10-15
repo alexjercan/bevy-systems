@@ -113,7 +113,10 @@ fn on_thruster_input(
 
 mod simulation {
     use avian3d::prelude::*;
-    use bevy::prelude::*;
+    use bevy::{
+        prelude::*,
+        window::{CursorGrabMode, CursorOptions, PrimaryWindow},
+    };
     use bevy_enhanced_input::prelude::*;
     use nova_protocol::prelude::*;
     use rand::prelude::*;
@@ -123,7 +126,7 @@ mod simulation {
     pub fn simulation_plugin(app: &mut App) {
         app.add_systems(
             OnEnter(super::SceneState::Simulation),
-            (setup_scene, setup_simple_scene),
+            (setup_scene, setup_simple_scene, setup_grab_cursor),
         );
 
         // Setup the input system to get input from the mouse and keyboard.
@@ -370,6 +373,12 @@ mod simulation {
         }
     }
 
+    fn setup_grab_cursor(primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>) {
+        let mut primary_cursor_options = primary_cursor_options.into_inner();
+        primary_cursor_options.grab_mode = CursorGrabMode::Locked;
+        primary_cursor_options.visible = false;
+    }
+
     #[derive(Resource, Default, Clone, Debug)]
     enum SpaceshipControlMode {
         #[default]
@@ -537,7 +546,7 @@ mod editor {
         prelude::*,
         reflect::Is,
         ui::{InteractionDisabled, Pressed},
-        ui_widgets::{observe, Activate, Button},
+        ui_widgets::{observe, Activate, Button}, window::{CursorGrabMode, CursorOptions, PrimaryWindow},
     };
     use nova_protocol::prelude::*;
 
@@ -565,7 +574,10 @@ mod editor {
     pub fn editor_plugin(app: &mut App) {
         app.insert_resource(SectionChoice::None);
 
-        app.add_systems(OnEnter(super::SceneState::Editor), setup_editor_scene);
+        app.add_systems(
+            OnEnter(super::SceneState::Editor),
+            (reset_spaceship, setup_editor_scene, setup_grab_cursor),
+        );
 
         app.add_observer(button_on_interaction::<Add, Pressed>)
             .add_observer(button_on_interaction::<Remove, Pressed>)
@@ -718,6 +730,20 @@ mod editor {
         )
     }
 
+    fn reset_spaceship(
+        mut commands: Commands,
+        spaceship: Single<(Entity, &Children), With<SpaceshipRootMarker>>,
+    ) {
+        let (spaceship, children) = spaceship.into_inner();
+        commands
+            .spawn(spaceship_root(SpaceshipConfig { ..default() }))
+            .add_children(children);
+        commands
+            .entity(spaceship)
+            .remove_children(children)
+            .despawn();
+    }
+
     fn setup_editor_scene(mut commands: Commands, game_assets: Res<GameAssets>) {
         commands.spawn((
             DespawnOnExit(super::SceneState::Editor),
@@ -828,6 +854,12 @@ mod editor {
                 ],
             )],
         ));
+    }
+
+    fn setup_grab_cursor(primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>) {
+        let mut primary_cursor_options = primary_cursor_options.into_inner();
+        primary_cursor_options.grab_mode = CursorGrabMode::None;
+        primary_cursor_options.visible = true;
     }
 
     fn create_new_spaceship(
