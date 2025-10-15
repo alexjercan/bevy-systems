@@ -19,6 +19,7 @@ pub mod prelude {
     pub use super::SpaceshipPlugin;
     pub use super::SpaceshipPluginSet;
     pub use super::SpaceshipRootMarker;
+    pub use super::SpaceshipSectionMarker;
 }
 
 /// Configuration for the spaceship root entity.
@@ -43,6 +44,10 @@ pub fn spaceship_root(config: SpaceshipConfig) -> impl Bundle {
 /// of this entity.
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct SpaceshipRootMarker;
+
+/// This will be a generic marker for all spaceship sections.
+#[derive(Component, Clone, Debug, Reflect)]
+pub struct SpaceshipSectionMarker;
 
 /// A system set that will contain all the systems related to the spaceship plugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]

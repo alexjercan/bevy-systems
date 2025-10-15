@@ -1,9 +1,8 @@
 mod helpers;
 
 use avian3d::prelude::*;
-use bevy::prelude::*;
+use bevy::{prelude::*, ui_widgets::UiWidgetsPlugins};
 use bevy_enhanced_input::prelude::*;
-use bevy_ui_widgets::UiWidgetsPlugins;
 use clap::Parser;
 use helpers::*;
 use nova_protocol::prelude::*;
@@ -25,11 +24,13 @@ fn main() {
     #[cfg(feature = "debug")]
     app.add_plugins(DebugGizmosPlugin);
 
+    // TODO: Maybe these should be part of new_gui_app?
     app.add_plugins(UiWidgetsPlugins);
 
     // We need to enable the physics plugins to have access to RigidBody and other components.
     // We will also disable gravity for this example, since we are in space, duh.
     app.add_plugins(PhysicsPlugins::default().set(PhysicsInterpolationPlugin::interpolate_all()));
+    app.add_plugins(PhysicsPickingPlugin);
     app.insert_resource(Gravity::ZERO);
     #[cfg(feature = "debug")]
     app.add_plugins(PhysicsDebugPlugin::default());
@@ -59,6 +60,8 @@ fn main() {
             state.set(SceneState::Editor);
         },
     );
+
+    app.add_systems(Update, on_thruster_input.run_if(in_state(SceneState::Simulation)));
 
     app.run();
 }
@@ -90,24 +93,34 @@ fn switch_scene_editor(keys: Res<ButtonInput<KeyCode>>, mut state: ResMut<NextSt
     }
 }
 
+#[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]
+struct ThrusterInputKey(KeyCode);
+
+fn on_thruster_input(
+    mut q_input: Query<(&mut ThrusterSectionInput, &ThrusterInputKey)>,
+    keys: Res<ButtonInput<KeyCode>>,
+) {
+    for (mut input, key) in &mut q_input {
+        if keys.pressed(key.0) {
+            **input = 1.0;
+        } else {
+            **input = 0.0;
+        }
+    }
+}
+
 mod editor {
     // https://github.com/bevyengine/bevy/blob/release-0.17.2/examples/ui/standard_widgets_observers.rs
-    // TODO:
-    // - on mouse click we find the position in world of the click
-    // - if we clicked on a spaceship section we spawn what we have selected from the menu
-    // - we will need to rotate the part appropriately based on the normal of the surface we
-    // clicked on
 
     use crate::helpers::GameAssets;
 
-    use super::SceneState;
     use bevy::{
-        picking::hover::Hovered,
+        picking::{hover::Hovered, pointer::PointerInteraction},
         prelude::*,
         reflect::Is,
         ui::{InteractionDisabled, Pressed},
+        ui_widgets::{observe, Activate, Button},
     };
-    use bevy_ui_widgets::{observe, Activate, Button};
     use nova_protocol::prelude::*;
 
     const NORMAL_BUTTON: Color = Color::srgb(0.15, 0.15, 0.15);
@@ -133,7 +146,7 @@ mod editor {
     pub fn editor_plugin(app: &mut App) {
         app.insert_resource(SectionChoice::None);
 
-        app.add_systems(OnEnter(SceneState::Editor), editor_menu_setup);
+        app.add_systems(OnEnter(super::SceneState::Editor), editor_menu_setup);
 
         app.add_observer(button_on_interaction::<Add, Pressed>)
             .add_observer(button_on_interaction::<Remove, Pressed>)
@@ -219,7 +232,9 @@ mod editor {
 
         if *setting != *t {
             if let Some(previous) = selected {
-                commands.entity(previous.into_inner()).remove::<SelectedOption>();
+                commands
+                    .entity(previous.into_inner())
+                    .remove::<SelectedOption>();
             }
             commands.entity(entity).insert(SelectedOption);
             *setting = *t;
@@ -246,8 +261,12 @@ mod editor {
 
     fn editor_menu_setup(mut commands: Commands) {
         commands.spawn((
-            DespawnOnExit(SceneState::Editor),
+            DespawnOnExit(super::SceneState::Editor),
             Name::new("Editor Main Menu"),
+            Pickable {
+                should_block_lower: false,
+                is_hoverable: false,
+            },
             Node {
                 width: percent(100),
                 height: percent(100),
@@ -304,17 +323,7 @@ mod editor {
                         },
                         BackgroundColor(Color::srgb(0.5, 0.5, 0.5)),
                     ),
-                    // Let's add some buttons for different sections of the spaceship
-                    (
-                        Name::new("Hull Section"),
-                        button("Hull Section"),
-                        SectionChoice::HullSection,
-                    ),
-                    (
-                        Name::new("Thruster Section"),
-                        button("Thruster Section"),
-                        SectionChoice::ThrusterSection,
-                    ),
+                    sections(),
                     (
                         Name::new("Separator 3"),
                         Node {
@@ -335,6 +344,30 @@ mod editor {
         ));
     }
 
+    fn sections() -> impl Bundle {
+        (
+            Node {
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::FlexStart,
+                width: percent(100),
+                ..default()
+            },
+            children![
+                (
+                    Name::new("Hull Section"),
+                    button("Hull Section"),
+                    SectionChoice::HullSection,
+                ),
+                (
+                    Name::new("Thruster Section"),
+                    button("Thruster Section"),
+                    SectionChoice::ThrusterSection,
+                ),
+            ],
+        )
+    }
+
     fn create_new_spaceship(
         _activate: On<Activate>,
         mut commands: Commands,
@@ -344,22 +377,28 @@ mod editor {
         for entity in &q_spaceship {
             commands.entity(entity).despawn();
         }
-        commands.spawn((
-            spaceship_root(SpaceshipConfig { ..default() }),
-            children![(hull_section(HullSectionConfig {
-                transform: Transform::from_xyz(0.0, 0.0, 0.0),
-                render_mesh: Some(game_assets.hull_01.clone()),
-                ..default()
-            }),),],
-        ));
+        let entity = commands
+            .spawn((spaceship_root(SpaceshipConfig { ..default() }),))
+            .id();
+
+        commands.entity(entity).with_children(|parent| {
+            parent
+                .spawn((hull_section(HullSectionConfig {
+                    transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                    render_mesh: Some(game_assets.hull_01.clone()),
+                    ..default()
+                }),))
+                .observe(on_click_spaceship_section)
+                .observe(on_hover_spaceship_section)
+                .observe(on_out_spaceship_section);
+        });
     }
 
     fn continue_to_simulation(
         _activate: On<Activate>,
-        mut game_state: ResMut<NextState<SceneState>>,
+        mut game_state: ResMut<NextState<super::SceneState>>,
     ) {
-        println!("Switching to simulation");
-        game_state.set(SceneState::Simulation);
+        game_state.set(super::SceneState::Simulation);
     }
 
     fn button(text: &str) -> impl Bundle {
@@ -389,4 +428,82 @@ mod editor {
             )],
         )
     }
+
+    fn on_click_spaceship_section(
+        click: On<Pointer<Press>>,
+        mut commands: Commands,
+        spaceship: Single<Entity, With<SpaceshipRootMarker>>,
+        q_pointer: Query<&PointerInteraction>,
+        q_section: Query<&Transform, With<SpaceshipSectionMarker>>,
+        selection: Res<SectionChoice>,
+        game_assets: Res<GameAssets>,
+    ) {
+        if click.button != PointerButton::Primary {
+            return;
+        }
+
+        let entity = click.entity;
+
+        let Some(normal) = q_pointer
+            .iter()
+            .filter_map(|interaction| interaction.get_nearest_hit())
+            .find_map(|(e, hit)| if *e == entity { hit.normal } else { None })
+        else {
+            return;
+        };
+
+        let Ok(transform) = q_section.get(entity) else {
+            return;
+        };
+
+        let spaceship = spaceship.into_inner();
+        let position = transform.translation + normal * 1.0;
+        let rotation = Quat::from_rotation_arc(Vec3::Z, normal.normalize());
+
+        match *selection {
+            SectionChoice::None => {
+                println!("No section selected");
+            }
+            SectionChoice::HullSection => {
+                commands.entity(spaceship).with_children(|parent| {
+                    parent
+                        .spawn((hull_section(HullSectionConfig {
+                            transform: Transform {
+                                translation: position,
+                                rotation,
+                                ..default()
+                            },
+                            render_mesh: Some(game_assets.hull_01.clone()),
+                            ..default()
+                        }),))
+                        .observe(on_click_spaceship_section)
+                        .observe(on_hover_spaceship_section)
+                        .observe(on_out_spaceship_section);
+                });
+            }
+            SectionChoice::ThrusterSection => {
+                commands.entity(spaceship).with_children(|parent| {
+                    parent
+                        .spawn((
+                            thruster_section(ThrusterSectionConfig {
+                                magnitude: 1.0,
+                                transform: Transform {
+                                    translation: position,
+                                    rotation,
+                                    ..default()
+                                },
+                                ..default()
+                            }),
+                            super::ThrusterInputKey(KeyCode::Digit1),
+                        ))
+                        .observe(on_hover_spaceship_section)
+                        .observe(on_out_spaceship_section);
+                });
+            }
+        }
+    }
+
+    fn on_hover_spaceship_section(click: On<Pointer<Over>>, mut commands: Commands) {}
+
+    fn on_out_spaceship_section(click: On<Pointer<Out>>, mut commands: Commands) {}
 }

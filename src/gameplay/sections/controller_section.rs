@@ -44,6 +44,7 @@ pub fn controller_section(config: ControllerSectionConfig) -> impl Bundle {
 
     (
         Name::new("Controller Section"),
+        super::SpaceshipSectionMarker,
         ControllerSectionMarker,
         Collider::cuboid(1.0, 1.0, 1.0),
         ColliderDensity(1.0),

@@ -56,6 +56,7 @@ pub fn thruster_section(config: ThrusterSectionConfig) -> impl Bundle {
 
     (
         Name::new("Thruster Section"),
+        super::SpaceshipSectionMarker,
         ThrusterSectionMarker,
         Collider::cuboid(1.0, 1.0, 1.0),
         ColliderDensity(config.collider_density),
