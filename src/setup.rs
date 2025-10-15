@@ -58,7 +58,7 @@ pub fn new_gui_app() -> App {
     }
 
     // NOTE: Just for non UI, lock cursor on left click and unlock on escape
-    app.add_systems(Update, (lock_on_left_click, unlock_on_escape));
+    app.add_systems(Update, lock_on_left_click);
 
     app
 }
@@ -89,14 +89,7 @@ fn lock_on_left_click(
         let mut primary_cursor_options = primary_cursor_options.into_inner();
         primary_cursor_options.grab_mode = CursorGrabMode::Locked;
         primary_cursor_options.visible = false;
-    }
-}
-
-fn unlock_on_escape(
-    primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>,
-    keys: Res<ButtonInput<KeyCode>>,
-) {
-    if keys.just_pressed(KeyCode::Escape) {
+    } else if mouse.just_released(MouseButton::Right) {
         let mut primary_cursor_options = primary_cursor_options.into_inner();
         primary_cursor_options.grab_mode = CursorGrabMode::None;
         primary_cursor_options.visible = true;
