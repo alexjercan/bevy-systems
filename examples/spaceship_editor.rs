@@ -61,7 +61,10 @@ fn main() {
         },
     );
 
-    app.add_systems(Update, on_thruster_input.run_if(in_state(SceneState::Simulation)));
+    app.add_systems(
+        Update,
+        on_thruster_input.run_if(in_state(SceneState::Simulation)),
+    );
 
     app.run();
 }
@@ -141,6 +144,7 @@ mod editor {
         None,
         HullSection,
         ThrusterSection,
+        Delete,
     }
 
     pub fn editor_plugin(app: &mut App) {
@@ -157,6 +161,11 @@ mod editor {
         app.add_observer(on_add_selected)
             .add_observer(on_remove_selected);
         app.add_observer(button_on_setting::<SectionChoice>);
+
+        app.add_observer(on_click_spaceship_section)
+            .add_observer(on_hover_spaceship_section)
+            .add_observer(on_move_spaceship_section)
+            .add_observer(on_out_spaceship_section);
     }
 
     #[derive(Component)]
@@ -259,6 +268,34 @@ mod editor {
         }
     }
 
+    fn button(text: &str) -> impl Bundle {
+        (
+            Node {
+                width: percent(80),
+                min_height: px(40),
+                margin: UiRect::all(px(20)),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            EditorButton,
+            Button,
+            Hovered::default(),
+            BorderColor::all(Color::BLACK),
+            BorderRadius::MAX,
+            BackgroundColor(NORMAL_BUTTON),
+            children![(
+                Text::new(text),
+                TextFont {
+                    font_size: 16.0,
+                    ..default()
+                },
+                TextColor(Color::srgb(0.9, 0.9, 0.9)),
+                TextShadow::default(),
+            )],
+        )
+    }
+
     fn editor_menu_setup(mut commands: Commands) {
         commands.spawn((
             DespawnOnExit(super::SceneState::Editor),
@@ -344,6 +381,35 @@ mod editor {
         ));
     }
 
+    fn create_new_spaceship(
+        _activate: On<Activate>,
+        mut commands: Commands,
+        q_spaceship: Query<Entity, With<SpaceshipRootMarker>>,
+        game_assets: Res<GameAssets>,
+    ) {
+        for entity in &q_spaceship {
+            commands.entity(entity).despawn();
+        }
+        let entity = commands
+            .spawn((spaceship_root(SpaceshipConfig { ..default() }),))
+            .id();
+
+        commands.entity(entity).with_children(|parent| {
+            parent.spawn((hull_section(HullSectionConfig {
+                transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                render_mesh: Some(game_assets.hull_01.clone()),
+                ..default()
+            }),));
+        });
+    }
+
+    fn continue_to_simulation(
+        _activate: On<Activate>,
+        mut game_state: ResMut<NextState<super::SceneState>>,
+    ) {
+        game_state.set(super::SceneState::Simulation);
+    }
+
     fn sections() -> impl Bundle {
         (
             Node {
@@ -364,68 +430,12 @@ mod editor {
                     button("Thruster Section"),
                     SectionChoice::ThrusterSection,
                 ),
+                (
+                    Name::new("Delete Section"),
+                    button("Delete Section"),
+                    SectionChoice::Delete,
+                ),
             ],
-        )
-    }
-
-    fn create_new_spaceship(
-        _activate: On<Activate>,
-        mut commands: Commands,
-        q_spaceship: Query<Entity, With<SpaceshipRootMarker>>,
-        game_assets: Res<GameAssets>,
-    ) {
-        for entity in &q_spaceship {
-            commands.entity(entity).despawn();
-        }
-        let entity = commands
-            .spawn((spaceship_root(SpaceshipConfig { ..default() }),))
-            .id();
-
-        commands.entity(entity).with_children(|parent| {
-            parent
-                .spawn((hull_section(HullSectionConfig {
-                    transform: Transform::from_xyz(0.0, 0.0, 0.0),
-                    render_mesh: Some(game_assets.hull_01.clone()),
-                    ..default()
-                }),))
-                .observe(on_click_spaceship_section)
-                .observe(on_hover_spaceship_section)
-                .observe(on_out_spaceship_section);
-        });
-    }
-
-    fn continue_to_simulation(
-        _activate: On<Activate>,
-        mut game_state: ResMut<NextState<super::SceneState>>,
-    ) {
-        game_state.set(super::SceneState::Simulation);
-    }
-
-    fn button(text: &str) -> impl Bundle {
-        (
-            Node {
-                width: percent(80),
-                min_height: px(40),
-                margin: UiRect::all(px(20)),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                ..default()
-            },
-            EditorButton,
-            Button,
-            Hovered::default(),
-            BorderColor::all(Color::BLACK),
-            BorderRadius::MAX,
-            BackgroundColor(NORMAL_BUTTON),
-            children![(
-                Text::new(text),
-                TextFont {
-                    font_size: 16.0,
-                    ..default()
-                },
-                TextColor(Color::srgb(0.9, 0.9, 0.9)),
-                TextShadow::default(),
-            )],
         )
     }
 
@@ -462,48 +472,126 @@ mod editor {
 
         match *selection {
             SectionChoice::None => {
-                println!("No section selected");
+                debug!("No section selected");
             }
             SectionChoice::HullSection => {
                 commands.entity(spaceship).with_children(|parent| {
-                    parent
-                        .spawn((hull_section(HullSectionConfig {
+                    parent.spawn((hull_section(HullSectionConfig {
+                        transform: Transform {
+                            translation: position,
+                            rotation,
+                            ..default()
+                        },
+                        render_mesh: Some(game_assets.hull_01.clone()),
+                        ..default()
+                    }),));
+                });
+            }
+            SectionChoice::ThrusterSection => {
+                commands.entity(spaceship).with_children(|parent| {
+                    parent.spawn((
+                        thruster_section(ThrusterSectionConfig {
+                            magnitude: 1.0,
                             transform: Transform {
                                 translation: position,
                                 rotation,
                                 ..default()
                             },
-                            render_mesh: Some(game_assets.hull_01.clone()),
                             ..default()
-                        }),))
-                        .observe(on_click_spaceship_section)
-                        .observe(on_hover_spaceship_section)
-                        .observe(on_out_spaceship_section);
+                        }),
+                        super::ThrusterInputKey(KeyCode::Digit1),
+                    ));
                 });
             }
-            SectionChoice::ThrusterSection => {
-                commands.entity(spaceship).with_children(|parent| {
-                    parent
-                        .spawn((
-                            thruster_section(ThrusterSectionConfig {
-                                magnitude: 1.0,
-                                transform: Transform {
-                                    translation: position,
-                                    rotation,
-                                    ..default()
-                                },
-                                ..default()
-                            }),
-                            super::ThrusterInputKey(KeyCode::Digit1),
-                        ))
-                        .observe(on_hover_spaceship_section)
-                        .observe(on_out_spaceship_section);
-                });
+            SectionChoice::Delete => {
+                commands.entity(entity).despawn();
             }
         }
     }
 
-    fn on_hover_spaceship_section(click: On<Pointer<Over>>, mut commands: Commands) {}
+    #[derive(Component)]
+    struct SectionPreviewMarker;
 
-    fn on_out_spaceship_section(click: On<Pointer<Out>>, mut commands: Commands) {}
+    fn on_hover_spaceship_section(
+        hover: On<Pointer<Over>>,
+        mut commands: Commands,
+        q_pointer: Query<&PointerInteraction>,
+        q_section: Query<&GlobalTransform, With<SpaceshipSectionMarker>>,
+        mut meshes: ResMut<Assets<Mesh>>,
+        mut materials: ResMut<Assets<StandardMaterial>>,
+        selection: Res<SectionChoice>,
+    ) {
+        if matches!(*selection, SectionChoice::Delete | SectionChoice::None) {
+            return;
+        }
+
+        let entity = hover.entity;
+
+        let Some(normal) = q_pointer
+            .iter()
+            .filter_map(|interaction| interaction.get_nearest_hit())
+            .find_map(|(e, hit)| if *e == entity { hit.normal } else { None })
+        else {
+            return;
+        };
+
+        let Ok(transform) = q_section.get(entity) else {
+            return;
+        };
+
+        let position = transform.translation() + normal * 1.0;
+        let rotation = Quat::from_rotation_arc(Vec3::Z, normal.normalize());
+
+        commands.spawn((
+            SectionPreviewMarker,
+            Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
+            MeshMaterial3d(materials.add(Color::srgb(0.2, 0.8, 0.2))),
+            Transform {
+                translation: position,
+                rotation,
+                ..default()
+            },
+        ));
+    }
+
+    fn on_move_spaceship_section(
+        move_: On<Pointer<Move>>,
+        q_pointer: Query<&PointerInteraction>,
+        q_section: Query<&GlobalTransform, With<SpaceshipSectionMarker>>,
+        preview: Single<&mut Transform, With<SectionPreviewMarker>>,
+    ) {
+        let entity = move_.entity;
+
+        let Some(normal) = q_pointer
+            .iter()
+            .filter_map(|interaction| interaction.get_nearest_hit())
+            .find_map(|(e, hit)| if *e == entity { hit.normal } else { None })
+        else {
+            return;
+        };
+
+        let Ok(transform) = q_section.get(entity) else {
+            return;
+        };
+
+        let position = transform.translation() + normal * 1.0;
+        let rotation = Quat::from_rotation_arc(Vec3::Z, normal.normalize());
+
+        let mut preview_transform = preview.into_inner();
+        preview_transform.translation = position;
+        preview_transform.rotation = rotation;
+    }
+
+    fn on_out_spaceship_section(
+        out: On<Pointer<Out>>,
+        q_section: Query<&Transform, With<SpaceshipSectionMarker>>,
+        mut commands: Commands,
+        preview: Single<Entity, With<SectionPreviewMarker>>,
+    ) {
+        let Ok(_) = q_section.get(out.entity) else {
+            return;
+        };
+
+        commands.entity(preview.into_inner()).despawn();
+    }
 }
