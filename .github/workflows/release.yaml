@@ -151,23 +151,6 @@ jobs:
           asset_name: ${{ env.GAME_EXECUTABLE_NAME }}_${{ env.VERSION }}_windows.zip
           tag: ${{ env.VERSION }}
           overwrite: true
-      - name: Create Installer
-        if: ${{ env.BUILD_INSTALLER }}
-        shell: bash
-        run: |
-          tag=${{ env.VERSION }}
-          version="${tag#v}"
-          dotnet build -p:Version=$version -c Release build/windows/installer/Installer.wixproj --output installer
-      - name: Upload installer
-        if: ${{ env.BUILD_INSTALLER }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: installer/en-US/installer.msi
-          asset_name: ${{ env.GAME_EXECUTABLE_NAME }}_${{ env.VERSION }}_windows.msi
-          release_name: ${{ env.VERSION }}
-          tag: ${{ env.VERSION }}
-          overwrite: true
 
   build-web:
     runs-on: ubuntu-latest
