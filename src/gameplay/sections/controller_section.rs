@@ -29,6 +29,8 @@ pub struct ControllerSectionConfig {
     pub max_torque: f32,
     /// The collider density / mass of the hull section.
     pub collider_density: f32,
+    /// The render mesh of the hull section, defaults to a cuboid of size 1x1x1.
+    pub render_mesh: Option<Handle<Scene>>,
 }
 
 impl Default for ControllerSectionConfig {
@@ -39,9 +41,13 @@ impl Default for ControllerSectionConfig {
             damping_ratio: 2.0,
             max_torque: 1.0,
             collider_density: CONTROLLER_SECTION_DEFAULT_COLLIDER_DENSITY,
+            render_mesh: None,
         }
     }
 }
+
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+struct ControllerSectionRenderMesh(Option<Handle<Scene>>);
 
 /// Helper function to create a controller section entity bundle.
 pub fn controller_section(config: ControllerSectionConfig) -> impl Bundle {
@@ -61,6 +67,7 @@ pub fn controller_section(config: ControllerSectionConfig) -> impl Bundle {
         },
         config.transform,
         Visibility::Visible,
+        ControllerSectionRenderMesh(config.render_mesh),
     )
 }
 
@@ -148,23 +155,42 @@ fn insert_controller_section_render(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    q_controller: Query<&ControllerSectionRenderMesh, With<ControllerSectionMarker>>,
 ) {
     let entity = add.entity;
     debug!("Inserting render for ControllerSection: {:?}", entity);
 
-    commands.entity(entity).insert((children![
-        (
-            Name::new("Controller Section Body"),
-            Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
-            MeshMaterial3d(materials.add(Color::srgb(0.2, 0.7, 0.9))),
-        ),
-        (
-            Name::new("Controller Section Window"),
-            Mesh3d(meshes.add(Cylinder::new(0.2, 0.1))),
-            MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 1.0))),
-            Transform::from_xyz(0.0, 0.5, 0.0),
-        )
-    ],));
+    let Ok(render_mesh) = q_controller.get(entity) else {
+        warn!(
+            "ControllerSection entity {:?} missing ControllerSectionRenderMesh component",
+            entity
+        );
+        return;
+    };
+
+    match &**render_mesh {
+        Some(scene) => {
+            commands.entity(entity).insert((children![(
+                Name::new("Controller Section Body"),
+                SceneRoot(scene.clone()),
+            ),],));
+        }
+        None => {
+            commands.entity(entity).insert((children![
+                (
+                    Name::new("Controller Section Body (A)"),
+                    Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
+                    MeshMaterial3d(materials.add(Color::srgb(0.2, 0.7, 0.9))),
+                ),
+                (
+                    Name::new("Controller Section Window (B)"),
+                    Mesh3d(meshes.add(Cylinder::new(0.2, 0.1))),
+                    MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 1.0))),
+                    Transform::from_xyz(0.0, 0.5, 0.0),
+                )
+            ],));
+        }
+    }
 }
 
 fn compute_pd_torque(
@@ -310,5 +336,26 @@ mod tests {
             **app.world().get::<ColliderDensity>(id).unwrap()
                 == CONTROLLER_SECTION_DEFAULT_COLLIDER_DENSITY
         );
+    }
+
+    #[test]
+    fn spawns_controller_with_custom_scene() {
+        // Arrange
+        let mut app = App::new();
+        let custom_scene = Handle::<Scene>::default();
+        let config = ControllerSectionConfig {
+            render_mesh: Some(custom_scene.clone()),
+            ..Default::default()
+        };
+        let id = app.world_mut().spawn(controller_section(config)).id();
+
+        // Act
+        app.update();
+
+        // Assert
+        assert!(app.world().get::<ControllerSectionMarker>(id).is_some());
+        let render_mesh = app.world().get::<ControllerSectionRenderMesh>(id).unwrap();
+        assert!(render_mesh.0.is_some());
+        assert_eq!(render_mesh.0.as_ref().unwrap(), &custom_scene);
     }
 }
