@@ -16,6 +16,9 @@ fn window_plugin() -> WindowPlugin {
             title: format!("SpaceGame - {}", env!("CARGO_PKG_VERSION")),
             resolution: (1024, 768).into(),
             present_mode: PresentMode::AutoVsync,
+            // Bind to canvas included in `index.html`
+            canvas: Some("#bevy".to_owned()),
+            fit_canvas_to_parent: true,
             // set to true if we want to capture tab etc in wasm
             prevent_default_event_handling: true,
             ..Default::default()

@@ -9,8 +9,9 @@ use bevy::{
 };
 use bevy_asset_loader::prelude::*;
 use bevy_enhanced_input::prelude::*;
-use nova_protocol::prelude::*;
 use rand::prelude::*;
+
+use crate::prelude::{WASDCamera, WASDCameraInput, WASDCameraPlugin};
 
 /// Game states for the application.
 #[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
