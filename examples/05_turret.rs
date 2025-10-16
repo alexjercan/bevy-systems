@@ -14,9 +14,64 @@ fn main() {
     let _ = Cli::parse();
     let mut app = new_gui_app();
 
-    app.add_systems(OnEnter(GameStates::Playing), (setup_spaceship, setup_camera, setup_simple_scene));
+    app.add_systems(OnEnter(GameStates::Playing), (setup_target, setup_spaceship, setup_camera, setup_simple_scene));
+
+    app.add_systems(
+        Update,
+        (
+            sync_random_orbit_state.after(SphereRandomOrbitPluginSet),
+            update_turret_target_input.before(SpaceshipPluginSet),
+        )
+            .chain(),
+    );
 
     app.run();
+}
+
+fn sync_random_orbit_state(
+    mut q_orbit: Query<
+        (&mut Transform, &RandomSphereOrbitOutput),
+        Changed<RandomSphereOrbitOutput>,
+    >,
+) {
+    for (mut transform, output) in &mut q_orbit {
+        transform.translation = **output;
+    }
+}
+
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+struct PDCTurretTargetMarker;
+
+fn update_turret_target_input(
+    target: Single<&GlobalTransform, With<PDCTurretTargetMarker>>,
+    mut q_turret: Query<&mut TurretSectionTargetInput, With<TurretSectionMarker>>,
+) {
+    let target_transform = target.into_inner();
+
+    for mut turret in &mut q_turret {
+        **turret = Some(target_transform.translation());
+    }
+}
+
+fn setup_target(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    commands.spawn((
+        Name::new("Turret Target"),
+        PDCTurretTargetMarker,
+        RandomSphereOrbit {
+            radius: 5.0,
+            angular_speed: 5.0,
+            center: Vec3::ZERO,
+            ..default()
+        },
+        Transform::default(),
+        Visibility::Visible,
+        Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
+        MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 0.2))),
+    ));
 }
 
 fn setup_spaceship(

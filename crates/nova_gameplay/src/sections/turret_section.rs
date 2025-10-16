@@ -58,7 +58,7 @@ impl Default for TurretSectionConfig {
             yaw_speed: std::f32::consts::PI, // 180 degrees per second
             pitch_speed: std::f32::consts::PI, // 180 degrees per second
             min_pitch: Some(-std::f32::consts::FRAC_PI_6),
-            max_pitch: None,
+            max_pitch: Some(std::f32::consts::FRAC_PI_2),
             collider_density: TURRET_SECTION_DEFAULT_COLLIDER_DENSITY,
             render_mesh_base: None,
             base_offset: Vec3::new(0.0, -0.5, 0.0),
@@ -284,6 +284,9 @@ fn update_turret_target_system(
 
         let target_pos = target_input;
         let barrel_pos = barrel_transform.translation();
+        if target_pos == barrel_pos {
+            continue;
+        }
 
         let barrel_yaw_local_pos = world_to_yaw_base.transform_point3(barrel_pos);
         let target_yaw_local_pos = world_to_yaw_base.transform_point3(target_pos);
