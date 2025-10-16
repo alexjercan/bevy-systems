@@ -178,7 +178,7 @@ struct TurretSectionRotatorPitchMarker;
 
 /// Marker component for the barrel part of the turret section rotator.
 #[derive(Component, Clone, Copy, Debug, Reflect)]
-struct TurretSectionRotatorBarrelMarker;
+pub struct TurretSectionRotatorBarrelMarker;
 
 /// The target input for the turret section. This is a world-space position that the turret will
 /// aim at. If None, the turret will not rotate.

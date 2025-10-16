@@ -3,10 +3,10 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-mod controller_section;
-mod hull_section;
-mod thruster_section;
-mod turret_section;
+pub mod controller_section;
+pub mod hull_section;
+pub mod thruster_section;
+pub mod turret_section;
 
 pub mod prelude {
     pub use super::controller_section::prelude::*;
