@@ -73,7 +73,10 @@ impl Plugin for SpaceshipPlugin {
                 ..default()
             },
             turret_section::TurretSectionPlugin,
-            controller_section::ControllerSectionPlugin,
+            controller_section::ControllerSectionPlugin {
+                render: self.render,
+                ..default()
+            },
         ));
 
         app.configure_sets(

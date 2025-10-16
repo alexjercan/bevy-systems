@@ -835,9 +835,14 @@ mod editor {
                         BackgroundColor(Color::srgb(0.5, 0.5, 0.5)),
                     ),
                     (
-                        Name::new("Create New Spaceship Button"),
-                        button("Create New Spaceship"),
+                        Name::new("Create New Spaceship Button V1"),
+                        button("Create New Spaceship V1"),
                         observe(create_new_spaceship),
+                    ),
+                    (
+                        Name::new("Create New Spaceship Button V2"),
+                        button("Create New Spaceship V2"),
+                        observe(create_new_spaceship_with_controller),
                     ),
                     (
                         Name::new("Separator 2"),
@@ -918,6 +923,30 @@ mod editor {
             parent.spawn((hull_section(HullSectionConfig {
                 transform: Transform::from_xyz(0.0, 0.0, 0.0),
                 render_mesh: Some(game_assets.hull_01.clone()),
+                ..default()
+            }),));
+        });
+    }
+
+    fn create_new_spaceship_with_controller(
+        _activate: On<Activate>,
+        mut commands: Commands,
+        q_spaceship: Query<Entity, With<SpaceshipRootMarker>>,
+        // game_assets: Res<GameAssets>,
+    ) {
+        for entity in &q_spaceship {
+            commands.entity(entity).despawn();
+        }
+        let entity = commands
+            .spawn((spaceship_root(SpaceshipConfig { ..default() }),))
+            .id();
+
+        commands.entity(entity).with_children(|parent| {
+            parent.spawn((controller_section(ControllerSectionConfig {
+                transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                frequency: 4.0,
+                damping_ratio: 4.0,
+                max_torque: 100.0,
                 ..default()
             }),));
         });
