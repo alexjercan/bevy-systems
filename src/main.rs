@@ -1,10 +1,7 @@
-mod helpers;
-
 use avian3d::prelude::*;
 use bevy::{prelude::*, ui_widgets::UiWidgetsPlugins};
 use bevy_enhanced_input::prelude::*;
 use clap::Parser;
-use helpers::*;
 use nova_protocol::prelude::*;
 
 #[derive(Parser)]
@@ -120,8 +117,6 @@ mod simulation {
     use bevy_enhanced_input::prelude::*;
     use nova_protocol::prelude::*;
     use rand::prelude::*;
-
-    use crate::helpers::GameAssets;
 
     pub fn simulation_plugin(app: &mut App) {
         app.add_systems(
@@ -538,8 +533,6 @@ mod simulation {
 
 mod editor {
     // https://github.com/bevyengine/bevy/blob/release-0.17.2/examples/ui/standard_widgets_observers.rs
-
-    use crate::helpers::{GameAssets, WASDCameraController};
 
     use bevy::{
         picking::{hover::Hovered, pointer::PointerInteraction},

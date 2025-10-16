@@ -1,13 +1,10 @@
 //! In this example, I want to demo how to use StableTorquePdController to rotate a spaceship to
 //! follow the mouse cursor. The spaceship will rotate to face the mouse cursor when moved.
 
-mod helpers;
-
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 use clap::Parser;
-use helpers::*;
 use nova_protocol::prelude::*;
 
 #[derive(Parser)]
