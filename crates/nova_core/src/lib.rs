@@ -7,4 +7,7 @@ pub mod prelude {
     pub use bevy_common_systems::prelude::*;
     pub use nova_assets::prelude::*;
     pub use nova_gameplay::prelude::*;
+
+    #[cfg(feature = "debug")]
+    pub use nova_debug::prelude::*;
 }
