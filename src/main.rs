@@ -1,6 +1,4 @@
-use avian3d::prelude::*;
-use bevy::{prelude::*, ui_widgets::UiWidgetsPlugins};
-use bevy_enhanced_input::prelude::*;
+use bevy::prelude::*;
 use clap::Parser;
 use nova_protocol::prelude::*;
 
@@ -13,41 +11,6 @@ struct Cli;
 fn main() {
     let _ = Cli::parse();
     let mut app = new_gui_app();
-
-    app.add_plugins(EnhancedInputPlugin);
-
-    // Helper plugins
-    app.add_plugins(GameAssetsPlugin);
-    app.add_plugins(WASDCameraControllerPlugin);
-    #[cfg(feature = "debug")]
-    app.add_plugins(DebugGizmosPlugin);
-
-    // TODO: Maybe these should be part of new_gui_app?
-    app.add_plugins(UiWidgetsPlugins);
-
-    // We need to enable the physics plugins to have access to RigidBody and other components.
-    // We will also disable gravity for this example, since we are in space, duh.
-    app.add_plugins(PhysicsPlugins::default().set(PhysicsInterpolationPlugin::interpolate_all()));
-    app.add_plugins(PhysicsPickingPlugin);
-    app.insert_resource(Gravity::ZERO);
-    #[cfg(feature = "debug")]
-    app.add_plugins(PhysicsDebugPlugin::default());
-
-    // Render Plugins
-    app.add_plugins(SkyboxPlugin);
-    app.add_plugins(PostProcessingDefaultPlugin);
-
-    // Chase Camera Plugin to have a 3rd person camera following the spaceship
-    app.add_plugins(ChaseCameraPlugin);
-    // Point Rotation Plugin to convert mouse movement to a target rotation
-    app.add_plugins(PointRotationPlugin);
-    // for debug to have a random orbiting object
-    app.add_plugins(SphereRandomOrbitPlugin);
-    // Rotation Plugin for the turret facing direction
-    app.add_plugins(SmoothLookRotationPlugin);
-
-    // Add sections plugins
-    app.add_plugins(SpaceshipPlugin { render: true });
 
     app.init_state::<SceneState>();
 
@@ -63,6 +26,8 @@ fn main() {
         Update,
         switch_scene_editor.run_if(in_state(SceneState::Simulation)),
     );
+
+    // TODO: Will move Editor/Simulation to gameplay once they are fully tested and functional
 
     // Editor
     app.add_plugins(editor::editor_plugin);
