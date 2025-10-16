@@ -8,8 +8,8 @@ use helpers::*;
 use nova_protocol::prelude::*;
 
 #[derive(Parser)]
-#[command(name = "spaceship_editor")]
-#[command(version = "0.1")]
+#[command(name = "nova_protocol")]
+#[command(version = "0.0.2")]
 #[command(about = "Simple spaceship editor scene where you can build custom ships", long_about = None)]
 struct Cli;
 
