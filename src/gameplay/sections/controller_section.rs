@@ -14,6 +14,8 @@ pub mod prelude {
     pub use super::ControllerSectionStableTorquePdController;
 }
 
+const CONTROLLER_SECTION_DEFAULT_COLLIDER_DENSITY: f32 = 1.0;
+
 /// Configuration for a controller section.
 #[derive(Clone, Debug)]
 pub struct ControllerSectionConfig {
@@ -25,6 +27,8 @@ pub struct ControllerSectionConfig {
     pub damping_ratio: f32,
     /// The maximum torque that can be applied by the PD controller.
     pub max_torque: f32,
+    /// The collider density / mass of the hull section.
+    pub collider_density: f32,
 }
 
 impl Default for ControllerSectionConfig {
@@ -34,6 +38,7 @@ impl Default for ControllerSectionConfig {
             frequency: 2.0,
             damping_ratio: 2.0,
             max_torque: 1.0,
+            collider_density: CONTROLLER_SECTION_DEFAULT_COLLIDER_DENSITY,
         }
     }
 }
@@ -47,7 +52,7 @@ pub fn controller_section(config: ControllerSectionConfig) -> impl Bundle {
         super::SpaceshipSectionMarker,
         ControllerSectionMarker,
         Collider::cuboid(1.0, 1.0, 1.0),
-        ColliderDensity(1.0),
+        ColliderDensity(config.collider_density),
         ControllerSectionRotationInput::default(),
         ControllerSectionStableTorquePdController {
             frequency: config.frequency,
@@ -285,5 +290,25 @@ mod tests {
             Quat::IDENTITY,
         );
         assert!(torque.length() > 0.0);
+    }
+
+    #[test]
+    fn spawns_controller_with_default_config() {
+        // Arrange
+        let mut app = App::new();
+        let id = app
+            .world_mut()
+            .spawn(controller_section(ControllerSectionConfig::default()))
+            .id();
+
+        // Act
+        app.update();
+
+        // Assert
+        assert!(app.world().get::<ControllerSectionMarker>(id).is_some());
+        assert!(
+            **app.world().get::<ColliderDensity>(id).unwrap()
+                == CONTROLLER_SECTION_DEFAULT_COLLIDER_DENSITY
+        );
     }
 }
