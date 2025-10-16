@@ -83,19 +83,24 @@ pub struct ControllerSectionStableTorquePdController {
 pub struct ControllerSectionPluginSet;
 
 /// A plugin that will enable the ControllerSection.
-pub struct ControllerSectionPlugin;
+#[derive(Default)]
+pub struct ControllerSectionPlugin {
+    pub render: bool,
+}
 
 impl Plugin for ControllerSectionPlugin {
     fn build(&self, app: &mut App) {
         // NOTE: How can we check that the TorquePdControllerPlugin is added?
         app.register_type::<ControllerSectionMarker>();
-        // TODO: Might add a flag for this later
-        app.add_observer(insert_controller_section_render);
 
         app.add_systems(
             FixedUpdate,
             update_controller_root_torque.in_set(ControllerSectionPluginSet),
         );
+
+        if self.render {
+            app.add_observer(insert_controller_section_render);
+        }
     }
 }
 
