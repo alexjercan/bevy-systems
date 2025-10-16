@@ -14,15 +14,23 @@ pub mod prelude {
     pub use super::TurretSectionTargetInput;
 }
 
+const TURRET_SECTION_DEFAULT_COLLIDER_DENSITY: f32 = 1.0;
+
 /// Configuration for a turret section of a spaceship.
 #[derive(Clone, Debug)]
 pub struct TurretSectionConfig {
     /// The transform of the turret section relative to its parent.
     pub transform: Transform,
+    /// The yaw speed of the turret section in radians per second.
     pub yaw_speed: f32,
+    /// The pitch speed of the turret section in radians per second.
     pub pitch_speed: f32,
+    /// The minimum pitch angle of the turret section in radians. If None, there is no limit.
     pub min_pitch: Option<f32>,
+    /// The maximum pitch angle of the turret section in radians. If None, there is no limit.
     pub max_pitch: Option<f32>,
+    /// The collider density / mass of the section.
+    pub collider_density: f32,
 }
 
 impl Default for TurretSectionConfig {
@@ -33,6 +41,7 @@ impl Default for TurretSectionConfig {
             pitch_speed: std::f32::consts::PI, // 180 degrees per second
             min_pitch: Some(-std::f32::consts::FRAC_PI_6),
             max_pitch: None,
+            collider_density: TURRET_SECTION_DEFAULT_COLLIDER_DENSITY,
         }
     }
 }
@@ -46,7 +55,7 @@ pub fn turret_section(config: TurretSectionConfig) -> impl Bundle {
         super::SpaceshipSectionMarker,
         TurretSectionMarker,
         Collider::cuboid(1.0, 1.0, 1.0),
-        ColliderDensity(1.0),
+        ColliderDensity(config.collider_density),
         TurretSectionTargetInput(None),
         config.transform,
         Visibility::Visible,
@@ -480,6 +489,7 @@ fn insert_turret_barrel_render(
     });
 }
 
+// TODO: move this thing to the debug crate
 mod debug {
     use super::*;
 
