@@ -34,7 +34,7 @@
         <!-- Installs the actual files -->
         <ComponentGroup Id="MainComponent" Directory="INSTALLFOLDER">
             <Component>
-                <File Id="Executable" Source="..\..\..\target\dist\nova_protocol.exe" Vital="true" />
+                <File Id="Executable" Source="..\..\..\target\dist\nova-protocol.exe" Vital="true" />
             </Component>
         </ComponentGroup>
 

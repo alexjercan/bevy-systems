@@ -12,7 +12,7 @@ on:
         type: string
 
 env:
-  GAME_EXECUTABLE_NAME: nova_protocol
+  GAME_EXECUTABLE_NAME: nova-protocol
   GAME_OSX_APP_NAME: NovaProtocol
 
 permissions:
