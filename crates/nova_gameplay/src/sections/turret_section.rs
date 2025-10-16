@@ -190,7 +190,10 @@ pub struct TurretSectionTargetInput(pub Option<Vec3>);
 pub struct TurretSectionPluginSet;
 
 /// A plugin that enables the TurretSection component and its related systems.
-pub struct TurretSectionPlugin;
+#[derive(Default)]
+pub struct TurretSectionPlugin {
+    pub render: bool,
+}
 
 impl Plugin for TurretSectionPlugin {
     fn build(&self, app: &mut App) {
@@ -199,15 +202,17 @@ impl Plugin for TurretSectionPlugin {
         }
 
         // NOTE: How can we check that the SmoothLookRotationPlugin is added?
-        // TODO: Might add a flag for this later
-        app.add_observer(insert_turret_section_render);
-        app.add_observer(insert_turret_yaw_rotator_render);
-        app.add_observer(insert_turret_pitch_rotator_render);
-        app.add_observer(insert_turret_barrel_render);
+        if self.render {
+            app.add_observer(insert_turret_section_render);
+            app.add_observer(insert_turret_yaw_rotator_render);
+            app.add_observer(insert_turret_pitch_rotator_render);
+            app.add_observer(insert_turret_barrel_render);
+        }
 
         app.add_systems(
             Update,
             // TODO: put the turret plugin between
+            // NOTE: I have no idea what I meant here
             (
                 update_turret_target_system,
                 sync_turret_rotator_yaw_system,
