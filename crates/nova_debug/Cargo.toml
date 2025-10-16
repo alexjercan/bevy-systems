@@ -1,0 +1,15 @@
+[package]
+name = "nova_debug"
+version = "0.0.2"
+edition = "2021"
+
+[dependencies]
+avian3d = { workspace = true }
+bevy = { workspace = true }
+bevy-inspector-egui = { workspace = true }
+
+[lints]
+workspace = true
+
+[features]
+debug = []

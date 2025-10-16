@@ -6,6 +6,7 @@ use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 use clap::Parser;
 use nova_protocol::prelude::*;
+use rand::Rng;
 
 #[derive(Parser)]
 #[command(name = "turret_target")]
@@ -17,18 +18,6 @@ fn main() {
     let _ = Cli::parse();
 
     let mut app = new_gui_app();
-    app.add_plugins(GameAssetsPlugin);
-    if cfg!(feature = "debug") {
-        app.add_plugins(DebugGizmosPlugin);
-    }
-
-    // We need to enable the physics plugins to have access to RigidBody and other components.
-    // We will also disable gravity for this example, since we are in space, duh.
-    app.add_plugins(PhysicsPlugins::default().set(PhysicsInterpolationPlugin::interpolate_all()));
-    if cfg!(feature = "debug") {
-        app.add_plugins(PhysicsDebugPlugin::default());
-    }
-    app.insert_resource(Gravity::ZERO);
 
     // Setup the scene with some entities, to have something to look at.
     app.add_systems(
@@ -37,7 +26,6 @@ fn main() {
     );
 
     // Setup the input system to get input from the mouse and keyboard.
-    app.add_plugins(EnhancedInputPlugin);
     app.add_input_context::<PlayerInputMarker>();
     app.add_observer(on_rotation_input);
     app.add_observer(on_rotation_input_completed);
@@ -45,22 +33,6 @@ fn main() {
     app.add_observer(on_combat_input_completed);
 
     app.insert_resource(SpaceshipControlMode::default());
-
-    // Chase Camera Plugin to have a 3rd person camera following the spaceship
-    app.add_plugins(ChaseCameraPlugin);
-    // Point Rotation Plugin to convert mouse movement to a target rotation
-    app.add_plugins(PointRotationPlugin);
-    // for debug to have a random orbiting object
-    app.add_plugins(SphereRandomOrbitPlugin);
-    // Rotation Plugin for the turret facing direction
-    app.add_plugins(SmoothLookRotationPlugin);
-
-    // Render Plugins
-    app.add_plugins(SkyboxPlugin);
-    app.add_plugins(PostProcessingDefaultPlugin);
-
-    // Add sections plugins
-    app.add_plugins(SpaceshipPlugin { render: true });
 
     app.add_systems(
         Update,
@@ -324,4 +296,75 @@ fn on_combat_input_started(_: On<Start<CombatInput>>, mut mode: ResMut<Spaceship
 
 fn on_combat_input_completed(_: On<Complete<CombatInput>>, mut mode: ResMut<SpaceshipControlMode>) {
     *mode = SpaceshipControlMode::Normal;
+}
+
+pub fn setup_simple_scene(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let mut rng = rand::rng();
+
+    commands.spawn((
+        DirectionalLight {
+            illuminance: 10000.0,
+            ..default()
+        },
+        Transform::from_rotation(Quat::from_euler(
+            EulerRot::XYZ,
+            -std::f32::consts::FRAC_PI_2,
+            0.0,
+            0.0,
+        )),
+        GlobalTransform::default(),
+    ));
+
+    for i in 0..20 {
+        let pos = Vec3::new(
+            rng.random_range(-100.0..100.0),
+            rng.random_range(-20.0..20.0),
+            rng.random_range(-100.0..100.0),
+        );
+        let radius = rng.random_range(2.0..6.0);
+        let color = Color::srgb(
+            rng.random_range(0.0..1.0),
+            rng.random_range(0.0..1.0),
+            rng.random_range(0.0..1.0),
+        );
+
+        commands.spawn((
+            Name::new(format!("Planet {}", i)),
+            Transform::from_translation(pos),
+            GlobalTransform::default(),
+            Mesh3d(meshes.add(Sphere::new(radius))),
+            MeshMaterial3d(materials.add(color)),
+            Collider::sphere(radius),
+            RigidBody::Static,
+        ));
+    }
+
+    for i in 0..40 {
+        let pos = Vec3::new(
+            rng.random_range(-120.0..120.0),
+            rng.random_range(-30.0..30.0),
+            rng.random_range(-120.0..120.0),
+        );
+        let size = rng.random_range(0.5..1.0);
+        let color = Color::srgb(
+            rng.random_range(0.6..1.0),
+            rng.random_range(0.6..1.0),
+            rng.random_range(0.0..0.6),
+        );
+
+        commands.spawn((
+            Name::new(format!("Satellite {}", i)),
+            Transform::from_translation(pos),
+            GlobalTransform::default(),
+            Mesh3d(meshes.add(Cuboid::new(size, size, size))),
+            MeshMaterial3d(materials.add(color)),
+            Collider::cuboid(size, size, size),
+            ColliderDensity(1.0),
+            RigidBody::Dynamic,
+        ));
+    }
 }
