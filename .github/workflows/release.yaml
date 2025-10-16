@@ -143,13 +143,6 @@ jobs:
         with:
           files: target/dist/assets/ target/dist/credits/ target/dist/${{ env.GAME_EXECUTABLE_NAME }}.exe
           dest: ${{ env.GAME_EXECUTABLE_NAME }}_windows.zip
-      - name: Create Installer
-        if: ${{ env.BUILD_INSTALLER }}
-        shell: bash
-        run: |
-          tag=${{ env.VERSION }}
-          version="${tag#v}"
-          dotnet build -p:Version=$version -c Release build/windows/installer/Installer.wixproj --output installer
       - name: Upload release
         uses: svenstaro/upload-release-action@v2
         with:
@@ -158,6 +151,13 @@ jobs:
           asset_name: ${{ env.GAME_EXECUTABLE_NAME }}_${{ env.VERSION }}_windows.zip
           tag: ${{ env.VERSION }}
           overwrite: true
+      - name: Create Installer
+        if: ${{ env.BUILD_INSTALLER }}
+        shell: bash
+        run: |
+          tag=${{ env.VERSION }}
+          version="${tag#v}"
+          dotnet build -p:Version=$version -c Release build/windows/installer/Installer.wixproj --output installer
       - name: Upload installer
         if: ${{ env.BUILD_INSTALLER }}
         uses: svenstaro/upload-release-action@v2
