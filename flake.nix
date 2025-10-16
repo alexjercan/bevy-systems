@@ -26,6 +26,7 @@
 
       rustNightly = pkgs.rust-bin.nightly.latest.default.override {
         extensions = ["rust-src" "clippy" "rustfmt"];
+        targets = ["wasm32-unknown-unknown"];
       };
       manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
     in {

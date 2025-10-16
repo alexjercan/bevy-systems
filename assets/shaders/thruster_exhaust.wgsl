@@ -17,9 +17,17 @@
 }
 #endif
 
-@group(#{MATERIAL_BIND_GROUP}) @binding(100) var<uniform> thruster_input: f32;
-@group(#{MATERIAL_BIND_GROUP}) @binding(101) var<uniform> thruster_exhaust_radius: f32;
-@group(#{MATERIAL_BIND_GROUP}) @binding(102) var<uniform> thruster_exhaust_height: f32;
+struct ThrusterExhaustMaterialData {
+    thruster_input: f32,
+    thruster_exhaust_radius: f32,
+    thruster_exhaust_height: f32,
+#ifdef SIXTEEN_BYTE_ALIGNMENT
+    // WebGL2 support: structs must be 16 byte aligned.
+    _webgl2_padding_16b: u32,
+#endif
+}
+
+@group(#{MATERIAL_BIND_GROUP}) @binding(100) var<uniform> material: ThrusterExhaustMaterialData;
 
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
@@ -32,11 +40,11 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
     let r: f32 = length(vertex.position.xz);
-    let max_r: f32 = thruster_exhaust_radius;
+    let max_r: f32 = material.thruster_exhaust_radius;
     let f: f32 = clamp(smoothstep(max_r, 0.0, r), 0.0, 1.0);
-    let h: f32 = f * thruster_exhaust_height;
+    let h: f32 = f * material.thruster_exhaust_height;
 
-    let offset_amount = h * thruster_input;
+    let offset_amount = h * material.thruster_input;
     var pos = vertex.position + vec3<f32>(0.0, offset_amount, 0.0);
 
     var world_from_local = get_world_from_local(vertex.instance_index);

@@ -218,20 +218,20 @@ fn insert_thruster_section_render(
                     Name::new("Thruster Exhaust"),
                     ThrusterSectionExhaustShaderMarker,
                     Mesh3d(meshes.add(Cone::new(0.4, 0.1))),
-                    MeshMaterial3d(exhaust_materials.add(ExtendedMaterial {
-                        base: StandardMaterial {
-                            base_color: Color::srgba(1.0, 1.0, 1.0, 1.0),
-                            perceptual_roughness: 1.0,
-                            metallic: 0.0,
-                            emissive: LinearRgba::rgb(0.0, 10.0, 10.0),
-                            ..default()
-                        },
-                        extension: ThrusterExhaustMaterial {
-                            thruster_input: 0.0,
-                            thruster_exhaust_radius: 0.4,
-                            thruster_exhaust_height: 1.0,
-                        },
-                    })),
+                    MeshMaterial3d(
+                        exhaust_materials.add(ExtendedMaterial {
+                            base: StandardMaterial {
+                                base_color: Color::srgba(1.0, 1.0, 1.0, 1.0),
+                                perceptual_roughness: 1.0,
+                                metallic: 0.0,
+                                emissive: LinearRgba::rgb(0.0, 10.0, 10.0),
+                                ..default()
+                            },
+                            extension: ThrusterExhaustMaterial::default()
+                                .with_exhaust_height(1.0)
+                                .with_exhaust_radius(0.4),
+                        })
+                    ),
                     Transform::from_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2))
                         .with_translation(Vec3::new(0.0, 0.0, 0.3)),
                 ),
@@ -240,14 +240,29 @@ fn insert_thruster_section_render(
     }
 }
 
-#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone, Default)]
 pub struct ThrusterExhaustMaterial {
     #[uniform(100)]
     pub thruster_input: f32,
-    #[uniform(101)]
+    #[uniform(100)]
     pub thruster_exhaust_radius: f32,
-    #[uniform(102)]
+    #[uniform(100)]
     pub thruster_exhaust_height: f32,
+    #[cfg(target_arch = "wasm32")]
+    #[uniform(100)]
+    _webgl2_padding_16b: u32,
+}
+
+impl ThrusterExhaustMaterial {
+    pub fn with_exhaust_radius(mut self, radius: f32) -> Self {
+        self.thruster_exhaust_radius = radius;
+        self
+    }
+
+    pub fn with_exhaust_height(mut self, height: f32) -> Self {
+        self.thruster_exhaust_height = height;
+        self
+    }
 }
 
 impl MaterialExtension for ThrusterExhaustMaterial {
