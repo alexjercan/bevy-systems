@@ -527,6 +527,7 @@ mod editor {
         None,
         HullSection,
         ThrusterSection,
+        TurretSection,
         Delete,
     }
 
@@ -1124,6 +1125,11 @@ mod editor {
                     SectionChoice::ThrusterSection,
                 ),
                 (
+                    Name::new("Turret Section"),
+                    button("Turret Section"),
+                    SectionChoice::TurretSection,
+                ),
+                (
                     Name::new("Delete Section"),
                     button("Delete Section"),
                     SectionChoice::Delete,
@@ -1166,7 +1172,6 @@ mod editor {
 
         let spaceship = spaceship.into_inner();
         let position = transform.translation + normal * 1.0;
-        let rotation = Quat::from_rotation_arc(Vec3::Z, normal.normalize());
 
         match *selection {
             SectionChoice::None => {}
@@ -1175,7 +1180,6 @@ mod editor {
                     parent.spawn((hull_section(HullSectionConfig {
                         transform: Transform {
                             translation: position,
-                            rotation,
                             ..default()
                         },
                         render_mesh: Some(game_assets.hull_01.clone()),
@@ -1184,6 +1188,7 @@ mod editor {
                 });
             }
             SectionChoice::ThrusterSection => {
+                let rotation = Quat::from_rotation_arc(Vec3::Z, normal.normalize());
                 let bind = keyboard.get_pressed().next().map_or(KeyCode::Space, |k| *k);
 
                 commands.entity(spaceship).with_children(|parent| {
@@ -1199,6 +1204,25 @@ mod editor {
                         }),
                         super::ThrusterInputKey(bind),
                     ));
+                });
+            }
+            SectionChoice::TurretSection => {
+                let rotation = Quat::from_rotation_arc(Vec3::Y, normal.normalize());
+
+                commands.entity(spaceship).with_children(|parent| {
+                    parent.spawn((turret_section(TurretSectionConfig {
+                        transform: Transform {
+                            translation: position,
+                            rotation,
+                            ..default()
+                        },
+                        render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
+                        render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
+                        pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
+                        render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
+                        barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
+                        ..default()
+                    }),));
                 });
             }
             SectionChoice::Delete => {
