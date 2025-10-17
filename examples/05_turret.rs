@@ -85,6 +85,15 @@ fn setup_spaceship(
     commands.entity(entity).with_children(|parent| {
         parent.spawn((turret_section(TurretSectionConfig {
             transform: Transform::from_xyz(0.0, 0.0, 0.0),
+            render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
+            render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
+            pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
+            render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
+            barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
+            ..default()
+        }),));
+        parent.spawn((turret_section(TurretSectionConfig {
+            transform: Transform::from_xyz(1.0, 0.0, 0.0),
             ..default()
         }),));
     });

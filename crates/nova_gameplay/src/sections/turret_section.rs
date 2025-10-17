@@ -289,36 +289,38 @@ fn update_turret_target_system(
 
         let target_pos = target_input;
         let barrel_pos = barrel_transform.translation();
+        let barrel_dir = barrel_transform.forward().into();
         if target_pos == barrel_pos {
             continue;
         }
 
         let barrel_yaw_local_pos = world_to_yaw_base.transform_point3(barrel_pos);
         let target_yaw_local_pos = world_to_yaw_base.transform_point3(target_pos);
+        let barrel_yaw_local_dir = world_to_yaw_base.transform_vector3(barrel_dir);
 
+        // phi is the angle from the x axis to the (x,-z) position
         let phi = (-target_yaw_local_pos.z).atan2(target_yaw_local_pos.x);
-        let r = barrel_yaw_local_pos.xz().length();
+        // r is the distance from the origin to the barrel direction projected onto the xz plane
+        let r = barrel_yaw_local_pos.cross(barrel_yaw_local_dir).y;
         let target_r = target_yaw_local_pos.xz().length();
-        if target_r < r {
-            continue;
+        if target_r > r.abs() {
+            let theta = (phi - (r / target_r).acos()) % (std::f32::consts::TAU);
+            **yaw_rotator_target = theta;
         }
-        let theta = (phi - (r / target_r).acos()) % (std::f32::consts::TAU);
-
-        **yaw_rotator_target = theta;
 
         let barrel_pitch_local_pos =
             world_to_pitch_base.transform_point3(barrel_transform.translation());
         let target_pitch_local_pos = world_to_pitch_base.transform_point3(target_input);
+        let barrel_pitch_local_dir =
+            world_to_pitch_base.transform_vector3(barrel_transform.forward().into());
 
         let phi = (-target_pitch_local_pos.z).atan2(target_pitch_local_pos.y);
-        let r = barrel_pitch_local_pos.yz().length();
+        let r = -barrel_pitch_local_pos.cross(barrel_pitch_local_dir).x;
         let target_r = target_pitch_local_pos.yz().length();
-        if target_r < r {
-            continue;
+        if target_r > r.abs() {
+            let theta = phi - (r / target_r).acos();
+            **pitch_rotator_target = -theta;
         }
-        let theta = phi - (r / target_r).acos();
-
-        **pitch_rotator_target = -theta;
     }
 }
 
