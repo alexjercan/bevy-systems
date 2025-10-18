@@ -37,7 +37,7 @@ fn main() {
 
     app.add_systems(
         Update,
-        on_thruster_input.run_if(in_state(SceneState::Simulation)),
+        (on_thruster_input, on_projectile_input).run_if(in_state(SceneState::Simulation)),
     );
 
     app.run();
@@ -69,6 +69,20 @@ fn on_thruster_input(
             **input = 1.0;
         } else {
             **input = 0.0;
+        }
+    }
+}
+
+fn on_projectile_input(
+    mut commands: Commands,
+    keys: Res<ButtonInput<KeyCode>>,
+    q_spawner: Query<Entity, With<ProjectileSpawnerMarker<BulletProjectileConfig>>>,
+) {
+    for spawner_entity in &q_spawner {
+        if keys.pressed(KeyCode::KeyQ) {
+            commands.trigger(SpawnProjectile {
+                entity: spawner_entity,
+            });
         }
     }
 }
@@ -110,7 +124,7 @@ mod simulation {
                     update_spaceship_target_rotation_torque,
                     update_turret_target_input,
                 )
-                    .before(SectionPluginSet),
+                    .before(SpaceshipPluginSet),
             )
                 .chain(),
         );
@@ -1146,7 +1160,7 @@ mod editor {
         mut commands: Commands,
         spaceship: Single<Entity, With<SpaceshipRootMarker>>,
         q_pointer: Query<&PointerInteraction>,
-        q_section: Query<&Transform, With<SpaceshipSectionMarker>>,
+        q_section: Query<&Transform, With<SectionMarker>>,
         selection: Res<SectionChoice>,
         game_assets: Res<GameAssets>,
         q_preview: Query<Entity, With<SectionPreviewMarker>>,
@@ -1210,19 +1224,34 @@ mod editor {
                 let rotation = Quat::from_rotation_arc(Vec3::Y, normal.normalize());
 
                 commands.entity(spaceship).with_children(|parent| {
-                    parent.spawn((turret_section(TurretSectionConfig {
-                        transform: Transform {
-                            translation: position,
-                            rotation,
+                    parent.spawn((
+                        turret_section(TurretSectionConfig {
+                            transform: Transform {
+                                translation: position,
+                                rotation,
+                                ..default()
+                            },
+                            render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
+                            render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
+                            pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
+                            render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
+                            barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
+                            muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
                             ..default()
-                        },
-                        render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
-                        render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
-                        pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
-                        render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
-                        barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
-                        ..default()
-                    }),));
+                        }),
+                        children![(weapon_attachment(ProjectileSpawnerConfig::<
+                            BulletProjectileConfig,
+                        > {
+                            muzzle_speed: 200.0,
+                            muzzle_offset: Vec3::new(0.0, 0.0, -0.5),
+                            fire_rate: 50.0,
+                            projectile: BulletProjectileConfig {
+                                lifetime: 5.0,
+                                render_mesh: None,
+                            },
+                            ..default()
+                        }),)],
+                    ));
                 });
             }
             SectionChoice::Delete => {
@@ -1238,7 +1267,7 @@ mod editor {
         hover: On<Pointer<Over>>,
         mut commands: Commands,
         q_pointer: Query<&PointerInteraction>,
-        q_section: Query<&GlobalTransform, With<SpaceshipSectionMarker>>,
+        q_section: Query<&GlobalTransform, With<SectionMarker>>,
         mut meshes: ResMut<Assets<Mesh>>,
         mut materials: ResMut<Assets<StandardMaterial>>,
         selection: Res<SectionChoice>,
@@ -1293,7 +1322,7 @@ mod editor {
     fn on_move_spaceship_section(
         move_: On<Pointer<Move>>,
         q_pointer: Query<&PointerInteraction>,
-        q_section: Query<&GlobalTransform, With<SpaceshipSectionMarker>>,
+        q_section: Query<&GlobalTransform, With<SectionMarker>>,
         preview: Single<&mut Transform, With<SectionPreviewMarker>>,
         selection: Res<SectionChoice>,
     ) {
@@ -1325,7 +1354,7 @@ mod editor {
 
     fn on_out_spaceship_section(
         out: On<Pointer<Out>>,
-        q_section: Query<&Transform, With<SpaceshipSectionMarker>>,
+        q_section: Query<&Transform, With<SectionMarker>>,
         mut commands: Commands,
         preview: Single<Entity, With<SectionPreviewMarker>>,
     ) {

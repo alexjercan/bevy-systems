@@ -38,6 +38,9 @@ impl Plugin for ProjectilePlugin {
             render: self.render,
         });
 
+        // TODO: move this plugin to some other thingy
+        app.add_plugins(spawner::ProjectileVelocityPlugin);
+
         app.configure_sets(
             Update,
             spawner::ProjectileSpawnerPluginSet.in_set(ProjectilePluginSet),

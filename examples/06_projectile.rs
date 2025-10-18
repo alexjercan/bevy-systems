@@ -14,10 +14,6 @@ fn main() {
     let _ = Cli::parse();
     let mut app = new_gui_app();
 
-    app.add_plugins(ProjectilePlugin { render: true });
-    app.add_plugins(AttachmentPlugin);
-    app.add_plugins(ProjectileVelocityPlugin);
-
     app.add_systems(
         OnEnter(GameStates::Playing),
         (
@@ -33,7 +29,7 @@ fn main() {
         (
             (
                 sync_random_orbit_state.after(SphereRandomOrbitPluginSet),
-                update_turret_target_input.before(SectionPluginSet),
+                update_turret_target_input.before(SpaceshipPluginSet),
             )
                 .chain(),
             on_projectile_input,

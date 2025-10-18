@@ -8,7 +8,7 @@ use bevy::{
     shader::ShaderRef,
 };
 
-use super::SpaceshipRootMarker;
+use crate::SpaceshipRootMarker;
 
 pub mod prelude {
     pub use super::thruster_section;
@@ -56,7 +56,7 @@ pub fn thruster_section(config: ThrusterSectionConfig) -> impl Bundle {
 
     (
         Name::new("Thruster Section"),
-        super::SpaceshipSectionMarker,
+        super::SectionMarker,
         ThrusterSectionMarker,
         Collider::cuboid(1.0, 1.0, 1.0),
         ColliderDensity(config.collider_density),

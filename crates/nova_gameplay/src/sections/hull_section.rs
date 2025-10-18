@@ -42,7 +42,7 @@ pub fn hull_section(config: HullSectionConfig) -> impl Bundle {
 
     (
         Name::new("Hull Section"),
-        super::SpaceshipSectionMarker,
+        super::SectionMarker,
         HullSectionMarker,
         Collider::cuboid(1.0, 1.0, 1.0),
         ColliderDensity(config.collider_density),

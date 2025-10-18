@@ -98,7 +98,7 @@ pub fn turret_section(config: TurretSectionConfig) -> impl Bundle {
 
     (
         Name::new("Turret Section"),
-        super::SpaceshipSectionMarker,
+        super::SectionMarker,
         TurretSectionMarker,
         Collider::cuboid(1.0, 1.0, 1.0),
         ColliderDensity(config.collider_density),

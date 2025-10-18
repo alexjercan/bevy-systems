@@ -1,6 +1,5 @@
 //! This module contains all the sections of a spaceship.
 
-use avian3d::prelude::*;
 use bevy::prelude::*;
 
 pub mod controller_section;
@@ -14,40 +13,14 @@ pub mod prelude {
     pub use super::thruster_section::prelude::*;
     pub use super::turret_section::prelude::*;
 
-    pub use super::spaceship_root;
-    pub use super::SpaceshipConfig;
     pub use super::SectionPlugin;
     pub use super::SectionPluginSet;
-    pub use super::SpaceshipRootMarker;
-    pub use super::SpaceshipSectionMarker;
+    pub use super::SectionMarker;
 }
-
-/// Configuration for the spaceship root entity.
-#[derive(Default, Clone, Debug)]
-pub struct SpaceshipConfig {
-    /// The transform of the spaceship root entity.
-    pub transform: Transform,
-}
-
-/// Helper function to create a spaceship root entity bundle.
-pub fn spaceship_root(config: SpaceshipConfig) -> impl Bundle {
-    (
-        Name::new("Spaceship Root"),
-        SpaceshipRootMarker,
-        RigidBody::Dynamic,
-        config.transform,
-        Visibility::Visible,
-    )
-}
-
-/// This will be the root component for the entire spaceship. All other sections will be children
-/// of this entity.
-#[derive(Component, Clone, Debug, Reflect)]
-pub struct SpaceshipRootMarker;
 
 /// This will be a generic marker for all spaceship sections.
 #[derive(Component, Clone, Debug, Reflect)]
-pub struct SpaceshipSectionMarker;
+pub struct SectionMarker;
 
 /// A system set that will contain all the systems related to the spaceship plugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -61,8 +34,6 @@ pub struct SectionPlugin {
 
 impl Plugin for SectionPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<SpaceshipRootMarker>();
-
         app.add_plugins((
             hull_section::HullSectionPlugin {
                 render: self.render,

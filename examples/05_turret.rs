@@ -28,7 +28,7 @@ fn main() {
         Update,
         (
             sync_random_orbit_state.after(SphereRandomOrbitPluginSet),
-            update_turret_target_input.before(SectionPluginSet),
+            update_turret_target_input.before(SpaceshipPluginSet),
         )
             .chain(),
     );

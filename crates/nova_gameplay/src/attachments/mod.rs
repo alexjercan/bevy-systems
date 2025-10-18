@@ -5,10 +5,14 @@ use crate::{projectiles::prelude::*, sections::prelude::*};
 
 pub mod prelude {
     pub use super::AttachmentPlugin;
+    pub use super::AttachmentPluginSet;
     pub use super::AttachmentMarker;
     pub use super::WeaponAttachment;
     pub use super::weapon_attachment;
 }
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AttachmentPluginSet;
 
 pub struct AttachmentPlugin;
 

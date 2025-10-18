@@ -67,7 +67,7 @@ pub fn new_gui_app() -> App {
     app.insert_resource(Gravity::ZERO);
 
     // GamePlay Plugins
-    app.add_plugins(nova_gameplay::prelude::SectionPlugin { render: true });
+    app.add_plugins(nova_gameplay::prelude::SpaceshipPlugin { render: true });
 
     #[cfg(feature = "debug")]
     app.add_plugins(DebugPlugin);
