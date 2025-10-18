@@ -33,7 +33,7 @@ fn main() {
         (
             (
                 sync_random_orbit_state.after(SphereRandomOrbitPluginSet),
-                update_turret_target_input.before(SpaceshipPluginSet),
+                update_turret_target_input.before(SectionPluginSet),
             )
                 .chain(),
             on_projectile_input,

@@ -21,7 +21,7 @@ fn main() {
 
     app.add_systems(
         Update,
-        update_spaceship_target_rotation_torque.before(SpaceshipPluginSet),
+        update_spaceship_target_rotation_torque.before(SectionPluginSet),
     );
 
     app.run();

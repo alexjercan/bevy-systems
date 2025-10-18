@@ -16,8 +16,8 @@ pub mod prelude {
 
     pub use super::spaceship_root;
     pub use super::SpaceshipConfig;
-    pub use super::SpaceshipPlugin;
-    pub use super::SpaceshipPluginSet;
+    pub use super::SectionPlugin;
+    pub use super::SectionPluginSet;
     pub use super::SpaceshipRootMarker;
     pub use super::SpaceshipSectionMarker;
 }
@@ -51,15 +51,15 @@ pub struct SpaceshipSectionMarker;
 
 /// A system set that will contain all the systems related to the spaceship plugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SpaceshipPluginSet;
+pub struct SectionPluginSet;
 
 /// A plugin that adds all the spaceship sections and their related systems.
 #[derive(Default, Clone, Debug)]
-pub struct SpaceshipPlugin {
+pub struct SectionPlugin {
     pub render: bool,
 }
 
-impl Plugin for SpaceshipPlugin {
+impl Plugin for SectionPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<SpaceshipRootMarker>();
 
@@ -84,35 +84,35 @@ impl Plugin for SpaceshipPlugin {
 
         app.configure_sets(
             Update,
-            thruster_section::ThrusterSectionPluginSet.in_set(SpaceshipPluginSet),
+            thruster_section::ThrusterSectionPluginSet.in_set(SectionPluginSet),
         );
         app.configure_sets(
             FixedUpdate,
-            thruster_section::ThrusterSectionPluginSet.in_set(SpaceshipPluginSet),
+            thruster_section::ThrusterSectionPluginSet.in_set(SectionPluginSet),
         );
         app.configure_sets(
             Update,
-            controller_section::ControllerSectionPluginSet.in_set(SpaceshipPluginSet),
+            controller_section::ControllerSectionPluginSet.in_set(SectionPluginSet),
         );
         app.configure_sets(
             FixedUpdate,
-            controller_section::ControllerSectionPluginSet.in_set(SpaceshipPluginSet),
+            controller_section::ControllerSectionPluginSet.in_set(SectionPluginSet),
         );
         app.configure_sets(
             Update,
-            turret_section::TurretSectionPluginSet.in_set(SpaceshipPluginSet),
+            turret_section::TurretSectionPluginSet.in_set(SectionPluginSet),
         );
         app.configure_sets(
             FixedUpdate,
-            turret_section::TurretSectionPluginSet.in_set(SpaceshipPluginSet),
+            turret_section::TurretSectionPluginSet.in_set(SectionPluginSet),
         );
         app.configure_sets(
             Update,
-            hull_section::HullSectionPluginSet.in_set(SpaceshipPluginSet),
+            hull_section::HullSectionPluginSet.in_set(SectionPluginSet),
         );
         app.configure_sets(
             FixedUpdate,
-            hull_section::HullSectionPluginSet.in_set(SpaceshipPluginSet),
+            hull_section::HullSectionPluginSet.in_set(SectionPluginSet),
         );
     }
 }

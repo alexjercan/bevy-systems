@@ -110,7 +110,7 @@ mod simulation {
                     update_spaceship_target_rotation_torque,
                     update_turret_target_input,
                 )
-                    .before(SpaceshipPluginSet),
+                    .before(SectionPluginSet),
             )
                 .chain(),
         );
