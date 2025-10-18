@@ -1,3 +1,4 @@
+use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
@@ -36,12 +37,16 @@ pub struct BulletProjectileMuzzleSpeed(pub f32);
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct BulletProjectileRenderMesh(pub Option<Handle<Scene>>);
 
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+pub struct BulletProjectilePrev(pub Option<Vec3>);
+
 pub fn bullet_projectile(config: BulletProjectileConfig) -> impl Bundle {
     (
         BulletProjectileMarker,
         TempEntity(config.lifetime),
         BulletProjectileMuzzleSpeed(config.muzzle_speed),
         BulletProjectileRenderMesh(config.render_mesh),
+        BulletProjectilePrev(None),
     )
 }
 
@@ -64,6 +69,11 @@ impl Plugin for BulletProjectilePlugin {
         app.add_systems(
             Update,
             update_ray_projectiles.in_set(BulletProjectilePluginSet),
+        );
+
+        app.add_systems(
+            FixedUpdate,
+            update_sweep_collisions.in_set(BulletProjectilePluginSet),
         );
 
         if self.render {
@@ -117,5 +127,46 @@ fn update_ray_projectiles(
         let distance = **speed * time.delta_secs();
         let forward = transform.forward();
         transform.translation += distance * *forward;
+    }
+}
+
+fn update_sweep_collisions(
+    mut commands: Commands,
+    query: SpatialQuery,
+    mut q_projectiles: Query<
+        (Entity, &mut Transform, &mut BulletProjectilePrev),
+        With<super::ProjectileMarker>,
+    >,
+) {
+    let filter = SpatialQueryFilter::default();
+
+    for (entity, transform, mut prev) in &mut q_projectiles {
+        if prev.is_none() {
+            **prev = Some(transform.translation);
+            continue;
+        }
+
+        let origin = prev.unwrap();
+        let direction = transform.translation - origin;
+        **prev = Some(transform.translation);
+
+        let Ok((direction, distance)) = Dir3::new_and_length(direction) else {
+            continue;
+        };
+
+        if let Some(ray_hit_data) = query.cast_ray(
+            origin,
+            direction,
+            distance,
+            true,
+            &filter,
+        ) {
+            println!(
+                "BulletProjectile {:?} hit entity {:?} at distance {}",
+                entity, ray_hit_data.entity, ray_hit_data.distance
+            );
+            // NOTE: For now, we just despawn the projectile
+            commands.entity(entity).despawn();
+        }
     }
 }
