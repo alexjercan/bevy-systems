@@ -21,10 +21,27 @@ fn main() {
 
     app.add_systems(
         OnEnter(GameStates::Playing),
-        (setup_projectile_spawner, setup_camera, setup_simple_scene),
+        (
+            setup_target,
+            setup_spaceship,
+            setup_camera,
+            setup_simple_scene,
+        ),
     );
 
-    app.add_systems(Update, on_projectile_input);
+    app.add_systems(
+        Update,
+        (
+            (
+                sync_random_orbit_state.after(SphereRandomOrbitPluginSet),
+                update_turret_target_input.before(SpaceshipPluginSet),
+            )
+                .chain(),
+            on_projectile_input,
+        ),
+    );
+
+    app.add_observer(on_turret_muzzle_spawn);
 
     app.run();
 }
@@ -43,20 +60,86 @@ fn on_projectile_input(
     }
 }
 
-fn setup_projectile_spawner(mut commands: Commands) {
+fn sync_random_orbit_state(
+    mut q_orbit: Query<
+        (&mut Transform, &RandomSphereOrbitOutput),
+        Changed<RandomSphereOrbitOutput>,
+    >,
+) {
+    for (mut transform, output) in &mut q_orbit {
+        transform.translation = **output;
+    }
+}
+
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+struct PDCTurretTargetMarker;
+
+fn update_turret_target_input(
+    target: Single<&GlobalTransform, With<PDCTurretTargetMarker>>,
+    mut q_turret: Query<&mut TurretSectionTargetInput, With<TurretSectionMarker>>,
+) {
+    let target_transform = target.into_inner();
+
+    for mut turret in &mut q_turret {
+        **turret = Some(target_transform.translation());
+    }
+}
+
+fn setup_target(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
     commands.spawn((
+        Name::new("Turret Target"),
+        PDCTurretTargetMarker,
+        RandomSphereOrbit {
+            radius: 5.0,
+            angular_speed: 5.0,
+            center: Vec3::ZERO,
+            ..default()
+        },
+        Transform::default(),
+        Visibility::Visible,
+        Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
+        MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 0.2))),
+    ));
+}
+
+fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {
+    let entity = commands
+        .spawn((spaceship_root(SpaceshipConfig { ..default() }),))
+        .id();
+
+    commands.entity(entity).with_children(|parent| {
+        parent.spawn((turret_section(TurretSectionConfig {
+            transform: Transform::from_xyz(0.0, 0.0, 0.0),
+            render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
+            render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
+            pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
+            render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
+            barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
+            muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
+            ..default()
+        }),));
+    });
+}
+
+fn on_turret_muzzle_spawn(add: On<Add, TurretSectionBarrelMuzzleMarker>, mut commands: Commands) {
+    commands.entity(add.entity).insert((children![(
         projectile_spawner(ProjectileSpawnerConfig::<BulletProjectileConfig> {
             muzzle_speed: 200.0,
-            muzzle_offset: Vec3::new(0.0, 0.0, -2.0),
+            muzzle_offset: Vec3::new(0.0, 0.0, -0.5),
             fire_rate: 50.0,
-            transform: Transform::default(),
             projectile: BulletProjectileConfig {
                 lifetime: 5.0,
                 render_mesh: None,
             },
+            ..default()
         }),
+        #[cfg(feature = "debug")]
         DebugAxisMarker,
-    ));
+    ),],));
 }
 
 fn setup_camera(mut commands: Commands, game_assets: Res<GameAssets>) {

@@ -71,7 +71,7 @@ impl Default for TurretSectionConfig {
             pitch_offset: Vec3::new(0.0, 0.2, 0.0),
             render_mesh_barrel: None,
             barrel_offset: Vec3::new(0.1, 0.2, 0.0),
-            muzzle_offset: Vec3::new(0.3, 0.2, 0.0),
+            muzzle_offset: Vec3::new(0.0, 0.0, -0.5),
         }
     }
 }

@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_common_systems::prelude::*;
 
 pub mod prelude {
     pub use super::bullet_projectile;
@@ -6,7 +7,6 @@ pub mod prelude {
     pub use super::BulletProjectileMarker;
     pub use super::BulletProjectilePlugin;
     pub use super::BulletProjectileRenderMesh;
-    pub use super::BulletProjectileLifetime;
 }
 
 #[derive(Clone, Debug)]
@@ -28,15 +28,12 @@ impl Default for BulletProjectileConfig {
 pub struct BulletProjectileMarker;
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
-pub struct BulletProjectileLifetime(pub f32);
-
-#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct BulletProjectileRenderMesh(pub Option<Handle<Scene>>);
 
 pub fn bullet_projectile(config: BulletProjectileConfig) -> impl Bundle {
     (
         BulletProjectileMarker,
-        BulletProjectileLifetime(config.lifetime),
+        TempEntity(config.lifetime),
         BulletProjectileRenderMesh(config.render_mesh),
     )
 }
