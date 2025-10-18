@@ -59,6 +59,10 @@ fn update_damage_systems(
 ) {
     for event in reader.read() {
         if let Ok((entity, mut health)) = q_health.get_mut(event.target) {
+            if health.current <= 0.0 {
+                continue;
+            }
+
             health.current -= event.amount;
             if health.current <= 0.0 {
                 health.current = 0.0;

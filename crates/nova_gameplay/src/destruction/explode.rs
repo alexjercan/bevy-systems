@@ -42,7 +42,7 @@ fn handle_explosion(
     debug!("Handling explosion for entity {:?}", entity);
 
     let Ok(explode) = q_explode.get(entity) else {
-        warn!("Destroyed entity {:?} missing ExplodeOnDestroy component, skipping explosion.", entity);
+        debug!("Destroyed entity {:?} missing ExplodeOnDestroy component, skipping explosion.", entity);
         return;
     };
 
