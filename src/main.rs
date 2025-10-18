@@ -326,6 +326,7 @@ mod simulation {
                 MeshMaterial3d(materials.add(color)),
                 Collider::sphere(radius),
                 RigidBody::Static,
+                Health::new(100.0),
             ));
         }
 

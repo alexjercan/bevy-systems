@@ -6,11 +6,13 @@ use bevy::prelude::*;
 pub mod spaceship;
 pub mod projectile_damage;
 pub mod sections;
+pub mod destruction;
 
 pub mod prelude {
     pub use super::sections::prelude::*;
     pub use super::projectile_damage::prelude::*;
     pub use super::spaceship::prelude::*;
+    pub use super::destruction::prelude::*;
 
     pub use super::GameplayPlugin;
 }
@@ -52,5 +54,6 @@ impl Plugin for GameplayPlugin {
         // Glue Plugins
         app.add_plugins(spaceship::SpaceshipPlugin { render: self.render });
         app.add_plugins(projectile_damage::ProjectileDamageGluePlugin);
+        app.add_plugins(destruction::DestructionHealthPlugin);
     }
 }

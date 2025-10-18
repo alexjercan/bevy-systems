@@ -8,6 +8,8 @@ pub mod prelude {
     pub use super::ProjectileDamageGluePluginSet;
 }
 
+const DAMAGE_MODIFIER: f32 = 0.01;
+
 /// A system set that will contain all the systems related to the projectile damage glue plugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ProjectileDamageGluePluginSet;
@@ -29,7 +31,7 @@ fn projectile_hit_to_damage(
         damage_writer.write(DamageApply {
             target: hit.hit_entity,
             source: Some(hit.projectile),
-            amount: hit.impact_energy,
+            amount: hit.impact_energy * DAMAGE_MODIFIER,
         });
     }
 }
