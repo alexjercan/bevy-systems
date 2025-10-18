@@ -14,6 +14,7 @@ pub mod prelude {
     pub use super::TurretSectionMarker;
     pub use super::TurretSectionPlugin;
     pub use super::TurretSectionTargetInput;
+    pub use super::TurretSectionBarrelMuzzleMarker;
 }
 
 const TURRET_SECTION_DEFAULT_COLLIDER_DENSITY: f32 = 1.0;
@@ -49,6 +50,8 @@ pub struct TurretSectionConfig {
     pub render_mesh_barrel: Option<Handle<Scene>>,
     /// The offset of the barrel from the pitch rotator
     pub barrel_offset: Vec3,
+    /// The offset of the muzzle from the barrel
+    pub muzzle_offset: Vec3,
 }
 
 impl Default for TurretSectionConfig {
@@ -68,6 +71,7 @@ impl Default for TurretSectionConfig {
             pitch_offset: Vec3::new(0.0, 0.2, 0.0),
             render_mesh_barrel: None,
             barrel_offset: Vec3::new(0.1, 0.2, 0.0),
+            muzzle_offset: Vec3::new(0.3, 0.2, 0.0),
         }
     }
 }
@@ -144,6 +148,12 @@ pub fn turret_section(config: TurretSectionConfig) -> impl Bundle {
                                 Transform::from_translation(config.barrel_offset),
                                 Visibility::Inherited,
                                 TurretSectionBarrelRenderMesh(config.render_mesh_barrel),
+                                children![(
+                                    Name::new("Turret Barrel Muzzle"),
+                                    TurretSectionBarrelMuzzleMarker,
+                                    Transform::from_translation(config.muzzle_offset),
+                                    Visibility::Inherited,
+                                )],
                             ),],
                         ),],
                     )],
@@ -179,6 +189,10 @@ struct TurretSectionRotatorPitchMarker;
 /// Marker component for the barrel part of the turret section rotator.
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 pub struct TurretSectionRotatorBarrelMarker;
+
+/// Marker component for the muzzle of the barrel.
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+pub struct TurretSectionBarrelMuzzleMarker;
 
 /// The target input for the turret section. This is a world-space position that the turret will
 /// aim at. If None, the turret will not rotate.
