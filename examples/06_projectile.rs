@@ -5,9 +5,9 @@ use nova_protocol::prelude::*;
 use rand::prelude::*;
 
 #[derive(Parser)]
-#[command(name = "02_hull")]
+#[command(name = "06_projectile")]
 #[command(version = "1.0.0")]
-#[command(about = "A simple example showing how to spawn a basic hull in nova_protocol", long_about = None)]
+#[command(about = "A simple example showing how to spawn a basic projectile in nova_protocol", long_about = None)]
 struct Cli;
 
 fn main() {
@@ -16,10 +16,87 @@ fn main() {
 
     app.add_systems(
         OnEnter(GameStates::Playing),
-        (setup_spaceship, setup_camera, setup_simple_scene),
+        (
+            setup_target,
+            setup_spaceship,
+            setup_camera,
+            setup_simple_scene,
+        ),
+    );
+
+    app.add_systems(
+        Update,
+        (
+            (
+                sync_random_orbit_state.after(SphereRandomOrbitPluginSet),
+                update_turret_target_input.before(SpaceshipPluginSet),
+            )
+                .chain(),
+            on_projectile_input,
+        ),
     );
 
     app.run();
+}
+
+fn on_projectile_input(
+    mut commands: Commands,
+    keys: Res<ButtonInput<KeyCode>>,
+    q_spawner: Query<Entity, With<ProjectileSpawnerMarker<BulletProjectileConfig>>>,
+) {
+    for spawner_entity in &q_spawner {
+        if keys.pressed(KeyCode::KeyQ) {
+            commands.trigger(SpawnProjectile {
+                entity: spawner_entity,
+            });
+        }
+    }
+}
+
+fn sync_random_orbit_state(
+    mut q_orbit: Query<
+        (&mut Transform, &RandomSphereOrbitOutput),
+        Changed<RandomSphereOrbitOutput>,
+    >,
+) {
+    for (mut transform, output) in &mut q_orbit {
+        transform.translation = **output;
+    }
+}
+
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+struct PDCTurretTargetMarker;
+
+fn update_turret_target_input(
+    target: Single<&GlobalTransform, With<PDCTurretTargetMarker>>,
+    mut q_turret: Query<&mut TurretSectionTargetInput, With<TurretSectionMarker>>,
+) {
+    let target_transform = target.into_inner();
+
+    for mut turret in &mut q_turret {
+        **turret = Some(target_transform.translation());
+    }
+}
+
+fn setup_target(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    commands.spawn((
+        Name::new("Turret Target"),
+        PDCTurretTargetMarker,
+        RandomSphereOrbit {
+            radius: 5.0,
+            angular_speed: 5.0,
+            center: Vec3::ZERO,
+            ..default()
+        },
+        Transform::default(),
+        Visibility::Visible,
+        Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
+        MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 0.2))),
+    ));
 }
 
 fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {
@@ -28,9 +105,20 @@ fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {
         .id();
 
     commands.entity(entity).with_children(|parent| {
-        parent.spawn((hull_section(HullSectionConfig {
+        parent.spawn((turret_section(TurretSectionConfig {
             transform: Transform::from_xyz(0.0, 0.0, 0.0),
-            render_mesh: Some(game_assets.hull_01.clone()),
+            render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
+            render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
+            pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
+            render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
+            barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
+            muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
+            fire_rate: 100.0,
+            projectile: BulletProjectileConfig {
+                muzzle_speed: 100.0,
+                lifetime: 5.0,
+                render_mesh: None,
+            },
             ..default()
         }),));
     });

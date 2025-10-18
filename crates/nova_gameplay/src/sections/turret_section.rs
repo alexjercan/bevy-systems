@@ -10,6 +10,8 @@ use bevy_common_systems::prelude::*;
 
 pub mod prelude {
     pub use super::turret_section;
+    pub use super::TurretSectionBarrelMuzzleEntity;
+    pub use super::TurretSectionBarrelMuzzleMarker;
     pub use super::TurretSectionConfig;
     pub use super::TurretSectionMarker;
     pub use super::TurretSectionPlugin;
@@ -19,7 +21,7 @@ pub mod prelude {
 const TURRET_SECTION_DEFAULT_COLLIDER_DENSITY: f32 = 1.0;
 
 /// Configuration for a turret section of a spaceship.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Reflect)]
 pub struct TurretSectionConfig {
     /// The transform of the turret section relative to its parent.
     pub transform: Transform,
@@ -49,6 +51,12 @@ pub struct TurretSectionConfig {
     pub render_mesh_barrel: Option<Handle<Scene>>,
     /// The offset of the barrel from the pitch rotator
     pub barrel_offset: Vec3,
+    /// The offset of the muzzle from the barrel
+    pub muzzle_offset: Vec3,
+    /// The fire rate of the turret in rounds per second.
+    pub fire_rate: f32,
+    /// The projectile configuration for the bullets fired by the turret.
+    pub projectile: BulletProjectileConfig,
 }
 
 impl Default for TurretSectionConfig {
@@ -68,6 +76,13 @@ impl Default for TurretSectionConfig {
             pitch_offset: Vec3::new(0.0, 0.2, 0.0),
             render_mesh_barrel: None,
             barrel_offset: Vec3::new(0.1, 0.2, 0.0),
+            muzzle_offset: Vec3::new(0.0, 0.0, -0.5),
+            fire_rate: 100.0,
+            projectile: BulletProjectileConfig {
+                muzzle_speed: 100.0,
+                lifetime: 5.0,
+                render_mesh: None,
+            },
         }
     }
 }
@@ -84,72 +99,23 @@ struct TurretSectionPitchRenderMesh(Option<Handle<Scene>>);
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 struct TurretSectionBarrelRenderMesh(Option<Handle<Scene>>);
 
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+struct TurretSectionConfigHelper(TurretSectionConfig);
+
 /// Helper function to create a turret section entity bundle.
 pub fn turret_section(config: TurretSectionConfig) -> impl Bundle {
     debug!("Creating turret section with config: {:?}", config);
 
     (
         Name::new("Turret Section"),
-        super::SpaceshipSectionMarker,
+        super::SectionMarker,
         TurretSectionMarker,
         Collider::cuboid(1.0, 1.0, 1.0),
         ColliderDensity(config.collider_density),
         TurretSectionTargetInput(None),
         config.transform,
         Visibility::Visible,
-        children![(
-            Name::new("Turret Rotator Base"),
-            TurretRotatorBaseMarker,
-            Transform::from_translation(config.base_offset),
-            Visibility::Inherited,
-            TurretSectionBaseRenderMesh(config.render_mesh_base),
-            children![(
-                Name::new("Turret Rotator Yaw Base"),
-                TurretSectionRotatorYawBaseMarker,
-                SmoothLookRotation {
-                    axis: Vec3::Y,
-                    initial: 0.0,
-                    speed: std::f32::consts::PI,
-                    ..default()
-                },
-                Transform::from_translation(config.yaw_offset),
-                Visibility::Inherited,
-                children![(
-                    Name::new("Turret Rotator Yaw"),
-                    TurretSectionRotatorYawMarker,
-                    Transform::default(),
-                    Visibility::Inherited,
-                    TurretSectionYawRenderMesh(config.render_mesh_yaw),
-                    children![(
-                        Name::new("Turret Rotator Pitch Base"),
-                        TurretSectionRotatorPitchBaseMarker,
-                        SmoothLookRotation {
-                            axis: Vec3::X,
-                            initial: 0.0,
-                            speed: std::f32::consts::PI,
-                            min: config.min_pitch,
-                            max: config.max_pitch,
-                        },
-                        Transform::from_translation(config.pitch_offset),
-                        Visibility::Inherited,
-                        children![(
-                            Name::new("Turret Rotator Pitch"),
-                            TurretSectionRotatorPitchMarker,
-                            Transform::default(),
-                            Visibility::Inherited,
-                            TurretSectionPitchRenderMesh(config.render_mesh_pitch),
-                            children![(
-                                Name::new("Turret Rotator Barrel"),
-                                TurretSectionRotatorBarrelMarker,
-                                Transform::from_translation(config.barrel_offset),
-                                Visibility::Inherited,
-                                TurretSectionBarrelRenderMesh(config.render_mesh_barrel),
-                            ),],
-                        ),],
-                    )],
-                ),],
-            )],
-        )],
+        TurretSectionConfigHelper(config),
     )
 }
 
@@ -180,6 +146,14 @@ struct TurretSectionRotatorPitchMarker;
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 pub struct TurretSectionRotatorBarrelMarker;
 
+/// Marker component for the muzzle of the barrel.
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+pub struct TurretSectionBarrelMuzzleMarker;
+
+/// The entity that represents the muzzle of the turret barrel.
+#[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
+pub struct TurretSectionBarrelMuzzleEntity(pub Entity);
+
 /// The target input for the turret section. This is a world-space position that the turret will
 /// aim at. If None, the turret will not rotate.
 #[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
@@ -200,6 +174,8 @@ impl Plugin for TurretSectionPlugin {
         if cfg!(feature = "debug") {
             app.add_plugins(debug::DebugTurretSectionPlugin);
         }
+
+        app.add_observer(insert_turret_section);
 
         // NOTE: How can we check that the SmoothLookRotationPlugin is added?
         if self.render {
@@ -350,6 +326,120 @@ fn sync_turret_rotator_pitch_system(
 
         pitch_transform.rotation = Quat::from_euler(EulerRot::YXZ, 0.0, **rotator_output, 0.0);
     }
+}
+
+fn insert_turret_section(
+    add: On<Add, TurretSectionMarker>,
+    mut commands: Commands,
+    q_config: Query<&TurretSectionConfigHelper, With<TurretSectionMarker>>,
+) {
+    let entity = add.entity;
+    debug!("Inserting turret section for entity: {:?}", entity);
+
+    let Ok(config) = q_config.get(entity) else {
+        warn!(
+            "TurretSection entity {:?} missing TurretSectionConfigHelper component",
+            entity
+        );
+        return;
+    };
+    let config = (**config).clone();
+
+    let muzzle = commands
+        .spawn((
+            Name::new("Turret Barrel Muzzle"),
+            TurretSectionBarrelMuzzleMarker,
+            Transform::from_translation(config.muzzle_offset),
+            Visibility::Inherited,
+            children![(projectile_spawner(ProjectileSpawnerConfig {
+                fire_rate: config.fire_rate,
+                projectile: config.projectile,
+                ..default()
+            }),)],
+        ))
+        .id();
+
+    commands
+        .entity(entity)
+        .insert((TurretSectionBarrelMuzzleEntity(muzzle),))
+        .with_children(|parent| {
+            parent
+                .spawn((
+                    Name::new("Turret Rotator Base"),
+                    TurretRotatorBaseMarker,
+                    Transform::from_translation(config.base_offset),
+                    Visibility::Inherited,
+                    TurretSectionBaseRenderMesh(config.render_mesh_base),
+                ))
+                .with_children(|parent| {
+                    parent
+                        .spawn((
+                            Name::new("Turret Rotator Yaw Base"),
+                            TurretSectionRotatorYawBaseMarker,
+                            SmoothLookRotation {
+                                axis: Vec3::Y,
+                                initial: 0.0,
+                                speed: config.yaw_speed,
+                                ..default()
+                            },
+                            Transform::from_translation(config.yaw_offset),
+                            Visibility::Inherited,
+                        ))
+                        .with_children(|parent| {
+                            parent
+                                .spawn((
+                                    Name::new("Turret Rotator Yaw"),
+                                    TurretSectionRotatorYawMarker,
+                                    Transform::default(),
+                                    Visibility::Inherited,
+                                    TurretSectionYawRenderMesh(config.render_mesh_yaw),
+                                ))
+                                .with_children(|parent| {
+                                    parent
+                                        .spawn((
+                                            Name::new("Turret Rotator Pitch Base"),
+                                            TurretSectionRotatorPitchBaseMarker,
+                                            SmoothLookRotation {
+                                                axis: Vec3::X,
+                                                initial: 0.0,
+                                                speed: config.pitch_speed,
+                                                min: config.min_pitch,
+                                                max: config.max_pitch,
+                                            },
+                                            Transform::from_translation(config.pitch_offset),
+                                            Visibility::Inherited,
+                                        ))
+                                        .with_children(|parent| {
+                                            parent
+                                                .spawn((
+                                                    Name::new("Turret Rotator Pitch"),
+                                                    TurretSectionRotatorPitchMarker,
+                                                    Transform::default(),
+                                                    Visibility::Inherited,
+                                                    TurretSectionPitchRenderMesh(
+                                                        config.render_mesh_pitch,
+                                                    ),
+                                                ))
+                                                .with_children(|parent| {
+                                                    parent
+                                                        .spawn((
+                                                            Name::new("Turret Rotator Barrel"),
+                                                            TurretSectionRotatorBarrelMarker,
+                                                            Transform::from_translation(
+                                                                config.barrel_offset,
+                                                            ),
+                                                            Visibility::Inherited,
+                                                            TurretSectionBarrelRenderMesh(
+                                                                config.render_mesh_barrel,
+                                                            ),
+                                                        ))
+                                                        .add_child(muzzle);
+                                                });
+                                        });
+                                });
+                        });
+                });
+        });
 }
 
 fn insert_turret_section_render(

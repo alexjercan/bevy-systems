@@ -172,4 +172,3 @@ fn on_vertical_input_completed(
         input.vertical = 0.0;
     }
 }
-

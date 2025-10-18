@@ -37,7 +37,15 @@ fn main() {
 
     app.add_systems(
         Update,
-        on_thruster_input.run_if(in_state(SceneState::Simulation)),
+        (on_thruster_input, on_projectile_input).run_if(in_state(SceneState::Simulation)),
+    );
+    app.add_systems(
+        OnExit(SceneState::Simulation),
+        |mut q_thruster: Query<&mut ThrusterSectionInput, With<ThrusterInputKey>>| {
+            for mut input in &mut q_thruster {
+                **input = 0.0;
+            }
+        },
     );
 
     app.run();
@@ -69,6 +77,20 @@ fn on_thruster_input(
             **input = 1.0;
         } else {
             **input = 0.0;
+        }
+    }
+}
+
+fn on_projectile_input(
+    mut commands: Commands,
+    mouse: Res<ButtonInput<MouseButton>>,
+    q_spawner: Query<Entity, With<ProjectileSpawnerMarker<BulletProjectileConfig>>>,
+) {
+    for spawner_entity in &q_spawner {
+        if mouse.pressed(MouseButton::Left) {
+            commands.trigger(SpawnProjectile {
+                entity: spawner_entity,
+            });
         }
     }
 }
@@ -248,6 +270,7 @@ mod simulation {
 
         // Spawn a target entity to visualize the target rotation
         commands.spawn((
+            DespawnOnExit(super::SceneState::Simulation),
             Name::new("Turret Target"),
             PDCTurretTargetMarker,
             Transform::from_xyz(0.0, 0.0, -500.0),
@@ -1146,7 +1169,7 @@ mod editor {
         mut commands: Commands,
         spaceship: Single<Entity, With<SpaceshipRootMarker>>,
         q_pointer: Query<&PointerInteraction>,
-        q_section: Query<&Transform, With<SpaceshipSectionMarker>>,
+        q_section: Query<&Transform, With<SectionMarker>>,
         selection: Res<SectionChoice>,
         game_assets: Res<GameAssets>,
         q_preview: Query<Entity, With<SectionPreviewMarker>>,
@@ -1221,6 +1244,13 @@ mod editor {
                         pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
                         render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
                         barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
+                        muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
+                        fire_rate: 100.0,
+                        projectile: BulletProjectileConfig {
+                            muzzle_speed: 100.0,
+                            lifetime: 5.0,
+                            render_mesh: None,
+                        },
                         ..default()
                     }),));
                 });
@@ -1238,7 +1268,7 @@ mod editor {
         hover: On<Pointer<Over>>,
         mut commands: Commands,
         q_pointer: Query<&PointerInteraction>,
-        q_section: Query<&GlobalTransform, With<SpaceshipSectionMarker>>,
+        q_section: Query<&GlobalTransform, With<SectionMarker>>,
         mut meshes: ResMut<Assets<Mesh>>,
         mut materials: ResMut<Assets<StandardMaterial>>,
         selection: Res<SectionChoice>,
@@ -1293,7 +1323,7 @@ mod editor {
     fn on_move_spaceship_section(
         move_: On<Pointer<Move>>,
         q_pointer: Query<&PointerInteraction>,
-        q_section: Query<&GlobalTransform, With<SpaceshipSectionMarker>>,
+        q_section: Query<&GlobalTransform, With<SectionMarker>>,
         preview: Single<&mut Transform, With<SectionPreviewMarker>>,
         selection: Res<SectionChoice>,
     ) {
@@ -1325,7 +1355,7 @@ mod editor {
 
     fn on_out_spaceship_section(
         out: On<Pointer<Out>>,
-        q_section: Query<&Transform, With<SpaceshipSectionMarker>>,
+        q_section: Query<&Transform, With<SectionMarker>>,
         mut commands: Commands,
         preview: Single<Entity, With<SectionPreviewMarker>>,
     ) {

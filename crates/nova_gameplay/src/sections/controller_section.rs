@@ -3,7 +3,7 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-use super::SpaceshipRootMarker;
+use crate::SpaceshipRootMarker;
 
 pub mod prelude {
     pub use super::controller_section;
@@ -55,7 +55,7 @@ pub fn controller_section(config: ControllerSectionConfig) -> impl Bundle {
 
     (
         Name::new("Controller Section"),
-        super::SpaceshipSectionMarker,
+        super::SectionMarker,
         ControllerSectionMarker,
         Collider::cuboid(1.0, 1.0, 1.0),
         ColliderDensity(config.collider_density),
