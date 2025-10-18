@@ -3,12 +3,10 @@ use std::fmt::Debug;
 
 pub mod prelude {
     pub use super::projectile_spawner;
-    pub use super::ProjectileSpawnerPlugin;
     pub use super::ProjectileSpawnerConfig;
     pub use super::ProjectileSpawnerMarker;
+    pub use super::ProjectileSpawnerPlugin;
     pub use super::SpawnProjectile;
-    pub use super::ProjectileVelocityPlugin;
-    pub use super::ProjectileMuzzleVelocity;
 }
 
 #[derive(Clone, Debug)]
@@ -16,7 +14,6 @@ pub struct ProjectileSpawnerConfig<T>
 where
     T: Clone + Debug,
 {
-    pub muzzle_speed: f32,
     pub muzzle_offset: Vec3,
     pub fire_rate: f32,
     pub transform: Transform,
@@ -29,7 +26,6 @@ where
 {
     fn default() -> Self {
         Self {
-            muzzle_speed: 50.0,
             muzzle_offset: Vec3::ZERO,
             fire_rate: 2.0,
             transform: Transform::default(),
@@ -45,9 +41,6 @@ where
 {
     _marker: std::marker::PhantomData<T>,
 }
-
-#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
-pub struct ProjectileSpawnerMuzzleSpeed(pub f32);
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct ProjectileSpawnerMuzzleOffset(pub Vec3);
@@ -70,7 +63,6 @@ where
     (
         Name::new("Projectile Spawner"),
         ProjectileSpawnerMarker::<T>::default(),
-        ProjectileSpawnerMuzzleSpeed(config.muzzle_speed),
         ProjectileSpawnerMuzzleOffset(config.muzzle_offset),
         ProjectileSpawnerFireRate(config.fire_rate),
         ProjectileSpawnerProjectile(config.projectile),
@@ -156,7 +148,6 @@ fn on_spawn_projectile<T>(
     mut q_spawners: Query<
         (
             &GlobalTransform,
-            &ProjectileSpawnerMuzzleSpeed,
             &ProjectileSpawnerMuzzleOffset,
             &mut ProjectileSpawnerFireState,
             &ProjectileSpawnerProjectile<T>,
@@ -167,7 +158,7 @@ fn on_spawn_projectile<T>(
     T: super::ProjectileBundle + Default + Clone + Debug + Send + Sync + 'static,
 {
     let entity = spawn.entity;
-    let Ok((spawner_transform, muzzle_speed, muzzle_offset, mut fire_state, projectile)) =
+    let Ok((spawner_transform, muzzle_offset, mut fire_state, projectile)) =
         q_spawners.get_mut(entity)
     else {
         warn!(
@@ -206,34 +197,7 @@ fn on_spawn_projectile<T>(
         projectile_transform,
         Visibility::Visible,
         projectile.projectile_bundle(),
-        ProjectileMuzzleVelocity(rotation.mul_vec3(Vec3::new(0.0, 0.0, -**muzzle_speed))),
     ));
 
     fire_state.reset();
-}
-
-// Things to move out
-
-#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
-pub struct ProjectileMuzzleVelocity(pub Vec3);
-
-pub struct ProjectileVelocityPlugin;
-
-impl Plugin for ProjectileVelocityPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(FixedUpdate, update_ray_projectiles);
-    }
-}
-
-fn update_ray_projectiles(
-    mut q_projectiles: Query<
-        (&ProjectileMuzzleVelocity, &mut Transform),
-        With<super::ProjectileMarker>,
-    >,
-    time: Res<Time>,
-) {
-    for (speed, mut transform) in &mut q_projectiles {
-        let distance = **speed * time.delta_secs();
-        transform.translation += distance;
-    }
 }

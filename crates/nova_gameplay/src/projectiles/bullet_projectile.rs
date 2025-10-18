@@ -6,11 +6,13 @@ pub mod prelude {
     pub use super::BulletProjectileConfig;
     pub use super::BulletProjectileMarker;
     pub use super::BulletProjectilePlugin;
+    pub use super::BulletProjectilePluginSet;
     pub use super::BulletProjectileRenderMesh;
 }
 
 #[derive(Clone, Debug)]
 pub struct BulletProjectileConfig {
+    pub muzzle_speed: f32,
     pub lifetime: f32,
     pub render_mesh: Option<Handle<Scene>>,
 }
@@ -18,6 +20,7 @@ pub struct BulletProjectileConfig {
 impl Default for BulletProjectileConfig {
     fn default() -> Self {
         Self {
+            muzzle_speed: 50.0,
             lifetime: 5.0,
             render_mesh: None,
         }
@@ -28,12 +31,16 @@ impl Default for BulletProjectileConfig {
 pub struct BulletProjectileMarker;
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+pub struct BulletProjectileMuzzleSpeed(pub f32);
+
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct BulletProjectileRenderMesh(pub Option<Handle<Scene>>);
 
 pub fn bullet_projectile(config: BulletProjectileConfig) -> impl Bundle {
     (
         BulletProjectileMarker,
         TempEntity(config.lifetime),
+        BulletProjectileMuzzleSpeed(config.muzzle_speed),
         BulletProjectileRenderMesh(config.render_mesh),
     )
 }
@@ -44,6 +51,9 @@ impl super::ProjectileBundle for BulletProjectileConfig {
     }
 }
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct BulletProjectilePluginSet;
+
 #[derive(Default)]
 pub struct BulletProjectilePlugin {
     pub render: bool,
@@ -51,6 +61,11 @@ pub struct BulletProjectilePlugin {
 
 impl Plugin for BulletProjectilePlugin {
     fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            update_ray_projectiles.in_set(BulletProjectilePluginSet),
+        );
+
         if self.render {
             app.add_observer(insert_projectile_render);
         }
@@ -84,9 +99,23 @@ fn insert_projectile_render(
         None => {
             commands.entity(entity).insert((children![(
                 Name::new("Bullet Projectile Render"),
-                Mesh3d(meshes.add(Cuboid::new(0.1, 0.1, 1.0))),
+                Mesh3d(meshes.add(Cuboid::new(0.05, 0.05, 0.3))),
                 MeshMaterial3d(materials.add(Color::srgb(1.0, 0.9, 0.2))),
             ),],));
         }
+    }
+}
+
+fn update_ray_projectiles(
+    mut q_projectiles: Query<
+        (&BulletProjectileMuzzleSpeed, &mut Transform),
+        With<super::ProjectileMarker>,
+    >,
+    time: Res<Time>,
+) {
+    for (speed, mut transform) in &mut q_projectiles {
+        let distance = **speed * time.delta_secs();
+        let forward = transform.forward();
+        transform.translation += distance * *forward;
     }
 }

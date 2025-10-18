@@ -1242,10 +1242,10 @@ mod editor {
                         children![(weapon_attachment(ProjectileSpawnerConfig::<
                             BulletProjectileConfig,
                         > {
-                            muzzle_speed: 200.0,
                             muzzle_offset: Vec3::new(0.0, 0.0, -0.5),
-                            fire_rate: 50.0,
+                            fire_rate: 100.0,
                             projectile: BulletProjectileConfig {
+                                muzzle_speed: 100.0,
                                 lifetime: 5.0,
                                 render_mesh: None,
                             },

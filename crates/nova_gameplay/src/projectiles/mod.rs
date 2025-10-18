@@ -38,9 +38,6 @@ impl Plugin for ProjectilePlugin {
             render: self.render,
         });
 
-        // TODO: move this plugin to some other thingy
-        app.add_plugins(spawner::ProjectileVelocityPlugin);
-
         app.configure_sets(
             Update,
             spawner::ProjectileSpawnerPluginSet.in_set(ProjectilePluginSet),
@@ -48,6 +45,14 @@ impl Plugin for ProjectilePlugin {
         app.configure_sets(
             FixedUpdate,
             spawner::ProjectileSpawnerPluginSet.in_set(ProjectilePluginSet),
+        );
+        app.configure_sets(
+            Update,
+            bullet_projectile::BulletProjectilePluginSet.in_set(ProjectilePluginSet),
+        );
+        app.configure_sets(
+            FixedUpdate,
+            bullet_projectile::BulletProjectilePluginSet.in_set(ProjectilePluginSet),
         );
     }
 }
