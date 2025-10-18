@@ -364,7 +364,7 @@ fn insert_turret_section(
                             SmoothLookRotation {
                                 axis: Vec3::Y,
                                 initial: 0.0,
-                                speed: std::f32::consts::PI,
+                                speed: config.yaw_speed,
                                 ..default()
                             },
                             Transform::from_translation(config.yaw_offset),
@@ -387,7 +387,7 @@ fn insert_turret_section(
                                             SmoothLookRotation {
                                                 axis: Vec3::X,
                                                 initial: 0.0,
-                                                speed: std::f32::consts::PI,
+                                                speed: config.pitch_speed,
                                                 min: config.min_pitch,
                                                 max: config.max_pitch,
                                             },
