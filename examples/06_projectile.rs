@@ -14,9 +14,7 @@ fn main() {
     let _ = Cli::parse();
     let mut app = new_gui_app();
 
-    app.add_plugins(ProjectilePlugin::<BulletProjectileConfig>::default());
-    app.add_plugins(BulletProjectilePlugin { render: true });
-    app.add_plugins(TempEntityPlugin);
+    app.add_plugins(ProjectilePlugin { render: true });
     app.add_plugins(AttachmentPlugin);
     app.add_plugins(ProjectileVelocityPlugin);
 

@@ -57,6 +57,8 @@ pub fn new_gui_app() -> App {
     app.add_plugins(bevy_common_systems::prelude::SphereRandomOrbitPlugin);
     // Rotation Plugin for the turret facing direction
     app.add_plugins(bevy_common_systems::prelude::SmoothLookRotationPlugin);
+    // Other helper plugins
+    app.add_plugins(bevy_common_systems::prelude::TempEntityPlugin);
 
     // We need to enable the physics plugins to have access to RigidBody and other components.
     // We will also disable gravity for this example, since we are in space, duh.

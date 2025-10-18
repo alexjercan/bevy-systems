@@ -3,7 +3,7 @@ use std::fmt::Debug;
 
 pub mod prelude {
     pub use super::projectile_spawner;
-    pub use super::ProjectilePlugin;
+    pub use super::ProjectileSpawnerPlugin;
     pub use super::ProjectileSpawnerConfig;
     pub use super::ProjectileSpawnerMarker;
     pub use super::SpawnProjectile;
@@ -85,24 +85,24 @@ pub struct SpawnProjectile {
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ProjectilePluginSet;
+pub struct ProjectileSpawnerPluginSet;
 
 #[derive(Default)]
-pub struct ProjectilePlugin<T>
+pub struct ProjectileSpawnerPlugin<T>
 where
     T: Default,
 {
     _marker: std::marker::PhantomData<T>,
 }
 
-impl<T> Plugin for ProjectilePlugin<T>
+impl<T> Plugin for ProjectileSpawnerPlugin<T>
 where
     T: super::ProjectileBundle + Default + Clone + Debug + Send + Sync + 'static,
 {
     fn build(&self, app: &mut App) {
         app.add_systems(
             FixedUpdate,
-            update_projectile_spawners::<T>.in_set(ProjectilePluginSet),
+            update_projectile_spawners::<T>.in_set(ProjectileSpawnerPluginSet),
         );
 
         app.add_observer(on_insert_projectile_spawner::<T>);
