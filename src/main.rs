@@ -39,6 +39,14 @@ fn main() {
         Update,
         (on_thruster_input, on_projectile_input).run_if(in_state(SceneState::Simulation)),
     );
+    app.add_systems(
+        OnExit(SceneState::Simulation),
+        |mut q_thruster: Query<&mut ThrusterSectionInput, With<ThrusterInputKey>>| {
+            for mut input in &mut q_thruster {
+                **input = 0.0;
+            }
+        },
+    );
 
     app.run();
 }
@@ -75,11 +83,11 @@ fn on_thruster_input(
 
 fn on_projectile_input(
     mut commands: Commands,
-    keys: Res<ButtonInput<KeyCode>>,
+    mouse: Res<ButtonInput<MouseButton>>,
     q_spawner: Query<Entity, With<ProjectileSpawnerMarker<BulletProjectileConfig>>>,
 ) {
     for spawner_entity in &q_spawner {
-        if keys.pressed(KeyCode::KeyQ) {
+        if mouse.pressed(MouseButton::Left) {
             commands.trigger(SpawnProjectile {
                 entity: spawner_entity,
             });
