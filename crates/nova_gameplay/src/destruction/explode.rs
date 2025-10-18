@@ -1,15 +1,21 @@
-use std::collections::VecDeque;
-
 /// A Bevy plugin that makes entities explode into pieces when they are destroyed.
+use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 use rand::Rng;
+use std::collections::VecDeque;
 
 pub mod prelude {
     pub use super::ExplodeOnDestroy;
+    pub use super::FragmentMeshMarker;
     pub use super::ExplodeOnDestroyPlugin;
     pub use super::ExplodeOnDestroyPluginSet;
 }
+
+const MAX_ITERATIONS: usize = 10;
+
+#[derive(Component, Clone, Debug, Reflect)]
+pub struct FragmentMeshMarker;
 
 /// A component that makes an entity explode into pieces when it is destroyed.
 #[derive(Component, Clone, Debug, Reflect)]
@@ -46,7 +52,7 @@ fn handle_explosion(
     add: On<Add, DestroyedMarker>,
     mut commands: Commands,
     q_explode: Query<&ExplodeOnDestroy>,
-    mut q_mesh: Query<(&Mesh3d, &MeshMaterial3d<StandardMaterial>, &mut Visibility)>,
+    mut q_mesh: Query<(&GlobalTransform, &Mesh3d, &MeshMaterial3d<StandardMaterial>, &mut Visibility)>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     let entity = add.entity;
@@ -68,7 +74,7 @@ fn handle_explosion(
         return;
     };
 
-    let Ok((mesh3d, material3d, mut visibility)) = q_mesh.get_mut(mesh_entity) else {
+    let Ok((transform, mesh3d, material3d, mut visibility)) = q_mesh.get_mut(mesh_entity) else {
         warn!("Mesh entity {:?} for explosion on entity {:?} does not have a Mesh3d component, skipping explosion.", mesh_entity, entity);
         return;
     };
@@ -88,7 +94,7 @@ fn handle_explosion(
 
     *visibility = Visibility::Hidden;
 
-    let Some(fragments) = slice_mesh_into_fragments(&mesh.clone(), explode.fragment_count) else {
+    let Some(fragments) = slice_mesh_into_fragments(&mesh.clone(), explode.fragment_count, MAX_ITERATIONS) else {
         warn!(
             "Failed to slice mesh for entity {:?} into fragments.",
             entity
@@ -96,31 +102,32 @@ fn handle_explosion(
         return;
     };
 
-    let fragment_handles = fragments.into_iter().map(|mesh| meshes.add(mesh)).collect::<Vec<_>>();
-    debug!(
-        "Spawned {} fragments for explosion of entity {:?}.",
-        fragment_handles.len(),
-        entity
-    );
+    for (mesh, normal) in fragments {
+        let transform = transform.compute_transform();
+        let offset = normal * 0.1;
+        let transform = transform.with_translation(transform.translation + offset);
 
-    for handle in fragment_handles {
         commands.spawn((
-            Mesh3d(handle),
-            material3d.clone(),
-            Transform::from_translation(Vec3::ZERO),
-            Visibility::Visible,
             Name::new("Explosion Fragment"),
+            FragmentMeshMarker,
+            Mesh3d(meshes.add(mesh.clone())),
+            material3d.clone(),
+            transform,
+            Visibility::Visible,
+            RigidBody::Dynamic,
+            Collider::convex_hull_from_mesh(&mesh).unwrap_or(Collider::sphere(0.5)),
+            LinearVelocity(normal * rand::rng().random_range(2.0..5.0)),
         ));
     }
 }
 
-fn slice_mesh_into_fragments(original: &Mesh, fragment_count: usize) -> Option<Vec<Mesh>> {
-    let mut queue = VecDeque::from([original.clone()]);
+fn slice_mesh_into_fragments(original: &Mesh, fragment_count: usize, max_iterations: usize) -> Option<Vec<(Mesh, Vec3)>> {
+    let mut queue = VecDeque::from([(original.clone(), Vec3::ZERO)]);
     let mut rng = rand::rng();
 
-    loop {
+    for _ in 0..max_iterations {
         let mut fragments = vec![];
-        while let Some(mesh) = queue.pop_front() {
+        while let Some((mesh, _)) = queue.pop_front() {
             let plane_point = Vec3::ZERO;
             let plane_normal = {
                 let u: f32 = rng.random_range(-1.0..1.0);
@@ -129,13 +136,13 @@ fn slice_mesh_into_fragments(original: &Mesh, fragment_count: usize) -> Option<V
                 Vec3::new(r * theta.cos(), r * theta.sin(), u).normalize()
             };
 
-            let Some((lhs, rhs)) = mesh_slice(&mesh, plane_normal, plane_point) else {
-                warn!("Failed to slice mesh into fragments.");
+            let Some((pos, neg)) = mesh_slice(&mesh, plane_normal, plane_point) else {
+                warn!("Failed to slice mesh into fragments... implement better code next time, bruh.");
                 continue;
             };
 
-            fragments.push(lhs);
-            fragments.push(rhs);
+            fragments.push((pos, plane_normal));
+            fragments.push((neg, -plane_normal));
         }
 
         if fragments.len() >= fragment_count {
@@ -147,4 +154,6 @@ fn slice_mesh_into_fragments(original: &Mesh, fragment_count: usize) -> Option<V
             queue = VecDeque::from(fragments);
         }
     }
+
+    None
 }

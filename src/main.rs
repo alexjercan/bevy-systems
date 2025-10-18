@@ -47,6 +47,14 @@ fn main() {
             }
         },
     );
+    app.add_systems(
+        OnExit(SceneState::Simulation),
+        |mut commands: Commands, q_fragment: Query<Entity, With<FragmentMeshMarker>>| {
+            for fragment in &q_fragment {
+                commands.entity(fragment).despawn();
+            }
+        },
+    );
 
     app.run();
 }
@@ -331,7 +339,7 @@ mod simulation {
 
             commands.entity(planet).insert(ExplodeOnDestroy {
                 mesh_entity: Some(planet),
-                fragment_count: 10,
+                fragment_count: 8,
             });
         }
 
@@ -348,7 +356,7 @@ mod simulation {
                 rng.random_range(0.0..0.6),
             );
 
-            commands.spawn((
+            let satellite = commands.spawn((
                 DespawnOnExit(super::SceneState::Simulation),
                 Name::new(format!("Satellite {}", i)),
                 Transform::from_translation(pos),
@@ -359,7 +367,12 @@ mod simulation {
                 ColliderDensity(1.0),
                 RigidBody::Dynamic,
                 Health::new(100.0),
-            ));
+            )).id();
+
+            commands.entity(satellite).insert(ExplodeOnDestroy {
+                mesh_entity: Some(satellite),
+                fragment_count: 4,
+            });
         }
     }
 

@@ -67,7 +67,7 @@ fn setup_health_entity(
 
     commands.entity(mesh_entity).insert(ExplodeOnDestroy {
         mesh_entity: Some(mesh_entity),
-        fragment_count: 2,
+        fragment_count: 10,
     });
 }
 

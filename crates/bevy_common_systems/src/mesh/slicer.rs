@@ -67,6 +67,10 @@ impl MeshBuilder {
         self
     }
 
+    fn is_empty(&self) -> bool {
+        self.indices.is_empty()
+    }
+
     fn build(&self) -> Mesh {
         let vertices = &self.vertices;
         let indices = &self.indices;
@@ -163,6 +167,8 @@ fn triangle_slice(
     }
 }
 
+/// Slices a mesh along a plane defined by a normal and a point on the plane.
+/// Returns two meshes: one on the positive side of the plane and one on the negative side.
 pub fn mesh_slice(mesh: &Mesh, plane_normal: Vec3, plane_point: Vec3) -> Option<(Mesh, Mesh)> {
     // Extract positions, normals, uvs
     let positions = match mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap() {
@@ -252,6 +258,10 @@ pub fn mesh_slice(mesh: &Mesh, plane_normal: Vec3, plane_point: Vec3) -> Option<
 
     positive_mesh_builder.fill_boundary(&boundary);
     negative_mesh_builder.fill_boundary(&boundary.iter().rev().cloned().collect::<Vec<_>>());
+
+    if positive_mesh_builder.is_empty() || negative_mesh_builder.is_empty() {
+        return None;
+    }
 
     Some((positive_mesh_builder.build(), negative_mesh_builder.build()))
 }
