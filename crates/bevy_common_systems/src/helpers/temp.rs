@@ -60,4 +60,3 @@ fn update_temp_entities(
         }
     }
 }
-

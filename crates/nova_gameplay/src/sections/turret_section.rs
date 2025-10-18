@@ -351,13 +351,11 @@ fn insert_turret_section(
             TurretSectionBarrelMuzzleMarker,
             Transform::from_translation(config.muzzle_offset),
             Visibility::Inherited,
-            children![(
-                projectile_spawner(ProjectileSpawnerConfig {
-                    fire_rate: config.fire_rate,
-                    projectile: config.projectile,
-                    ..default()
-                }),
-            )]
+            children![(projectile_spawner(ProjectileSpawnerConfig {
+                fire_rate: config.fire_rate,
+                projectile: config.projectile,
+                ..default()
+            }),)],
         ))
         .id();
 

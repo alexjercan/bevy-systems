@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use avian3d::prelude::*;
 use bevy::{
-    app::{ScheduleRunnerPlugin},
+    app::ScheduleRunnerPlugin,
     log::{Level, LogPlugin},
     prelude::*,
     window::PresentMode,

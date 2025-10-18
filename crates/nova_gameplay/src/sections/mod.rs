@@ -13,9 +13,9 @@ pub mod prelude {
     pub use super::thruster_section::prelude::*;
     pub use super::turret_section::prelude::*;
 
+    pub use super::SectionMarker;
     pub use super::SectionPlugin;
     pub use super::SectionPluginSet;
-    pub use super::SectionMarker;
 }
 
 /// This will be a generic marker for all spaceship sections.

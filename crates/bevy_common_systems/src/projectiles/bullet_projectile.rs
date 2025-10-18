@@ -154,7 +154,7 @@ fn update_sweep_collisions(
             continue;
         };
 
-        if let Some(ray_hit_data) = query.cast_ray(origin, direction, distance, true, &filter) {
+        if let Some(_ray_hit_data) = query.cast_ray(origin, direction, distance, true, &filter) {
             // NOTE: For now, we just despawn the projectile
             commands.entity(entity).despawn();
         }

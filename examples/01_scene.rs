@@ -1,8 +1,8 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
-use rand::prelude::*;
 use clap::Parser;
 use nova_protocol::prelude::*;
+use rand::prelude::*;
 
 #[derive(Parser)]
 #[command(name = "01_scene")]
@@ -14,15 +14,15 @@ fn main() {
     let _ = Cli::parse();
     let mut app = new_gui_app();
 
-    app.add_systems(OnEnter(GameStates::Playing), (setup_camera, setup_simple_scene));
+    app.add_systems(
+        OnEnter(GameStates::Playing),
+        (setup_camera, setup_simple_scene),
+    );
 
     app.run();
 }
 
-fn setup_camera(
-    mut commands: Commands,
-    game_assets: Res<GameAssets>,
-) {
+fn setup_camera(mut commands: Commands, game_assets: Res<GameAssets>) {
     commands.spawn((
         Name::new("Main Camera"),
         Camera3d::default(),

@@ -10,9 +10,9 @@ pub mod prelude {
 
     pub use super::spaceship_root;
     pub use super::SpaceshipConfig;
-    pub use super::SpaceshipRootMarker;
     pub use super::SpaceshipPlugin;
     pub use super::SpaceshipPluginSet;
+    pub use super::SpaceshipRootMarker;
 }
 
 /// Configuration for the spaceship root entity.
@@ -50,7 +50,9 @@ pub struct SpaceshipPlugin {
 
 impl Plugin for SpaceshipPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(sections::SectionPlugin { render: self.render });
+        app.add_plugins(sections::SectionPlugin {
+            render: self.render,
+        });
 
         app.configure_sets(
             Update,

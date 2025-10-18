@@ -1,8 +1,8 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
-use rand::prelude::*;
 use clap::Parser;
 use nova_protocol::prelude::*;
+use rand::prelude::*;
 
 #[derive(Parser)]
 #[command(name = "02_hull")]
@@ -14,15 +14,15 @@ fn main() {
     let _ = Cli::parse();
     let mut app = new_gui_app();
 
-    app.add_systems(OnEnter(GameStates::Playing), (setup_spaceship, setup_camera, setup_simple_scene));
+    app.add_systems(
+        OnEnter(GameStates::Playing),
+        (setup_spaceship, setup_camera, setup_simple_scene),
+    );
 
     app.run();
 }
 
-fn setup_spaceship(
-    mut commands: Commands,
-    game_assets: Res<GameAssets>,
-) {
+fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {
     let entity = commands
         .spawn((spaceship_root(SpaceshipConfig { ..default() }),))
         .id();
@@ -36,10 +36,7 @@ fn setup_spaceship(
     });
 }
 
-fn setup_camera(
-    mut commands: Commands,
-    game_assets: Res<GameAssets>,
-) {
+fn setup_camera(mut commands: Commands, game_assets: Res<GameAssets>) {
     commands.spawn((
         Name::new("Main Camera"),
         Camera3d::default(),
