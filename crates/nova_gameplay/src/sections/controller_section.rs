@@ -3,7 +3,7 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-use crate::SpaceshipRootMarker;
+use crate::prelude::SpaceshipRootMarker;
 
 pub mod prelude {
     pub use super::controller_section;

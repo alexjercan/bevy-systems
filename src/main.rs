@@ -1249,6 +1249,7 @@ mod editor {
                         projectile: BulletProjectileConfig {
                             muzzle_speed: 100.0,
                             lifetime: 5.0,
+                            mass: 0.1,
                             render_mesh: None,
                         },
                         ..default()

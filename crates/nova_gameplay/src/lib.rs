@@ -1,66 +1,56 @@
-//! TODO: Add description in this crate
+//! Gameplay related functionality for Nova Protocol.
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
+pub mod spaceship;
+pub mod projectile_damage;
 pub mod sections;
 
 pub mod prelude {
     pub use super::sections::prelude::*;
+    pub use super::projectile_damage::prelude::*;
+    pub use super::spaceship::prelude::*;
 
-    pub use super::spaceship_root;
-    pub use super::SpaceshipConfig;
-    pub use super::SpaceshipPlugin;
-    pub use super::SpaceshipPluginSet;
-    pub use super::SpaceshipRootMarker;
+    pub use super::GameplayPlugin;
 }
 
-/// Configuration for the spaceship root entity.
+/// A system set that will contain all the systems related to the gameplay plugin.
 #[derive(Default, Clone, Debug)]
-pub struct SpaceshipConfig {
-    /// The transform of the spaceship root entity.
-    pub transform: Transform,
-}
-
-/// Helper function to create a spaceship root entity bundle.
-pub fn spaceship_root(config: SpaceshipConfig) -> impl Bundle {
-    (
-        Name::new("Spaceship Root"),
-        SpaceshipRootMarker,
-        RigidBody::Dynamic,
-        config.transform,
-        Visibility::Visible,
-    )
-}
-
-/// This will be the root component for the entire spaceship. All other sections will be children
-/// of this entity.
-#[derive(Component, Clone, Debug, Reflect)]
-pub struct SpaceshipRootMarker;
-
-/// A system set that will contain all the systems related to the spaceship plugin.
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SpaceshipPluginSet;
-
-/// A plugin that adds all the spaceship sections and their related systems.
-#[derive(Default, Clone, Debug)]
-pub struct SpaceshipPlugin {
+pub struct GameplayPlugin {
     pub render: bool,
 }
 
-impl Plugin for SpaceshipPlugin {
+impl Plugin for GameplayPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(sections::SectionPlugin {
-            render: self.render,
-        });
+        // We need to enable the physics plugins to have access to RigidBody and other components.
+        // We will also disable gravity for this example, since we are in space, duh.
+        app.add_plugins(PhysicsPlugins::default().set(PhysicsInterpolationPlugin::interpolate_all()));
+        app.add_plugins(PhysicsPickingPlugin);
+        app.insert_resource(Gravity::ZERO);
 
-        app.configure_sets(
-            Update,
-            sections::SectionPluginSet.in_set(SpaceshipPluginSet),
-        );
-        app.configure_sets(
-            FixedUpdate,
-            sections::SectionPluginSet.in_set(SpaceshipPluginSet),
-        );
+        // Bevy Common Systems - WASD Camera
+        app.add_plugins(bevy_common_systems::prelude::WASDCameraPlugin);
+        app.add_plugins(bevy_common_systems::prelude::WASDCameraControllerPlugin);
+        // Chase Camera Plugin to have a 3rd person camera following the spaceship
+        app.add_plugins(bevy_common_systems::prelude::ChaseCameraPlugin);
+        // Bevy Common Systems - Rendering
+        app.add_plugins(bevy_common_systems::prelude::SkyboxPlugin);
+        app.add_plugins(bevy_common_systems::prelude::PostProcessingDefaultPlugin);
+        // Point Rotation Plugin to convert linear movement to a target rotation
+        app.add_plugins(bevy_common_systems::prelude::PointRotationPlugin);
+        // for debug to have a random orbiting object
+        app.add_plugins(bevy_common_systems::prelude::SphereRandomOrbitPlugin);
+        // Rotation Plugin for the turret facing direction
+        app.add_plugins(bevy_common_systems::prelude::SmoothLookRotationPlugin);
+        // Other helper plugins
+        app.add_plugins(bevy_common_systems::prelude::TempEntityPlugin);
+        // Core Mechanics
+        app.add_plugins(bevy_common_systems::prelude::ProjectilePlugin { render: true });
+        app.add_plugins(bevy_common_systems::prelude::HealthPlugin);
+
+        // Glue Plugins
+        app.add_plugins(spaceship::SpaceshipPlugin { render: self.render });
+        app.add_plugins(projectile_damage::ProjectileDamageGluePlugin);
     }
 }

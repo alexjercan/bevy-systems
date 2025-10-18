@@ -1,3 +1,8 @@
+//! Bullet projectile implementation.
+//!
+//! The bullet projectile is a kinematic projectile that moves in a straight line
+//! at a constant speed. It uses raycasting to detect collisions.
+
 use crate::helpers::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
@@ -9,12 +14,19 @@ pub mod prelude {
     pub use super::BulletProjectilePlugin;
     pub use super::BulletProjectilePluginSet;
     pub use super::BulletProjectileRenderMesh;
+    pub use super::BulletProjectileHit;
 }
 
+/// Configuration for a bullet projectile.
 #[derive(Clone, Debug, Reflect)]
 pub struct BulletProjectileConfig {
+    /// Muzzle speed of the projectile in units per second.
     pub muzzle_speed: f32,
+    /// Lifetime of the projectile in seconds.
     pub lifetime: f32,
+    /// The mass of the bullet projectile.
+    pub mass: f32,
+    /// Optional render mesh for the projectile.
     pub render_mesh: Option<Handle<Scene>>,
 }
 
@@ -23,28 +35,39 @@ impl Default for BulletProjectileConfig {
         Self {
             muzzle_speed: 50.0,
             lifetime: 5.0,
+            mass: 0.1,
             render_mesh: None,
         }
     }
 }
 
+/// Marker component for bullet projectiles.
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct BulletProjectileMarker;
 
+/// Muzzle speed of the bullet projectile.
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct BulletProjectileMuzzleSpeed(pub f32);
 
+/// Mass of the bullet projectile.
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+pub struct BulletProjectileMass(pub f32);
+
+/// Render mesh for the bullet projectile.
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct BulletProjectileRenderMesh(pub Option<Handle<Scene>>);
 
+/// Previous position of the bullet projectile for sweep collision detection.
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
-pub struct BulletProjectilePrev(pub Option<Vec3>);
+struct BulletProjectilePrev(Option<Vec3>);
 
+/// Helper function to create a bullet projectile entity bundle.
 pub fn bullet_projectile(config: BulletProjectileConfig) -> impl Bundle {
     (
         BulletProjectileMarker,
         TempEntity(config.lifetime),
         BulletProjectileMuzzleSpeed(config.muzzle_speed),
+        BulletProjectileMass(config.mass),
         BulletProjectileRenderMesh(config.render_mesh),
         BulletProjectilePrev(None),
     )
@@ -56,9 +79,26 @@ impl super::ProjectileBundle for BulletProjectileConfig {
     }
 }
 
+/// Message sent when a bullet projectile hits an entity.
+#[derive(Message, Clone, Debug)]
+pub struct BulletProjectileHit {
+    /// The projectile entity that hit.
+    pub projectile: Entity,
+    /// The entity that was hit.
+    pub hit_entity: Entity,
+    /// The point of impact in world space.
+    pub hit_point: Vec3,
+    /// The normal of the surface hit.
+    pub hit_normal: Vec3,
+    /// The impact energy of the hit.
+    pub impact_energy: f32,
+}
+
+/// System set for the bullet projectile plugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BulletProjectilePluginSet;
 
+/// A plugin that enables the BulletProjectile component and its related systems.
 #[derive(Default)]
 pub struct BulletProjectilePlugin {
     pub render: bool,
@@ -66,6 +106,8 @@ pub struct BulletProjectilePlugin {
 
 impl Plugin for BulletProjectilePlugin {
     fn build(&self, app: &mut App) {
+        app.add_message::<BulletProjectileHit>();
+
         app.add_systems(
             Update,
             update_ray_projectiles.in_set(BulletProjectilePluginSet),
@@ -134,13 +176,20 @@ fn update_sweep_collisions(
     mut commands: Commands,
     query: SpatialQuery,
     mut q_projectiles: Query<
-        (Entity, &mut Transform, &mut BulletProjectilePrev),
+        (
+            Entity,
+            &mut Transform,
+            &mut BulletProjectilePrev,
+            &BulletProjectileMuzzleSpeed,
+            &BulletProjectileMass,
+        ),
         With<super::ProjectileMarker>,
     >,
+    mut writer: MessageWriter<BulletProjectileHit>,
 ) {
     let filter = SpatialQueryFilter::default();
 
-    for (entity, transform, mut prev) in &mut q_projectiles {
+    for (entity, transform, mut prev, speed, mass) in &mut q_projectiles {
         if prev.is_none() {
             **prev = Some(transform.translation);
             continue;
@@ -154,9 +203,20 @@ fn update_sweep_collisions(
             continue;
         };
 
-        if let Some(_ray_hit_data) = query.cast_ray(origin, direction, distance, true, &filter) {
-            // NOTE: For now, we just despawn the projectile
+        if let Some(ray_hit_data) = query.cast_ray(origin, direction, distance, true, &filter) {
             commands.entity(entity).despawn();
+
+            let distance = ray_hit_data.distance;
+            let hit_point = origin + direction * distance;
+            let impact_energy = 0.5 * **mass * (**speed * **speed);
+
+            writer.write(BulletProjectileHit {
+                projectile: entity,
+                hit_entity: ray_hit_data.entity,
+                hit_point,
+                hit_normal: ray_hit_data.normal,
+                impact_energy,
+            });
         }
     }
 }
