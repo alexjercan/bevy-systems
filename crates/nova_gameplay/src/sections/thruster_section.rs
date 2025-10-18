@@ -8,7 +8,7 @@ use bevy::{
     shader::ShaderRef,
 };
 
-use crate::SpaceshipRootMarker;
+use crate::prelude::SpaceshipRootMarker;
 
 pub mod prelude {
     pub use super::thruster_section;

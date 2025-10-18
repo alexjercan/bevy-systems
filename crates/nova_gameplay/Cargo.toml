@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 avian3d = { workspace = true }
 bevy = { workspace = true }
+rand = { workspace = true }
 bevy_common_systems = { path = "../bevy_common_systems" }
 
 [lints]
