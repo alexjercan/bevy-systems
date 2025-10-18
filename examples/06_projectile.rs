@@ -17,6 +17,7 @@ fn main() {
     app.add_plugins(ProjectilePlugin::<BulletProjectileConfig>::default());
     app.add_plugins(BulletProjectilePlugin { render: true });
     app.add_plugins(TempEntityPlugin);
+    app.add_plugins(AttachmentPlugin);
     app.add_plugins(ProjectileVelocityPlugin);
 
     app.add_systems(
@@ -40,8 +41,6 @@ fn main() {
             on_projectile_input,
         ),
     );
-
-    app.add_observer(on_turret_muzzle_spawn);
 
     app.run();
 }
@@ -112,34 +111,31 @@ fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {
         .id();
 
     commands.entity(entity).with_children(|parent| {
-        parent.spawn((turret_section(TurretSectionConfig {
-            transform: Transform::from_xyz(0.0, 0.0, 0.0),
-            render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
-            render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
-            pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
-            render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
-            barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
-            muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
-            ..default()
-        }),));
+        parent.spawn((
+            turret_section(TurretSectionConfig {
+                transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
+                render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
+                pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
+                render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
+                barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
+                muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
+                ..default()
+            }),
+            children![(weapon_attachment(ProjectileSpawnerConfig::<
+                BulletProjectileConfig,
+            > {
+                muzzle_speed: 200.0,
+                muzzle_offset: Vec3::new(0.0, 0.0, -0.5),
+                fire_rate: 50.0,
+                projectile: BulletProjectileConfig {
+                    lifetime: 5.0,
+                    render_mesh: None,
+                },
+                ..default()
+            }),)],
+        ));
     });
-}
-
-fn on_turret_muzzle_spawn(add: On<Add, TurretSectionBarrelMuzzleMarker>, mut commands: Commands) {
-    commands.entity(add.entity).insert((children![(
-        projectile_spawner(ProjectileSpawnerConfig::<BulletProjectileConfig> {
-            muzzle_speed: 200.0,
-            muzzle_offset: Vec3::new(0.0, 0.0, -0.5),
-            fire_rate: 50.0,
-            projectile: BulletProjectileConfig {
-                lifetime: 5.0,
-                render_mesh: None,
-            },
-            ..default()
-        }),
-        #[cfg(feature = "debug")]
-        DebugAxisMarker,
-    ),],));
 }
 
 fn setup_camera(mut commands: Commands, game_assets: Res<GameAssets>) {

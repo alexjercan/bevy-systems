@@ -8,6 +8,7 @@ pub mod bullet_projectile;
 pub mod prelude {
     pub use super::spawner::prelude::*;
     pub use super::bullet_projectile::prelude::*;
+    pub use super::ProjectileBundle;
 }
 
 #[derive(Component, Clone, Debug, Reflect)]
