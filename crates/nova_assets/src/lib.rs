@@ -36,4 +36,10 @@ pub struct GameAssets {
     pub cubemap: Handle<Image>,
     #[asset(path = "gltf/hull-01.glb#Scene0")]
     pub hull_01: Handle<Scene>,
+    #[asset(path = "gltf/turret-yaw-01.glb#Scene0")]
+    pub turret_yaw_01: Handle<Scene>,
+    #[asset(path = "gltf/turret-pitch-01.glb#Scene0")]
+    pub turret_pitch_01: Handle<Scene>,
+    #[asset(path = "gltf/turret-barrel-01.glb#Scene0")]
+    pub turret_barrel_01: Handle<Scene>,
 }
