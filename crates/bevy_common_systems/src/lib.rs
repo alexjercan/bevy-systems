@@ -6,6 +6,7 @@ pub mod meth;
 pub mod projectiles;
 pub mod transform;
 pub mod health;
+pub mod mesh;
 
 pub mod prelude {
     pub use crate::camera::prelude::*;
@@ -14,4 +15,5 @@ pub mod prelude {
     pub use crate::projectiles::prelude::*;
     pub use crate::transform::prelude::*;
     pub use crate::health::prelude::*;
+    pub use crate::mesh::prelude::*;
 }

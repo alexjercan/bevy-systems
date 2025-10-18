@@ -317,7 +317,7 @@ mod simulation {
                 rng.random_range(0.0..1.0),
             );
 
-            commands.spawn((
+            let planet = commands.spawn((
                 DespawnOnExit(super::SceneState::Simulation),
                 Name::new(format!("Planet {}", i)),
                 Transform::from_translation(pos),
@@ -327,7 +327,12 @@ mod simulation {
                 Collider::sphere(radius),
                 RigidBody::Static,
                 Health::new(100.0),
-            ));
+            )).id();
+
+            commands.entity(planet).insert(ExplodeOnDestroy {
+                mesh_entity: Some(planet),
+                fragment_count: 10,
+            });
         }
 
         for i in 0..40 {
@@ -353,6 +358,7 @@ mod simulation {
                 Collider::cuboid(size, size, size),
                 ColliderDensity(1.0),
                 RigidBody::Dynamic,
+                Health::new(100.0),
             ));
         }
     }
