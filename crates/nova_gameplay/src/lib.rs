@@ -4,13 +4,9 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 
 pub mod sections;
-pub mod projectiles;
-pub mod attachments;
 
 pub mod prelude {
     pub use super::sections::prelude::*;
-    pub use super::projectiles::prelude::*;
-    pub use super::attachments::prelude::*;
 
     pub use super::spaceship_root;
     pub use super::SpaceshipConfig;
@@ -55,8 +51,6 @@ pub struct SpaceshipPlugin {
 impl Plugin for SpaceshipPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(sections::SectionPlugin { render: self.render });
-        app.add_plugins(projectiles::ProjectilePlugin { render: self.render });
-        app.add_plugins(attachments::AttachmentPlugin);
 
         app.configure_sets(
             Update,
@@ -65,22 +59,6 @@ impl Plugin for SpaceshipPlugin {
         app.configure_sets(
             FixedUpdate,
             sections::SectionPluginSet.in_set(SpaceshipPluginSet),
-        );
-        app.configure_sets(
-            Update,
-            projectiles::ProjectilePluginSet.in_set(SpaceshipPluginSet),
-        );
-        app.configure_sets(
-            FixedUpdate,
-            projectiles::ProjectilePluginSet.in_set(SpaceshipPluginSet),
-        );
-        app.configure_sets(
-            Update,
-            attachments::AttachmentPluginSet.in_set(SpaceshipPluginSet),
-        );
-        app.configure_sets(
-            FixedUpdate,
-            attachments::AttachmentPluginSet.in_set(SpaceshipPluginSet),
         );
     }
 }

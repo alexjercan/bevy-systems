@@ -53,6 +53,10 @@ pub struct TurretSectionConfig {
     pub barrel_offset: Vec3,
     /// The offset of the muzzle from the barrel
     pub muzzle_offset: Vec3,
+    /// The fire rate of the turret in rounds per second.
+    pub fire_rate: f32,
+    /// The projectile configuration for the bullets fired by the turret.
+    pub projectile: BulletProjectileConfig,
 }
 
 impl Default for TurretSectionConfig {
@@ -73,6 +77,12 @@ impl Default for TurretSectionConfig {
             render_mesh_barrel: None,
             barrel_offset: Vec3::new(0.1, 0.2, 0.0),
             muzzle_offset: Vec3::new(0.0, 0.0, -0.5),
+            fire_rate: 100.0,
+            projectile: BulletProjectileConfig {
+                muzzle_speed: 100.0,
+                lifetime: 5.0,
+                render_mesh: None,
+            },
         }
     }
 }
@@ -341,6 +351,13 @@ fn insert_turret_section(
             TurretSectionBarrelMuzzleMarker,
             Transform::from_translation(config.muzzle_offset),
             Visibility::Inherited,
+            children![(
+                projectile_spawner(ProjectileSpawnerConfig {
+                    fire_rate: config.fire_rate,
+                    projectile: config.projectile,
+                    ..default()
+                }),
+            )]
         ))
         .id();
 

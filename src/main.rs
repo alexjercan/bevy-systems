@@ -270,6 +270,7 @@ mod simulation {
 
         // Spawn a target entity to visualize the target rotation
         commands.spawn((
+            DespawnOnExit(super::SceneState::Simulation),
             Name::new("Turret Target"),
             PDCTurretTargetMarker,
             Transform::from_xyz(0.0, 0.0, -500.0),
@@ -1232,34 +1233,26 @@ mod editor {
                 let rotation = Quat::from_rotation_arc(Vec3::Y, normal.normalize());
 
                 commands.entity(spaceship).with_children(|parent| {
-                    parent.spawn((
-                        turret_section(TurretSectionConfig {
-                            transform: Transform {
-                                translation: position,
-                                rotation,
-                                ..default()
-                            },
-                            render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
-                            render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
-                            pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
-                            render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
-                            barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
-                            muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
+                    parent.spawn((turret_section(TurretSectionConfig {
+                        transform: Transform {
+                            translation: position,
+                            rotation,
                             ..default()
-                        }),
-                        children![(weapon_attachment(ProjectileSpawnerConfig::<
-                            BulletProjectileConfig,
-                        > {
-                            muzzle_offset: Vec3::new(0.0, 0.0, -0.5),
-                            fire_rate: 100.0,
-                            projectile: BulletProjectileConfig {
-                                muzzle_speed: 100.0,
-                                lifetime: 5.0,
-                                render_mesh: None,
-                            },
-                            ..default()
-                        }),)],
-                    ));
+                        },
+                        render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
+                        render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
+                        pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
+                        render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
+                        barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
+                        muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
+                        fire_rate: 100.0,
+                        projectile: BulletProjectileConfig {
+                            muzzle_speed: 100.0,
+                            lifetime: 5.0,
+                            render_mesh: None,
+                        },
+                        ..default()
+                    }),));
                 });
             }
             SectionChoice::Delete => {

@@ -1,6 +1,6 @@
+use crate::helpers::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
-use bevy_common_systems::prelude::*;
 
 pub mod prelude {
     pub use super::bullet_projectile;
@@ -11,7 +11,7 @@ pub mod prelude {
     pub use super::BulletProjectileRenderMesh;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Reflect)]
 pub struct BulletProjectileConfig {
     pub muzzle_speed: f32,
     pub lifetime: f32,
@@ -154,17 +154,7 @@ fn update_sweep_collisions(
             continue;
         };
 
-        if let Some(ray_hit_data) = query.cast_ray(
-            origin,
-            direction,
-            distance,
-            true,
-            &filter,
-        ) {
-            println!(
-                "BulletProjectile {:?} hit entity {:?} at distance {}",
-                entity, ray_hit_data.entity, ray_hit_data.distance
-            );
+        if let Some(ray_hit_data) = query.cast_ray(origin, direction, distance, true, &filter) {
             // NOTE: For now, we just despawn the projectile
             commands.entity(entity).despawn();
         }

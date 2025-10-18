@@ -4,6 +4,7 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
+avian3d = { workspace = true }
 bevy = { workspace = true }
 bevy_enhanced_input = { workspace = true }
 rand = { workspace = true }

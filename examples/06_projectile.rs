@@ -114,12 +114,6 @@ fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {
                 render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
                 barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
                 muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
-                ..default()
-            }),
-            children![(weapon_attachment(ProjectileSpawnerConfig::<
-                BulletProjectileConfig,
-            > {
-                muzzle_offset: Vec3::new(0.0, 0.0, -0.5),
                 fire_rate: 100.0,
                 projectile: BulletProjectileConfig {
                     muzzle_speed: 100.0,
@@ -127,7 +121,7 @@ fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {
                     render_mesh: None,
                 },
                 ..default()
-            }),)],
+            }),
         ));
     });
 }
