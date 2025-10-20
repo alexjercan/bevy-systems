@@ -1,6 +1,5 @@
 use bevy::{
-    pbr::wireframe::{WireframeConfig, WireframePlugin},
-    prelude::*,
+    camera::visibility::RenderLayers, pbr::wireframe::{WireframeConfig, WireframePlugin}, prelude::*
 };
 use bevy_inspector_egui::{
     bevy_egui::{EguiContext, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext},
@@ -11,6 +10,8 @@ pub mod prelude {
     pub use super::gizmos::DebugAxisMarker;
     pub use super::DebugPlugin;
 }
+
+pub const GIZMOS_RENDER_LAYER: usize = 1;
 
 /// The keycode to toggle debug mode.
 pub const DEBUG_TOGGLE_KEYCODE: KeyCode = KeyCode::F11;
@@ -26,9 +27,10 @@ impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(DebugEnabled(true));
 
-        app.add_plugins(inspector::InpsectorDebugPlugin);
-        app.add_plugins(gizmos::DebugGizmosPlugin);
-        app.add_plugins(turret::DebugTurretSectionPlugin);
+        // TODO: implement camera for debug menu
+        // app.add_plugins(inspector::InpsectorDebugPlugin);
+        // app.add_plugins(gizmos::DebugGizmosPlugin);
+        // app.add_plugins(spaceship::DebugSpaceshipSectionPlugin);
         // app.add_plugins(avian3d::prelude::PhysicsDebugPlugin::default());
 
         app.add_systems(Update, (toggle_debug_mode, /*update_physics_gizmos*/));
@@ -140,17 +142,17 @@ mod gizmos {
     }
 }
 
-mod turret {
+mod spaceship {
     use super::*;
-    use nova_gameplay::sections::turret_section::*;
+    use nova_gameplay::{prelude::SpaceshipRootMarker, sections::turret_section::*};
 
-    pub struct DebugTurretSectionPlugin;
+    pub struct DebugSpaceshipSectionPlugin;
 
-    impl Plugin for DebugTurretSectionPlugin {
+    impl Plugin for DebugSpaceshipSectionPlugin {
         fn build(&self, app: &mut App) {
             app.add_systems(
                 Update,
-                (debug_draw_barrel_direction, debug_gizmos_turret_forward)
+                (debug_draw_barrel_direction, debug_gizmos_turret_forward, debug_gizmos_spaceship_forward)
                     .run_if(resource_equals(DebugEnabled(true))),
             );
         }
@@ -183,6 +185,17 @@ mod turret {
                 let dir = (target - origin).normalize() * DEBUG_LINE_LENGTH;
                 gizmos.line(origin, origin + dir, Color::srgb(0.9, 0.9, 0.1));
             }
+        }
+    }
+
+    fn debug_gizmos_spaceship_forward(
+        mut gizmos: Gizmos,
+        q_spaceship: Query<&GlobalTransform, With<SpaceshipRootMarker>>,
+    ) {
+        for transform in &q_spaceship {
+            let origin = transform.translation();
+            let dir = transform.forward() * DEBUG_LINE_LENGTH;
+            gizmos.line(origin, origin + dir, Color::srgb(0.1, 0.9, 0.9));
         }
     }
 }

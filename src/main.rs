@@ -187,14 +187,16 @@ mod simulation {
         chase_camera: Single<(&Camera, &GlobalTransform), With<ChaseCamera>>,
         hud_camera: Single<(&Camera, &GlobalTransform), With<CameraHudMarker>>,
         point_rotation: Single<&PointRotationOutput, With<SpaceshipRotationInputActiveMarker>>,
+        spaceship: Single<&GlobalTransform, With<SpaceshipRootMarker>>,
     ) {
         let mut indicator = indicator.into_inner();
         let (chase_camera, camera_transform) = chase_camera.into_inner();
         let (hud_camera, hud_camera_transform) = hud_camera.into_inner();
         let rotation = point_rotation.into_inner();
+        let spaceship_transform = spaceship.into_inner();
 
         let forward = **rotation * -Vec3::Z;
-        let spaceship_pos = camera_transform.translation() + forward * 200.0;
+        let spaceship_pos = spaceship_transform.translation() + forward * 200.0;
 
         let Ok(coords) = chase_camera.world_to_viewport(camera_transform, spaceship_pos) else {
             return;
@@ -336,6 +338,7 @@ mod simulation {
                 brightness: 1000.0,
             },
             RenderLayers::layer(0),
+            IsDefaultUiCamera,
         ));
 
         commands.spawn((
