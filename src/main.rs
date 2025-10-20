@@ -150,36 +150,60 @@ mod simulation {
     #[derive(Component, Debug, Clone)]
     struct CameraHudMarker;
 
-    #[derive(Component, Debug, Clone)]
-    struct SpaceshipForwardIndicatorMarker;
+    #[derive(Component, Debug, Deref, DerefMut, Clone)]
+    struct SpaceshipForwardIndicatorMarker(f32);
 
     #[derive(Component, Debug, Clone)]
     struct SpaceshipCursorIndicatorMarker;
 
     fn update_spaceship_forward_hud(
-        indicator: Single<&mut Transform, With<SpaceshipForwardIndicatorMarker>>,
+        mut q_indicator: Query<(&mut Transform, &SpaceshipForwardIndicatorMarker)>,
         chase_camera: Single<(&Camera, &GlobalTransform), With<ChaseCamera>>,
         hud_camera: Single<(&Camera, &GlobalTransform), With<CameraHudMarker>>,
-        spaceship: Single<&GlobalTransform, With<SpaceshipRootMarker>>,
+        spaceship: Single<(&GlobalTransform, &LinearVelocity) , With<SpaceshipRootMarker>>,
     ) {
-        let mut indicator = indicator.into_inner();
         let (chase_camera, camera_transform) = chase_camera.into_inner();
-        let spaceship_transform = spaceship.into_inner();
+        let (spaceship_transform, spaceship_velocity) = spaceship.into_inner();
         let (hud_camera, hud_camera_transform) = hud_camera.into_inner();
 
         let spaceship_pos = spaceship_transform.translation();
-        let spaceship_fwd = spaceship_transform.forward();
-        let spaceship_pos = spaceship_pos + spaceship_fwd * 200.0;
+        let spaceship_vel = **spaceship_velocity;
+        let spaceship_dir = spaceship_vel.normalize_or_zero();
 
-        let Ok(coords) = chase_camera.world_to_viewport(camera_transform, spaceship_pos) else {
+        let Ok(spaceship_screen_coords) =
+            chase_camera.world_to_viewport(camera_transform, spaceship_pos)
+        else {
             return;
         };
 
-        let Ok(hud_pos) = hud_camera.viewport_to_world_2d(hud_camera_transform, coords) else {
+        let Ok(spaceship_hud_pos) =
+            hud_camera.viewport_to_world_2d(hud_camera_transform, spaceship_screen_coords)
+        else {
             return;
         };
 
-        indicator.translation = hud_pos.extend(0.0);
+        if spaceship_dir == Vec3::ZERO {
+            // TODO: Handle zero velocity
+            return;
+        }
+
+        for (mut indicator_transform, indicator_marker) in &mut q_indicator {
+            let predicted_pos = spaceship_pos + spaceship_dir * **indicator_marker as f32;
+
+            let Ok(coords) = chase_camera.world_to_viewport(camera_transform, predicted_pos) else {
+                continue;
+            };
+
+            let Ok(hud_pos) = hud_camera.viewport_to_world_2d(hud_camera_transform, coords) else {
+                continue;
+            };
+
+            let dir = spaceship_hud_pos - hud_pos;
+            let angle = dir.y.atan2(dir.x) + std::f32::consts::FRAC_PI_2;
+
+            indicator_transform.translation = hud_pos.extend(0.0);
+            indicator_transform.rotation = Quat::from_rotation_z(angle);
+        }
     }
 
     fn update_spaceship_cursor_indicator_hud(
@@ -356,18 +380,21 @@ mod simulation {
             RenderLayers::layer(1),
         ));
 
-        commands.spawn((
-            DespawnOnExit(super::SceneState::Simulation),
-            Name::new("Spaceship Cursor Indicator"),
-            SpaceshipForwardIndicatorMarker,
-            Sprite {
-                image: game_assets.spaceship_forward.clone(),
-                custom_size: Some(Vec2::new(64.0, 64.0)),
-                ..default()
-            },
-            Transform::from_xyz(0.0, 0.0, 0.0),
-            RenderLayers::layer(1),
-        ));
+        for i in 1..=3 {
+            let seconds = (i * i * i) as f32;
+            commands.spawn((
+                DespawnOnExit(super::SceneState::Simulation),
+                Name::new("Spaceship Cursor Indicator"),
+                SpaceshipForwardIndicatorMarker(seconds),
+                Sprite {
+                    image: game_assets.spaceship_forward.clone(),
+                    custom_size: Some(Vec2::new(64.0, 64.0)),
+                    ..default()
+                },
+                Transform::from_xyz(0.0, 0.0, 0.0),
+                RenderLayers::layer(1),
+            ));
+        }
 
         commands.spawn((
             DespawnOnExit(super::SceneState::Simulation),

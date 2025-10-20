@@ -44,6 +44,8 @@ pub struct GameAssets {
     pub turret_barrel_01: Handle<Scene>,
     #[asset(path = "images/Direction.png")]
     pub spaceship_cursor: Handle<Image>,
-    #[asset(path = "images/Target.png")]
+    #[asset(path = "images/Heading.png")]
     pub spaceship_forward: Handle<Image>,
+    #[asset(path = "images/Target.png")]
+    pub world_target: Handle<Image>,
 }
