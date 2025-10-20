@@ -144,7 +144,7 @@ mod simulation {
                 .chain(),
         );
 
-        app.add_systems(Update, (update_spaceship_forward_hud, update_spaceship_cursor_indicator_hud));
+        app.add_systems(FixedUpdate, (update_spaceship_forward_hud, update_spaceship_cursor_indicator_hud));
     }
 
     #[derive(Component, Debug, Clone)]
