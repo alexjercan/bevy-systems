@@ -42,4 +42,8 @@ pub struct GameAssets {
     pub turret_pitch_01: Handle<Scene>,
     #[asset(path = "gltf/turret-barrel-01.glb#Scene0")]
     pub turret_barrel_01: Handle<Scene>,
+    #[asset(path = "images/Direction.png")]
+    pub spaceship_cursor: Handle<Image>,
+    #[asset(path = "images/Target.png")]
+    pub spaceship_forward: Handle<Image>,
 }

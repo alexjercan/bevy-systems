@@ -29,9 +29,9 @@ impl Plugin for DebugPlugin {
         app.add_plugins(inspector::InpsectorDebugPlugin);
         app.add_plugins(gizmos::DebugGizmosPlugin);
         app.add_plugins(turret::DebugTurretSectionPlugin);
-        app.add_plugins(avian3d::prelude::PhysicsDebugPlugin::default());
+        // app.add_plugins(avian3d::prelude::PhysicsDebugPlugin::default());
 
-        app.add_systems(Update, (toggle_debug_mode, update_physics_gizmos));
+        app.add_systems(Update, (toggle_debug_mode, /*update_physics_gizmos*/));
     }
 }
 
@@ -41,14 +41,14 @@ fn toggle_debug_mode(mut debug: ResMut<DebugEnabled>, keyboard: Res<ButtonInput<
     }
 }
 
-fn update_physics_gizmos(debug: Res<DebugEnabled>, mut store: ResMut<GizmoConfigStore>) {
-    if debug.is_changed() {
-        store
-            .config_mut::<avian3d::prelude::PhysicsGizmos>()
-            .0
-            .enabled = **debug;
-    }
-}
+// fn update_physics_gizmos(debug: Res<DebugEnabled>, mut store: ResMut<GizmoConfigStore>) {
+//     if debug.is_changed() {
+//         store
+//             .config_mut::<avian3d::prelude::PhysicsGizmos>()
+//             .0
+//             .enabled = **debug;
+//     }
+// }
 
 mod inspector {
     use super::*;

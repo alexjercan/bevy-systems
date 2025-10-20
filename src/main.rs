@@ -106,8 +106,7 @@ fn on_projectile_input(
 mod simulation {
     use avian3d::prelude::*;
     use bevy::{
-        prelude::*,
-        window::{CursorGrabMode, CursorOptions, PrimaryWindow},
+        camera::visibility::RenderLayers, prelude::*, window::{CursorGrabMode, CursorOptions, PrimaryWindow}
     };
     use bevy_enhanced_input::prelude::*;
     use nova_protocol::prelude::*;
@@ -144,6 +143,68 @@ mod simulation {
             )
                 .chain(),
         );
+
+        app.add_systems(Update, (update_spaceship_forward_hud, update_spaceship_cursor_indicator_hud));
+    }
+
+    #[derive(Component, Debug, Clone)]
+    struct CameraHudMarker;
+
+    #[derive(Component, Debug, Clone)]
+    struct SpaceshipForwardIndicatorMarker;
+
+    #[derive(Component, Debug, Clone)]
+    struct SpaceshipCursorIndicatorMarker;
+
+    fn update_spaceship_forward_hud(
+        indicator: Single<&mut Transform, With<SpaceshipForwardIndicatorMarker>>,
+        chase_camera: Single<(&Camera, &GlobalTransform), With<ChaseCamera>>,
+        hud_camera: Single<(&Camera, &GlobalTransform), With<CameraHudMarker>>,
+        spaceship: Single<&GlobalTransform, With<SpaceshipRootMarker>>,
+    ) {
+        let mut indicator = indicator.into_inner();
+        let (chase_camera, camera_transform) = chase_camera.into_inner();
+        let spaceship_transform = spaceship.into_inner();
+        let (hud_camera, hud_camera_transform) = hud_camera.into_inner();
+
+        let spaceship_pos = spaceship_transform.translation();
+        let spaceship_fwd = spaceship_transform.forward();
+        let spaceship_pos = spaceship_pos + spaceship_fwd * 200.0;
+
+        let Ok(coords) = chase_camera.world_to_viewport(camera_transform, spaceship_pos) else {
+            return;
+        };
+
+        let Ok(hud_pos) = hud_camera.viewport_to_world_2d(hud_camera_transform, coords) else {
+            return;
+        };
+
+        indicator.translation = hud_pos.extend(0.0);
+    }
+
+    fn update_spaceship_cursor_indicator_hud(
+        indicator: Single<&mut Transform, With<SpaceshipCursorIndicatorMarker>>,
+        chase_camera: Single<(&Camera, &GlobalTransform), With<ChaseCamera>>,
+        hud_camera: Single<(&Camera, &GlobalTransform), With<CameraHudMarker>>,
+        point_rotation: Single<&PointRotationOutput, With<SpaceshipRotationInputActiveMarker>>,
+    ) {
+        let mut indicator = indicator.into_inner();
+        let (chase_camera, camera_transform) = chase_camera.into_inner();
+        let (hud_camera, hud_camera_transform) = hud_camera.into_inner();
+        let rotation = point_rotation.into_inner();
+
+        let forward = **rotation * -Vec3::Z;
+        let spaceship_pos = camera_transform.translation() + forward * 200.0;
+
+        let Ok(coords) = chase_camera.world_to_viewport(camera_transform, spaceship_pos) else {
+            return;
+        };
+
+        let Ok(hud_pos) = hud_camera.viewport_to_world_2d(hud_camera_transform, coords) else {
+            return;
+        };
+
+        indicator.translation = hud_pos.extend(0.0);
     }
 
     fn update_chase_camera_input(
@@ -274,6 +335,48 @@ mod simulation {
                 cubemap: game_assets.cubemap.clone(),
                 brightness: 1000.0,
             },
+            RenderLayers::layer(0),
+        ));
+
+        commands.spawn((
+            DespawnOnExit(super::SceneState::Simulation),
+            Name::new("Camera HUD"),
+            CameraHudMarker,
+            Camera2d,
+            Camera {
+                order: 1,
+                // Don't draw anything in the background, to see the previous camera.
+                clear_color: ClearColorConfig::Custom(Color::srgba(0.0, 0.0, 0.0, 0.0)),
+                ..default()
+            },
+            // This camera will only render entities which are on the same render layer.
+            RenderLayers::layer(1),
+        ));
+
+        commands.spawn((
+            DespawnOnExit(super::SceneState::Simulation),
+            Name::new("Spaceship Cursor Indicator"),
+            SpaceshipForwardIndicatorMarker,
+            Sprite {
+                image: game_assets.spaceship_forward.clone(),
+                custom_size: Some(Vec2::new(64.0, 64.0)),
+                ..default()
+            },
+            Transform::from_xyz(0.0, 0.0, 0.0),
+            RenderLayers::layer(1),
+        ));
+
+        commands.spawn((
+            DespawnOnExit(super::SceneState::Simulation),
+            Name::new("Spaceship Cursor"),
+            SpaceshipCursorIndicatorMarker,
+            Sprite {
+                image: game_assets.spaceship_cursor.clone(),
+                custom_size: Some(Vec2::new(32.0, 32.0)),
+                ..default()
+            },
+            Transform::from_xyz(0.0, 0.0, 0.0),
+            RenderLayers::layer(1),
         ));
 
         // Spawn a target entity to visualize the target rotation
@@ -325,17 +428,19 @@ mod simulation {
                 rng.random_range(0.0..1.0),
             );
 
-            let planet = commands.spawn((
-                DespawnOnExit(super::SceneState::Simulation),
-                Name::new(format!("Planet {}", i)),
-                Transform::from_translation(pos),
-                GlobalTransform::default(),
-                Mesh3d(meshes.add(Sphere::new(radius))),
-                MeshMaterial3d(materials.add(color)),
-                Collider::sphere(radius),
-                RigidBody::Static,
-                Health::new(100.0),
-            )).id();
+            let planet = commands
+                .spawn((
+                    DespawnOnExit(super::SceneState::Simulation),
+                    Name::new(format!("Planet {}", i)),
+                    Transform::from_translation(pos),
+                    GlobalTransform::default(),
+                    Mesh3d(meshes.add(Sphere::new(radius))),
+                    MeshMaterial3d(materials.add(color)),
+                    Collider::sphere(radius),
+                    RigidBody::Static,
+                    Health::new(100.0),
+                ))
+                .id();
 
             commands.entity(planet).insert(ExplodeOnDestroy {
                 mesh_entity: Some(planet),
@@ -356,18 +461,20 @@ mod simulation {
                 rng.random_range(0.0..0.6),
             );
 
-            let satellite = commands.spawn((
-                DespawnOnExit(super::SceneState::Simulation),
-                Name::new(format!("Satellite {}", i)),
-                Transform::from_translation(pos),
-                GlobalTransform::default(),
-                Mesh3d(meshes.add(Cuboid::new(size, size, size))),
-                MeshMaterial3d(materials.add(color)),
-                Collider::cuboid(size, size, size),
-                ColliderDensity(1.0),
-                RigidBody::Dynamic,
-                Health::new(100.0),
-            )).id();
+            let satellite = commands
+                .spawn((
+                    DespawnOnExit(super::SceneState::Simulation),
+                    Name::new(format!("Satellite {}", i)),
+                    Transform::from_translation(pos),
+                    GlobalTransform::default(),
+                    Mesh3d(meshes.add(Cuboid::new(size, size, size))),
+                    MeshMaterial3d(materials.add(color)),
+                    Collider::cuboid(size, size, size),
+                    ColliderDensity(1.0),
+                    RigidBody::Dynamic,
+                    Health::new(100.0),
+                ))
+                .id();
 
             commands.entity(satellite).insert(ExplodeOnDestroy {
                 mesh_entity: Some(satellite),
