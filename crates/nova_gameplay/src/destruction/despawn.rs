@@ -2,9 +2,9 @@ use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
 pub mod prelude {
+    pub use super::DespawnOnDestroy;
     pub use super::DespawnOnDestroyPlugin;
     pub use super::DespawnOnDestroyPluginSet;
-    pub use super::DespawnOnDestroy;
 }
 
 #[derive(Component, Default, Clone, Debug, Reflect)]
@@ -30,7 +30,10 @@ fn handle_despawn_on_destroy(
     debug!("Handling destruction for entity {:?}", entity);
 
     let Ok(_) = q_despawn.get(entity) else {
-        warn!("Destroyed entity {:?} missing DespawnOnDestroy component, skipping despawn.", entity);
+        warn!(
+            "Destroyed entity {:?} missing DespawnOnDestroy component, skipping despawn.",
+            entity
+        );
         return;
     };
 

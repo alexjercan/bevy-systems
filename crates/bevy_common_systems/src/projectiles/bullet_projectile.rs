@@ -10,11 +10,11 @@ use bevy::prelude::*;
 pub mod prelude {
     pub use super::bullet_projectile;
     pub use super::BulletProjectileConfig;
+    pub use super::BulletProjectileHit;
     pub use super::BulletProjectileMarker;
     pub use super::BulletProjectilePlugin;
     pub use super::BulletProjectilePluginSet;
     pub use super::BulletProjectileRenderMesh;
-    pub use super::BulletProjectileHit;
 }
 
 /// Configuration for a bullet projectile.

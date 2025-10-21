@@ -7,9 +7,9 @@ use std::collections::VecDeque;
 
 pub mod prelude {
     pub use super::ExplodeOnDestroy;
-    pub use super::FragmentMeshMarker;
     pub use super::ExplodeOnDestroyPlugin;
     pub use super::ExplodeOnDestroyPluginSet;
+    pub use super::FragmentMeshMarker;
 }
 
 const MAX_ITERATIONS: usize = 10;
@@ -52,7 +52,12 @@ fn handle_explosion(
     add: On<Add, DestroyedMarker>,
     mut commands: Commands,
     q_explode: Query<&ExplodeOnDestroy>,
-    mut q_mesh: Query<(&GlobalTransform, &Mesh3d, &MeshMaterial3d<StandardMaterial>, &mut Visibility)>,
+    mut q_mesh: Query<(
+        &GlobalTransform,
+        &Mesh3d,
+        &MeshMaterial3d<StandardMaterial>,
+        &mut Visibility,
+    )>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     let entity = add.entity;
@@ -94,7 +99,9 @@ fn handle_explosion(
 
     *visibility = Visibility::Hidden;
 
-    let Some(fragments) = slice_mesh_into_fragments(&mesh.clone(), explode.fragment_count, MAX_ITERATIONS) else {
+    let Some(fragments) =
+        slice_mesh_into_fragments(&mesh.clone(), explode.fragment_count, MAX_ITERATIONS)
+    else {
         warn!(
             "Failed to slice mesh for entity {:?} into fragments.",
             entity
@@ -121,7 +128,11 @@ fn handle_explosion(
     }
 }
 
-fn slice_mesh_into_fragments(original: &Mesh, fragment_count: usize, max_iterations: usize) -> Option<Vec<(Mesh, Vec3)>> {
+fn slice_mesh_into_fragments(
+    original: &Mesh,
+    fragment_count: usize,
+    max_iterations: usize,
+) -> Option<Vec<(Mesh, Vec3)>> {
     let mut queue = VecDeque::from([(original.clone(), Vec3::ZERO)]);
     let mut rng = rand::rng();
 
@@ -137,7 +148,9 @@ fn slice_mesh_into_fragments(original: &Mesh, fragment_count: usize, max_iterati
             };
 
             let Some((pos, neg)) = mesh_slice(&mesh, plane_normal, plane_point) else {
-                warn!("Failed to slice mesh into fragments... implement better code next time, bruh.");
+                warn!(
+                    "Failed to slice mesh into fragments... implement better code next time, bruh."
+                );
                 continue;
             };
 

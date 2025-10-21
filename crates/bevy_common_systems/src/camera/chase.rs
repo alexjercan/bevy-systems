@@ -27,7 +27,7 @@ impl Default for ChaseCamera {
         Self {
             offset: Vec3::new(0.0, 5.0, -20.0),
             focus_offset: Vec3::new(0.0, 0.0, 20.0),
-            smoothing: 0.1,
+            smoothing: 0.0,
         }
     }
 }
