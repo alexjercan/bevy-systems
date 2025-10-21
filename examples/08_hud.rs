@@ -33,8 +33,8 @@ fn main() {
     app.add_systems(
         Update,
         (
-            update_velocity_hud_input.before(SphereOrbitPluginSet),
-            sync_orbit_state.after(SphereOrbitPluginSet),
+            update_velocity_hud_input.before(DirectionalSphereOrbitPluginSet),
+            sync_orbit_state.after(DirectionalSphereOrbitPluginSet),
             direction_shader_update_system,
         ),
     );
