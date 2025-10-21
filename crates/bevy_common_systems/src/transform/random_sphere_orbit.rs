@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use rand::prelude::*;
+use crate::meth::prelude::*;
 
 pub mod prelude {
     pub use super::{
@@ -162,35 +163,5 @@ fn random_sphere_update_output(
     for (orbit, state, mut output) in query.iter_mut() {
         let pos = spherical_to_cartesian(orbit.radius, state.theta, state.phi) + orbit.center;
         output.0 = pos;
-    }
-}
-
-fn spherical_to_cartesian(radius: f32, theta: f32, phi: f32) -> Vec3 {
-    let cos_phi = phi.cos();
-    let x = radius * cos_phi * theta.cos();
-    let y = radius * phi;
-    let z = radius * cos_phi * theta.sin();
-    Vec3::new(x, y, z)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_spherical_to_cartesian() {
-        let radius = 1.0;
-        let theta = 0.0;
-        let phi = 0.0;
-        let pos = spherical_to_cartesian(radius, theta, phi);
-        assert!(pos.abs_diff_eq(Vec3::new(1.0, 0.0, 0.0), 1e-6));
-
-        let theta = std::f32::consts::FRAC_PI_2;
-        let pos = spherical_to_cartesian(radius, theta, phi);
-        assert!(pos.abs_diff_eq(Vec3::new(0.0, 0.0, 1.0), 1e-6));
-
-        let phi = std::f32::consts::FRAC_PI_2;
-        let pos = spherical_to_cartesian(radius, theta, phi);
-        assert!(pos.abs_diff_eq(Vec3::new(0.0, std::f32::consts::FRAC_PI_2, 0.0), 1e-6));
     }
 }

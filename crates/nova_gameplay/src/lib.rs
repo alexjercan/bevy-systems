@@ -45,6 +45,9 @@ impl Plugin for GameplayPlugin {
         app.add_plugins(bevy_common_systems::prelude::SphereRandomOrbitPlugin);
         // Rotation Plugin for the turret facing direction
         app.add_plugins(bevy_common_systems::prelude::SmoothLookRotationPlugin);
+        // Sphere Orbit Plugin
+        app.add_plugins(bevy_common_systems::prelude::SphereOrbitPlugin);
+        app.add_plugins(bevy_common_systems::prelude::DirectionalSphereOrbitPlugin);
         // Other helper plugins
         app.add_plugins(bevy_common_systems::prelude::TempEntityPlugin);
         // Core Mechanics
