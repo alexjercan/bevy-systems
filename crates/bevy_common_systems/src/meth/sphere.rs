@@ -19,11 +19,7 @@ pub fn direction_to_spherical(direction: Vec3) -> (f32, f32) {
     let horiz = (x * x + z * z).sqrt();
 
     let eps = 1e-6_f32;
-    let theta = if horiz <= eps {
-        0.0
-    } else {
-        x.atan2(-z)
-    };
+    let theta = if horiz <= eps { 0.0 } else { x.atan2(-z) };
     let phi = y.atan2(horiz);
 
     (theta, phi)

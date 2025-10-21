@@ -19,7 +19,10 @@ pub struct ProjectileDamageGluePlugin;
 
 impl Plugin for ProjectileDamageGluePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, projectile_hit_to_damage.in_set(ProjectileDamageGluePluginSet));
+        app.add_systems(
+            Update,
+            projectile_hit_to_damage.in_set(ProjectileDamageGluePluginSet),
+        );
     }
 }
 

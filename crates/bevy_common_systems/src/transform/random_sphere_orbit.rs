@@ -1,8 +1,8 @@
 // TODO: Refactor to not apply the Transform directly, but rather have an output component
 
+use crate::meth::prelude::*;
 use bevy::prelude::*;
 use rand::prelude::*;
-use crate::meth::prelude::*;
 
 pub mod prelude {
     pub use super::{

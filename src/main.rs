@@ -106,7 +106,11 @@ fn on_projectile_input(
 mod simulation {
     use avian3d::prelude::*;
     use bevy::{
-        pbr::{ExtendedMaterial, MaterialExtension}, prelude::*, render::render_resource::AsBindGroup, shader::ShaderRef, window::{CursorGrabMode, CursorOptions, PrimaryWindow}
+        pbr::{ExtendedMaterial, MaterialExtension},
+        prelude::*,
+        render::render_resource::AsBindGroup,
+        shader::ShaderRef,
+        window::{CursorGrabMode, CursorOptions, PrimaryWindow},
     };
     use bevy_enhanced_input::prelude::*;
     use nova_protocol::prelude::*;
@@ -119,7 +123,12 @@ mod simulation {
 
         app.add_systems(
             OnEnter(super::SceneState::Simulation),
-            (setup_scene, setup_hud, setup_simple_scene, setup_grab_cursor),
+            (
+                setup_scene,
+                setup_hud,
+                setup_simple_scene,
+                setup_grab_cursor,
+            ),
         );
 
         // Setup the input system to get input from the mouse and keyboard.
@@ -211,7 +220,10 @@ mod simulation {
     fn sync_orbit_state(
         mut q_orbit: Query<
             (&mut Transform, &DirectionalSphereOrbitOutput),
-            (Changed<DirectionalSphereOrbitOutput>, Without<SpaceshipRootMarker>),
+            (
+                Changed<DirectionalSphereOrbitOutput>,
+                Without<SpaceshipRootMarker>,
+            ),
         >,
         spaceship: Single<&Transform, With<SpaceshipRootMarker>>,
     ) {

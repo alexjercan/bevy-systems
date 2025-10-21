@@ -3,16 +3,16 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-pub mod spaceship;
+pub mod destruction;
 pub mod projectile_damage;
 pub mod sections;
-pub mod destruction;
+pub mod spaceship;
 
 pub mod prelude {
-    pub use super::sections::prelude::*;
-    pub use super::projectile_damage::prelude::*;
-    pub use super::spaceship::prelude::*;
     pub use super::destruction::prelude::*;
+    pub use super::projectile_damage::prelude::*;
+    pub use super::sections::prelude::*;
+    pub use super::spaceship::prelude::*;
 
     pub use super::GameplayPlugin;
 }
@@ -27,7 +27,9 @@ impl Plugin for GameplayPlugin {
     fn build(&self, app: &mut App) {
         // We need to enable the physics plugins to have access to RigidBody and other components.
         // We will also disable gravity for this example, since we are in space, duh.
-        app.add_plugins(PhysicsPlugins::default().set(PhysicsInterpolationPlugin::interpolate_all()));
+        app.add_plugins(
+            PhysicsPlugins::default().set(PhysicsInterpolationPlugin::interpolate_all()),
+        );
         app.add_plugins(PhysicsPickingPlugin);
         app.insert_resource(Gravity::ZERO);
 
@@ -55,7 +57,9 @@ impl Plugin for GameplayPlugin {
         app.add_plugins(bevy_common_systems::prelude::HealthPlugin);
 
         // Glue Plugins
-        app.add_plugins(spaceship::SpaceshipPlugin { render: self.render });
+        app.add_plugins(spaceship::SpaceshipPlugin {
+            render: self.render,
+        });
         app.add_plugins(projectile_damage::ProjectileDamageGluePlugin);
         app.add_plugins(destruction::DestructionHealthPlugin);
     }

@@ -117,9 +117,10 @@ fn sync_orbit_state(
 fn direction_shader_update_system(
     spaceship: Single<&LinearVelocity, With<SpaceshipRootMarker>>,
     q_hud: Query<Entity, With<VelocityHudMarker>>,
-    q_render: Query<
-        (&MeshMaterial3d<ExtendedMaterial<StandardMaterial, DirectionMagnitudeMaterial>>, &ChildOf),
-    >,
+    q_render: Query<(
+        &MeshMaterial3d<ExtendedMaterial<StandardMaterial, DirectionMagnitudeMaterial>>,
+        &ChildOf,
+    )>,
     mut materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, DirectionMagnitudeMaterial>>>,
 ) {
     let spaceship_velocity = spaceship.into_inner();

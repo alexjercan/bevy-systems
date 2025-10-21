@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use crate::meth::prelude::*;
+use bevy::prelude::*;
 
 pub mod prelude {
     pub use super::{
@@ -52,10 +52,7 @@ impl Plugin for SphereOrbitPlugin {
 
         app.add_systems(
             Update,
-            (
-                sphere_update_state,
-                sphere_update_output,
-            )
+            (sphere_update_state, sphere_update_output)
                 .chain()
                 .in_set(SphereOrbitPluginSet),
         );
@@ -92,11 +89,7 @@ fn initialize_sphere_orbit_system(
 
 fn sphere_update_state(
     time: Res<Time>,
-    mut query: Query<(
-        &SphereOrbit,
-        &mut SphereOrbitState,
-        &SphereOrbitInput,
-    )>,
+    mut query: Query<(&SphereOrbit, &mut SphereOrbitState, &SphereOrbitInput)>,
 ) {
     let dt = time.delta_secs();
 
@@ -111,11 +104,7 @@ fn sphere_update_state(
 }
 
 fn sphere_update_output(
-    mut query: Query<(
-        &SphereOrbit,
-        &SphereOrbitState,
-        &mut SphereOrbitOutput,
-    )>,
+    mut query: Query<(&SphereOrbit, &SphereOrbitState, &mut SphereOrbitOutput)>,
 ) {
     for (orbit, state, mut output) in query.iter_mut() {
         let pos = spherical_to_cartesian(orbit.radius, state.theta, state.phi) + orbit.center;

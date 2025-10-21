@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use crate::meth::prelude::*;
+use bevy::prelude::*;
 
 pub mod prelude {
     pub use super::{
@@ -72,14 +72,10 @@ fn initialize_sphere_orbit_system(
     let (theta, phi) = direction_to_spherical(orbit.direction);
 
     commands.entity(entity).insert((
-        DirectionalSphereOrbitState {
-            theta,
-            phi,
-        },
+        DirectionalSphereOrbitState { theta, phi },
         DirectionalSphereOrbitInput(orbit.direction),
         DirectionalSphereOrbitOutput(
-            spherical_to_cartesian(orbit.radius, theta, phi)
-                + orbit.center,
+            spherical_to_cartesian(orbit.radius, theta, phi) + orbit.center,
         ),
     ));
 }

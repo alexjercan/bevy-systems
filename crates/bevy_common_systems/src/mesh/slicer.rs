@@ -44,14 +44,12 @@ impl MeshBuilder {
             return self;
         }
 
-        let center_pos = boundary
-            .iter()
-            .fold(Vec3::ZERO, |acc, v| acc + v.position)
-            / (boundary.len() as f32);
+        let center_pos =
+            boundary.iter().fold(Vec3::ZERO, |acc, v| acc + v.position) / (boundary.len() as f32);
         let center = Vertex {
             position: center_pos,
             normal: Vec3::ZERO, // Will be recalculated
-            uv: Vec2::ZERO,    // Placeholder
+            uv: Vec2::ZERO,     // Placeholder
         };
 
         // TODO: optionally implement reordering logic if boundary isn't guaranteed CCW
@@ -233,7 +231,7 @@ pub fn mesh_slice(mesh: &Mesh, plane_normal: Vec3, plane_point: Vec3) -> Option<
         match triangle_slice(tri, plane_normal, plane_point) {
             (TriangleSliceResult::Single(tri), true) => {
                 positive_mesh_builder.add_triangle(tri);
-            },
+            }
             (TriangleSliceResult::Single(tri), false) => {
                 negative_mesh_builder.add_triangle(tri);
             }
