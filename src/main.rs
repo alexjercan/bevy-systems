@@ -140,13 +140,13 @@ mod simulation {
             (
                 update_chase_camera_input.before(ChaseCameraPluginSet),
                 update_velocity_hud_input.before(DirectionalSphereOrbitPluginSet),
-                sync_orbit_state.after(DirectionalSphereOrbitPluginSet),
-                direction_shader_update_system,
                 (
                     update_spaceship_target_rotation_torque,
                     update_turret_target_input,
                 )
                     .before(SpaceshipPluginSet),
+                sync_orbit_state.after(DirectionalSphereOrbitPluginSet),
+                direction_shader_update_system,
             )
                 .chain(),
         );
@@ -211,12 +211,12 @@ mod simulation {
     fn sync_orbit_state(
         mut q_orbit: Query<
             (&mut Transform, &DirectionalSphereOrbitOutput),
-            Changed<DirectionalSphereOrbitOutput>,
+            (Changed<DirectionalSphereOrbitOutput>, Without<SpaceshipRootMarker>),
         >,
-        spaceship: Single<&GlobalTransform, With<SpaceshipRootMarker>>,
+        spaceship: Single<&Transform, With<SpaceshipRootMarker>>,
     ) {
         let spaceship_transform = spaceship.into_inner();
-        let spaceship_origin = spaceship_transform.translation();
+        let spaceship_origin = spaceship_transform.translation;
 
         for (mut transform, output) in &mut q_orbit {
             let dir = **output;
@@ -237,7 +237,7 @@ mod simulation {
         >,
     ) {
         let spaceship_velocity = spaceship.into_inner();
-        let magnitude = spaceship_velocity.length();
+        let magnitude = spaceship_velocity.length() / 100.0;
 
         for (material, &ChildOf(parent)) in &q_render {
             let Ok(_) = q_hud.get(parent) else {

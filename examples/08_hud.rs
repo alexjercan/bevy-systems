@@ -56,7 +56,7 @@ fn setup_hud(
         Name::new("HUD"),
         VelocityHudMarker,
         DirectionalSphereOrbit {
-            radius: 10.0,
+            radius: 5.0,
             ..default()
         },
         Transform::default(),
