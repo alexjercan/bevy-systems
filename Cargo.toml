@@ -1,6 +1,6 @@
 [package]
 name = "nova-protocol"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["jercan_alex27@yahoo.com"]
 edition = "2021"
 license = "MIT"
