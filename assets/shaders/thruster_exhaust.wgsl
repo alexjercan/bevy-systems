@@ -42,9 +42,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let r: f32 = length(vertex.position.xz);
     let max_r: f32 = material.thruster_exhaust_radius;
     let f: f32 = clamp(smoothstep(max_r, 0.0, r), 0.0, 1.0);
-    let h: f32 = f * material.thruster_exhaust_height;
 
-    let offset_amount = h * material.thruster_input;
+    let offset_amount = clamp(f * material.thruster_input, 0.0, material.thruster_exhaust_height);
     var pos = vertex.position + vec3<f32>(0.0, offset_amount, 0.0);
 
     var world_from_local = get_world_from_local(vertex.instance_index);

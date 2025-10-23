@@ -2,6 +2,8 @@
 
 pub mod setup;
 
+pub use nova_gameplay;
+
 pub mod prelude {
     pub use crate::setup::{new_gui_app, new_headless_app, GameStates};
     pub use bevy_common_systems::prelude::*;
