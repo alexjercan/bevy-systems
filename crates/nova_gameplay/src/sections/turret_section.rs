@@ -7,6 +7,7 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 
 use bevy_common_systems::prelude::*;
+use bevy_hanabi::prelude::*;
 
 pub mod prelude {
     pub use super::turret_section;
@@ -57,6 +58,8 @@ pub struct TurretSectionConfig {
     pub fire_rate: f32,
     /// The projectile configuration for the bullets fired by the turret.
     pub projectile: BulletProjectileConfig,
+    /// The muzzle particle effect when shooting.
+    pub muzzle_effect: Option<Handle<EffectAsset>>,
 }
 
 impl Default for TurretSectionConfig {
@@ -84,6 +87,7 @@ impl Default for TurretSectionConfig {
                 mass: 0.1,
                 render_mesh: None,
             },
+            muzzle_effect: None,
         }
     }
 }
@@ -102,6 +106,9 @@ struct TurretSectionBarrelRenderMesh(Option<Handle<Scene>>);
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 struct TurretSectionConfigHelper(TurretSectionConfig);
+
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+struct TurretSectionBarrelMuzzleEffect(Option<Handle<EffectAsset>>);
 
 /// Helper function to create a turret section entity bundle.
 pub fn turret_section(config: TurretSectionConfig) -> impl Bundle {
@@ -184,7 +191,10 @@ impl Plugin for TurretSectionPlugin {
             app.add_observer(insert_turret_yaw_rotator_render);
             app.add_observer(insert_turret_pitch_rotator_render);
             app.add_observer(insert_turret_barrel_render);
+            app.add_observer(insert_turret_barrel_muzzle_effect);
         }
+
+        app.add_observer(on_spawn_projectile);
 
         app.add_systems(
             Update,
@@ -350,6 +360,7 @@ fn insert_turret_section(
         .spawn((
             Name::new("Turret Barrel Muzzle"),
             TurretSectionBarrelMuzzleMarker,
+            TurretSectionBarrelMuzzleEffect(config.muzzle_effect.clone()),
             Transform::from_translation(config.muzzle_offset),
             Visibility::Inherited,
             children![(projectile_spawner(ProjectileSpawnerConfig {
@@ -712,6 +723,180 @@ fn insert_turret_barrel_render(
             });
         }
     }
+}
+
+fn insert_turret_barrel_muzzle_effect(
+    add: On<Add, TurretSectionBarrelMuzzleMarker>,
+    mut commands: Commands,
+    mut effects: ResMut<Assets<EffectAsset>>,
+    q_effect: Query<&TurretSectionBarrelMuzzleEffect, With<TurretSectionBarrelMuzzleMarker>>,
+) {
+    let entity = add.entity;
+    debug!(
+        "Inserting muzzle effect for TurretSectionBarrelMuzzleMarker: {:?}",
+        entity
+    );
+
+    let Ok(effect_handle) = q_effect.get(entity) else {
+        warn!(
+            "TurretSectionBarrelMuzzleMarker entity {:?} missing TurretSectionBarrelMuzzleEffect component",
+            entity
+        );
+        return;
+    };
+
+    match &**effect_handle {
+        Some(effect) => {
+            commands.entity(entity).insert((children![(
+                Name::new("Muzzle Effect"),
+                ParticleEffect::new(effect.clone()),
+                EffectProperties::default(),
+            ),],));
+        }
+        None => {
+            let spawner = SpawnerSettings::once(100.0.into())
+                // Disable starting emitting particles when the EffectSpawner is instantiated. We want
+                // complete control, and only emit when reset() is called.
+                .with_emit_on_start(false);
+
+            let writer = ExprWriter::new();
+
+            let age = writer.lit(0.).expr();
+            let init_age = SetAttributeModifier::new(Attribute::AGE, age);
+
+            // Give a bit of variation by randomizing the lifetime per particle
+            let lifetime = writer.lit(0.01).uniform(writer.lit(0.1)).expr();
+            let init_lifetime = SetAttributeModifier::new(Attribute::LIFETIME, lifetime);
+
+            // Bind the initial particle color to the value of the 'spawn_color' property
+            // when the particle spawns. The particle will keep that color afterward,
+            // even if the property changes, because the color will be saved
+            // per-particle (due to the Attribute::COLOR).
+            let spawn_color = writer.add_property("spawn_color", 0xFFFFFFFFu32.into());
+            let color = writer.prop(spawn_color).expr();
+            let init_color = SetAttributeModifier::new(Attribute::COLOR, color);
+
+            let normal = writer.add_property("normal", Vec3::ZERO.into());
+            let normal = writer.prop(normal);
+
+            // Set the position to be the collision point, which in this example is always
+            // the emitter position (0,0,0) at the ball center, minus the ball radius
+            // alongside the collision normal. Also raise particle to Z=0.2 so they appear
+            // above the black background box.
+            //   pos = -normal * BALL_RADIUS + Z * 0.2;
+            // let pos = normal.clone() * writer.lit(-BALL_RADIUS) + writer.lit(Vec3::Z * 0.2);
+            let pos = writer.lit(Vec3::ZERO);
+            let init_pos = SetAttributeModifier::new(Attribute::POSITION, pos.expr());
+
+            // Set the velocity to be a random direction mostly along the collision normal,
+            // but with some spread. This cheaply ensures that we spawn only particles
+            // inside the black background box (or almost; we ignore the edge case around
+            // the corners). An alternative would be to use something
+            // like a KillAabbModifier, but that would spawn particles and kill them
+            // immediately, wasting compute resources and GPU memory.
+            let spread_x = (writer.rand(ScalarType::Float) - writer.lit(0.5)) * writer.lit(0.2);
+            let spread_y = (writer.rand(ScalarType::Float) - writer.lit(0.5)) * writer.lit(0.2);
+            let spread_z = (writer.rand(ScalarType::Float) - writer.lit(0.5)) * writer.lit(0.2);
+            let spread = writer.lit(Vec3::X) * spread_x
+                + writer.lit(Vec3::Y) * spread_y
+                + writer.lit(Vec3::Z) * spread_z;
+            let speed = writer.rand(ScalarType::Float) * writer.lit(5.0);
+            let velocity = (normal + spread * writer.lit(2.5)).normalized() * speed;
+            let init_vel = SetAttributeModifier::new(Attribute::VELOCITY, velocity.expr());
+
+            let effect = effects.add(
+                EffectAsset::new(32768, spawner, writer.finish())
+                    .with_name("spawn_on_command")
+                    .init(init_pos)
+                    .init(init_vel)
+                    .init(init_age)
+                    .init(init_lifetime)
+                    .init(init_color)
+                    // Set a size of 3 (logical) pixels, constant in screen space, independent of projection
+                    .render(SetSizeModifier {
+                        size: Vec3::splat(3.).into(),
+                    })
+                    .render(ScreenSpaceSizeModifier),
+            );
+
+            commands.entity(entity).insert((children![(
+                Name::new("Muzzle Effect"),
+                ParticleEffect::new(effect),
+                EffectProperties::default(),
+            ),],));
+        }
+    }
+}
+
+fn on_spawn_projectile(
+    spawn: On<SpawnProjectile>,
+    q_spawner: Query<&ChildOf, With<ProjectileSpawnerMarker<BulletProjectileConfig>>>,
+    q_muzzle: Query<&GlobalTransform, With<TurretSectionBarrelMuzzleMarker>>,
+    mut q_effect: Query<
+        (&mut EffectProperties, &mut EffectSpawner, &ChildOf),
+        Without<TurretSectionBarrelMuzzleMarker>,
+    >,
+) {
+    let entity = spawn.entity;
+    let Ok(&ChildOf(muzzle)) = q_spawner.get(entity) else {
+        warn!(
+            "SpawnProjectile entity {:?} missing ProjectileSpawnerMarker component",
+            entity
+        );
+        return;
+    };
+
+    let Ok(muzzle_transform) = q_muzzle.get(muzzle) else {
+        warn!(
+            "ProjectileSpawner's parent entity {:?} missing TurretSectionBarrelMuzzleMarker component",
+            muzzle
+        );
+        return;
+    };
+
+    let Some((mut properties, mut effect_spawner, _)) = q_effect
+        .iter_mut()
+        .find(|(_, _, &ChildOf(parent))| parent == muzzle)
+    else {
+        warn!(
+            "TurretSectionBarrelMuzzleMarker entity {:?} missing EffectProperties or EffectSpawner component",
+            muzzle
+        );
+        return;
+    };
+
+    let normal = muzzle_transform.forward();
+
+    let p: f32 = rand::random();
+
+    let (r, g, b) = if p < 0.4 {
+        let r = 255;
+        let g = 240 + rand::random_range(0..16);
+        let b = 200 + rand::random_range(0..56);
+        (r, g, b)
+    } else if p < 0.75 {
+        let r = 255;
+        let g = rand::random_range(100..180);
+        let b = 0;
+        (r, g, b)
+    } else if p < 0.95 {
+        let r = 255;
+        let g = rand::random_range(50..120);
+        let b = 0;
+        (r, g, b)
+    } else {
+        let val = rand::random_range(30..80);
+        (val, val, val)
+    };
+    let color = 0xFF000000u32 | ((b as u32) << 16) | ((g as u32) << 8) | (r as u32);
+    properties.set("spawn_color", color.into());
+
+    // Set the collision normal
+    let normal = normal.normalize();
+    properties.set("normal", normal.into());
+
+    // Spawn the particles
+    effect_spawner.reset();
 }
 
 // TODO: move this thing to the debug crate

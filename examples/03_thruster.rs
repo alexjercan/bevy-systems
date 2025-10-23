@@ -40,21 +40,49 @@ fn on_thruster_input(
     }
 }
 
-fn setup_spaceship(mut commands: Commands) {
+fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {
     let entity = commands
         .spawn((spaceship_root(SpaceshipConfig { ..default() }),))
         .id();
 
-    commands.entity(entity).with_children(|parent| {
-        parent.spawn((
-            thruster_section(ThrusterSectionConfig {
-                magnitude: 1.0,
-                transform: Transform::from_xyz(0.0, 0.0, 0.0),
-                ..default()
-            }),
-            ThrusterInputKey(KeyCode::Digit1),
-        ));
-    });
+    let cube_size = 1;
+    for x in -cube_size..=cube_size {
+        for y in -cube_size..=cube_size {
+            for z in -cube_size..=cube_size {
+                commands.entity(entity).with_children(|parent| {
+                    parent.spawn((hull_section(HullSectionConfig {
+                        transform: Transform::from_xyz(
+                            x as f32 * 1.0,
+                            y as f32 * 1.0,
+                            z as f32 * 1.0,
+                        ),
+                        render_mesh: Some(game_assets.hull_01.clone()),
+                        ..default()
+                    }),));
+                });
+            }
+        }
+    }
+
+    let z = cube_size + 1;
+    for x in -cube_size..=cube_size {
+        for y in -cube_size..=cube_size {
+            commands.entity(entity).with_children(|parent| {
+                parent.spawn((
+                    thruster_section(ThrusterSectionConfig {
+                        magnitude: 1.0,
+                        transform: Transform::from_xyz(
+                            x as f32 * 1.0,
+                            y as f32 * 1.0,
+                            z as f32 * 1.0,
+                        ),
+                        ..default()
+                    }),
+                    ThrusterInputKey(KeyCode::Digit1),
+                ));
+            });
+        }
+    }
 }
 
 fn setup_camera(mut commands: Commands, game_assets: Res<GameAssets>) {

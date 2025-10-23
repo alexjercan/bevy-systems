@@ -33,6 +33,8 @@ impl Plugin for GameplayPlugin {
         app.add_plugins(PhysicsPickingPlugin);
         app.insert_resource(Gravity::ZERO);
 
+        app.add_plugins(bevy_hanabi::HanabiPlugin);
+
         // Bevy Common Systems - WASD Camera
         app.add_plugins(bevy_common_systems::prelude::WASDCameraPlugin);
         app.add_plugins(bevy_common_systems::prelude::WASDCameraControllerPlugin);
