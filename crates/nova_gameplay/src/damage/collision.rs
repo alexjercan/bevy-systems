@@ -8,7 +8,7 @@ pub mod prelude {
     pub use super::CollisionDamageGluePluginSet;
 }
 
-const DAMAGE_MODIFIER: f32 = 0.01;
+const DAMAGE_MODIFIER: f32 = 1.00;
 
 /// A system set that will contain all the systems related to the collision damage glue plugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -29,6 +29,6 @@ fn on_collision_hit_to_damage(hit: On<CollisionDamageEvent>, mut commands: Comma
     commands.trigger(DamageApply {
         target: hit.entity,
         source: Some(hit.other),
-        amount: hit.relative_velocity.length(),
+        amount: hit.relative_velocity.length() * DAMAGE_MODIFIER,
     });
 }
