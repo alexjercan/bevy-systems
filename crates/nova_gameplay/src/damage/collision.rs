@@ -23,15 +23,12 @@ impl Plugin for CollisionDamageGluePlugin {
     }
 }
 
-fn on_collision_hit_to_damage(
-    hit: On<CollisionDamageEvent>,
-    mut commands: Commands,
-) {
+fn on_collision_hit_to_damage(hit: On<CollisionDamageEvent>, mut commands: Commands) {
     // TODO: Calculate damage based on relative velocity and DAMAGE_MODIFIER
 
     commands.trigger(DamageApply {
         target: hit.entity,
         source: Some(hit.other),
-        amount: 0.0,
+        amount: hit.relative_velocity.length(),
     });
 }

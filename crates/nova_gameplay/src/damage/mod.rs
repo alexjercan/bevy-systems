@@ -1,11 +1,11 @@
 //! A Bevy plugin that handles damage.
 
-pub mod projectile;
 pub mod collision;
+pub mod projectile;
 
 pub mod prelude {
-    pub use super::projectile::prelude::*;
     pub use super::collision::prelude::*;
+    pub use super::projectile::prelude::*;
 
     pub use super::DamagePlugin;
     pub use super::DamagePluginSet;

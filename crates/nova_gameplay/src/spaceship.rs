@@ -2,6 +2,7 @@
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
+use bevy_common_systems::prelude::*;
 
 pub mod prelude {
     pub use super::spaceship_root;
@@ -26,6 +27,8 @@ pub fn spaceship_root(config: SpaceshipConfig) -> impl Bundle {
         RigidBody::Dynamic,
         config.transform,
         Visibility::Visible,
+        // TODO: Might want to have Health on each section instead of the root
+        Health::new(100.0),
     )
 }
 

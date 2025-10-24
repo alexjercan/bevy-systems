@@ -1,11 +1,11 @@
 //! A Bevy plugin that applies damage to entities upon collision.
 
-use bevy::prelude::*;
 use avian3d::prelude::*;
+use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::CollisionDamageMarker;
     pub use super::CollisionDamageEvent;
+    pub use super::CollisionDamageMarker;
     pub use super::CollisionDamagePlugin;
 }
 
@@ -19,10 +19,10 @@ pub struct CollisionDamageEvent {
     pub entity: Entity,
     /// The entity that was hit.
     pub other: Entity,
-    /// The point of impact in world space.
-    pub hit_point: Vec3,
-    /// The normal of the surface hit.
-    pub hit_normal: Vec3,
+    // /// The point of impact in world space.
+    // pub hit_point: Vec3,
+    // /// The normal of the surface hit.
+    // pub hit_normal: Vec3,
     /// The relative velocity at the point of impact.
     pub relative_velocity: Vec3,
 }
@@ -36,12 +36,12 @@ impl Plugin for CollisionDamagePlugin {
     }
 }
 
-fn insert_collision_events(
-    add: On<Add, CollisionDamageMarker>,
-    mut commands: Commands,
-) {
+fn insert_collision_events(add: On<Add, CollisionDamageMarker>, mut commands: Commands) {
     let entity = add.entity;
-    debug!("Inserting collision events for CollisionDamageMarker: {:?}", entity);
+    debug!(
+        "Inserting collision events for CollisionDamageMarker: {:?}",
+        entity
+    );
 
     commands.entity(entity).insert(CollisionEventsEnabled);
 }
@@ -49,7 +49,28 @@ fn insert_collision_events(
 fn on_collision_event(
     collision: On<CollisionStart>,
     mut commands: Commands,
+    q_velocity: Query<&LinearVelocity, With<RigidBody>>,
 ) {
-    println!("Collision detected between {:?} and {:?}", collision.collider1, collision.collider2);
-    println!("Collision detected between {:?} and {:?}", collision.body1, collision.body2);
+    let Some(body) = collision.body1 else {
+        debug!("No body1 found for collision event");
+        return;
+    };
+
+    let Some(other) = collision.body2 else {
+        debug!("No body2 found for collision event");
+        return;
+    };
+
+    let velocity1 = q_velocity.get(body).map(|v| v.0).unwrap_or_default();
+    let velocity2 = q_velocity.get(other).map(|v| v.0).unwrap_or_default();
+
+    let relative_velocity = velocity1 - velocity2;
+
+    commands.trigger(CollisionDamageEvent {
+        entity: body,
+        other,
+        // hit_point: collision.contact_point,
+        // hit_normal: collision.contact_normal,
+        relative_velocity,
+    });
 }

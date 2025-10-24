@@ -150,6 +150,7 @@ mod simulation {
                 update_chase_camera_input.before(ChaseCameraPluginSet),
                 update_velocity_hud_input.before(DirectionalSphereOrbitPluginSet),
                 (
+                    update_text_hud,
                     update_spaceship_target_rotation_torque,
                     update_turret_target_input,
                 )
@@ -163,6 +164,9 @@ mod simulation {
 
     #[derive(Component, Debug, Clone)]
     struct VelocityHudMarker;
+
+    #[derive(Component, Debug, Clone)]
+    struct HealthHudMarker;
 
     fn setup_hud(
         mut commands: Commands,
@@ -200,6 +204,21 @@ mod simulation {
                 ),
             )],
         ));
+
+        commands.spawn((
+            DespawnOnExit(super::SceneState::Simulation),
+            Name::new("Health HUD"),
+            HealthHudMarker,
+            Text::new("Health: 100%"),
+            TextShadow::default(),
+            TextLayout::new_with_justify(Justify::Center),
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: px(5),
+                right: px(5),
+                ..default()
+            },
+        ));
     }
 
     fn update_velocity_hud_input(
@@ -215,6 +234,18 @@ mod simulation {
         let mut hud_input = hud.into_inner();
 
         **hud_input = spaceship_dir;
+    }
+
+    fn update_text_hud(
+        spaceship: Single<&Health, With<SpaceshipRootMarker>>,
+        mut q_hud: Query<&mut Text, With<HealthHudMarker>>,
+    ) {
+        let health = spaceship.into_inner();
+        let health_percent = (health.current / health.max * 100.0).round();
+
+        for mut text in &mut q_hud {
+            text.0 = format!("Health: {}%", health_percent);
+        }
     }
 
     fn sync_orbit_state(
@@ -491,6 +522,7 @@ mod simulation {
                     Collider::sphere(radius),
                     RigidBody::Static,
                     Health::new(100.0),
+                    CollisionDamageMarker,
                 ))
                 .id();
 
@@ -525,6 +557,7 @@ mod simulation {
                     ColliderDensity(1.0),
                     RigidBody::Dynamic,
                     Health::new(100.0),
+                    CollisionDamageMarker,
                 ))
                 .id();
 
