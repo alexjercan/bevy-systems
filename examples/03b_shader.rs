@@ -1,6 +1,5 @@
 use avian3d::prelude::*;
 use bevy::{
-    input_focus::InputDispatchPlugin,
     pbr::ExtendedMaterial,
     picking::hover::Hovered,
     prelude::*,
