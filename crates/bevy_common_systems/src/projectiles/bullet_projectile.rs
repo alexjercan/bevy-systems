@@ -80,7 +80,7 @@ impl super::ProjectileBundle for BulletProjectileConfig {
 }
 
 /// Message sent when a bullet projectile hits an entity.
-#[derive(Message, Clone, Debug)]
+#[derive(Event, Clone, Debug)]
 pub struct BulletProjectileHit {
     /// The projectile entity that hit.
     pub projectile: Entity,
@@ -106,8 +106,6 @@ pub struct BulletProjectilePlugin {
 
 impl Plugin for BulletProjectilePlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<BulletProjectileHit>();
-
         app.add_systems(
             Update,
             update_ray_projectiles.in_set(BulletProjectilePluginSet),
@@ -185,7 +183,6 @@ fn update_sweep_collisions(
         ),
         With<super::ProjectileMarker>,
     >,
-    mut writer: MessageWriter<BulletProjectileHit>,
 ) {
     let filter = SpatialQueryFilter::default();
 
@@ -204,13 +201,17 @@ fn update_sweep_collisions(
         };
 
         if let Some(ray_hit_data) = query.cast_ray(origin, direction, distance, true, &filter) {
+            // NOTE: Maybe in the future I don't want to despawn this right away, but maybe allow
+            // having penetration. Also I would rather send the speed instead of the energy and
+            // compute the energy where it is needed.
+
             commands.entity(entity).despawn();
 
             let distance = ray_hit_data.distance;
             let hit_point = origin + direction * distance;
             let impact_energy = 0.5 * **mass * (**speed * **speed);
 
-            writer.write(BulletProjectileHit {
+            commands.trigger(BulletProjectileHit {
                 projectile: entity,
                 hit_entity: ray_hit_data.entity,
                 hit_point,

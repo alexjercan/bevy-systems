@@ -29,7 +29,7 @@ impl Health {
 }
 
 /// Event to apply damage to an entity.
-#[derive(Message, Clone, Debug)]
+#[derive(Event, Clone, Debug)]
 pub struct DamageApply {
     pub target: Entity,
     pub source: Option<Entity>,
@@ -46,28 +46,30 @@ pub struct HealthPlugin;
 
 impl Plugin for HealthPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<DamageApply>();
-
-        app.add_systems(Update, update_damage_systems.in_set(HealthPluginSet));
+        app.add_observer(on_damage);
     }
 }
 
-fn update_damage_systems(
+fn on_damage(
+    damage: On<DamageApply>,
     mut commands: Commands,
-    mut reader: MessageReader<DamageApply>,
     mut q_health: Query<(Entity, &mut Health), Without<DestroyedMarker>>,
 ) {
-    for event in reader.read() {
-        if let Ok((entity, mut health)) = q_health.get_mut(event.target) {
-            if health.current <= 0.0 {
-                continue;
-            }
+    let Ok((entity, mut health)) = q_health.get_mut(damage.target) else {
+        warn!(
+            "DamageApply target entity {:?} missing Health component",
+            damage.target
+        );
+        return;
+    };
 
-            health.current -= event.amount;
-            if health.current <= 0.0 {
-                health.current = 0.0;
-                commands.entity(entity).insert(DestroyedMarker);
-            }
-        }
+    if health.current <= 0.0 {
+        return;
+    }
+
+    health.current -= damage.amount;
+    if health.current <= 0.0 {
+        health.current = 0.0;
+        commands.entity(entity).insert(DestroyedMarker);
     }
 }

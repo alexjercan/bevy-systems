@@ -26,8 +26,8 @@ fn main() {
 
 fn on_click_damage_health(
     click: On<Pointer<Press>>,
+    mut commands: Commands,
     q_health: Query<&Health>,
-    mut writer: MessageWriter<DamageApply>,
 ) {
     if click.button != PointerButton::Primary {
         return;
@@ -39,7 +39,7 @@ fn on_click_damage_health(
     if let Ok(health) = q_health.get(entity) {
         println!("Entity has health: {:?}", health);
 
-        writer.write(DamageApply {
+        commands.trigger(DamageApply {
             target: click.entity,
             source: None,
             amount: 10.0,
@@ -67,7 +67,7 @@ fn setup_health_entity(
 
     commands.entity(mesh_entity).insert(ExplodeOnDestroy {
         mesh_entity: Some(mesh_entity),
-        fragment_count: 10,
+        fragment_count: 4,
     });
 }
 
