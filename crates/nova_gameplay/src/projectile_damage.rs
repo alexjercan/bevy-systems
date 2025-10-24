@@ -19,22 +19,17 @@ pub struct ProjectileDamageGluePlugin;
 
 impl Plugin for ProjectileDamageGluePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            projectile_hit_to_damage.in_set(ProjectileDamageGluePluginSet),
-        );
+        app.add_observer(on_projectile_hit_to_damage);
     }
 }
 
-fn projectile_hit_to_damage(
-    mut hit_reader: MessageReader<BulletProjectileHit>,
-    mut damage_writer: MessageWriter<DamageApply>,
+fn on_projectile_hit_to_damage(
+    hit: On<BulletProjectileHit>,
+    mut commands: Commands,
 ) {
-    for hit in hit_reader.read() {
-        damage_writer.write(DamageApply {
-            target: hit.hit_entity,
-            source: Some(hit.projectile),
-            amount: hit.impact_energy * DAMAGE_MODIFIER,
-        });
-    }
+    commands.trigger(DamageApply {
+        target: hit.hit_entity,
+        source: Some(hit.projectile),
+        amount: hit.impact_energy * DAMAGE_MODIFIER,
+    });
 }
