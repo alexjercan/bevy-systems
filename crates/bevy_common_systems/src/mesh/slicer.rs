@@ -22,15 +22,6 @@ struct MeshBuilder {
 impl MeshBuilder {
     fn add_triangle(&mut self, t: Triangle) {
         let base = self.vertices.len() as u32;
-        let mut t = t;
-
-        // Recalculate Normals
-        let normal = (t.1.position - t.0.position)
-            .cross(t.2.position - t.0.position)
-            .normalize();
-        t.0.normal = normal;
-        t.1.normal = normal;
-        t.2.normal = normal;
 
         // Add vertices and indices
         self.vertices.push(t.0);
@@ -59,7 +50,17 @@ impl MeshBuilder {
             let a = reordered[i];
             let b = reordered[i + 1];
 
-            self.add_triangle(Triangle(a, b, center));
+            let mut t = Triangle(a, b, center);
+
+            // Recalculate Normals
+            let normal = (t.1.position - t.0.position)
+                .cross(t.2.position - t.0.position)
+                .normalize();
+            t.0.normal = normal;
+            t.1.normal = normal;
+            t.2.normal = normal;
+
+            self.add_triangle(t);
         }
 
         self
