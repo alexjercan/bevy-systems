@@ -7,6 +7,7 @@ use bevy::{
     render::render_resource::AsBindGroup,
     shader::ShaderRef,
 };
+use bevy_common_systems::prelude::*;
 
 use crate::prelude::SpaceshipRootMarker;
 
@@ -65,6 +66,7 @@ pub fn thruster_section(config: ThrusterSectionConfig) -> impl Bundle {
         config.transform,
         Visibility::Visible,
         ThrusterSectionRenderMesh(config.render_mesh),
+        CollisionDamageMarker,
     )
 }
 

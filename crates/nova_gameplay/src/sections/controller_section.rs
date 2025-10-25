@@ -2,6 +2,7 @@
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
+use bevy_common_systems::prelude::*;
 
 use crate::prelude::SpaceshipRootMarker;
 
@@ -68,6 +69,7 @@ pub fn controller_section(config: ControllerSectionConfig) -> impl Bundle {
         config.transform,
         Visibility::Visible,
         ControllerSectionRenderMesh(config.render_mesh),
+        CollisionDamageMarker,
     )
 }
 

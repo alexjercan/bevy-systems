@@ -1,6 +1,5 @@
 use avian3d::prelude::*;
 use bevy::{
-    input_focus::InputDispatchPlugin,
     pbr::ExtendedMaterial,
     picking::hover::Hovered,
     prelude::*,
@@ -68,12 +67,22 @@ fn setup_cone_shader(
         Assets<ExtendedMaterial<StandardMaterial, ThrusterExhaustMaterial>>,
     >,
 ) {
-    let cone_mesh = meshes.add(Cone::new(0.4, 0.1));
+    commands.spawn((
+        Name::new("Thruster Exhaust - cone"),
+        Transform::from_xyz(-5.0, 0.0, 0.0),
+        Mesh3d(meshes.add(Cone::new(0.4, 0.4))),
+        MeshMaterial3d(standard_materials.add(StandardMaterial {
+            base_color: Color::BLACK,
+            perceptual_roughness: 1.0,
+            metallic: 0.0,
+            ..default()
+        })),
+    ));
 
     commands.spawn((
         Name::new("Thruster Exhaust - without shader"),
-        Transform::from_xyz(-0.0, 0.0, 0.0),
-        Mesh3d(cone_mesh.clone()),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+        Mesh3d(meshes.add(Cone::new(0.4, 0.4))),
         MeshMaterial3d(standard_materials.add(StandardMaterial {
             base_color: Color::srgba(1.0, 0.5, 0.0, 1.0),
             perceptual_roughness: 1.0,
@@ -85,7 +94,7 @@ fn setup_cone_shader(
     commands.spawn((
         Name::new("Thruster Exhaust - emissive"),
         Transform::from_xyz(5.0, 0.0, 0.0),
-        Mesh3d(cone_mesh.clone()),
+        Mesh3d(meshes.add(Cone::new(0.4, 0.4))),
         MeshMaterial3d(standard_materials.add(StandardMaterial {
             base_color: Color::srgba(1.0, 1.0, 1.0, 1.0),
             perceptual_roughness: 1.0,
@@ -98,7 +107,7 @@ fn setup_cone_shader(
     commands.spawn((
         Name::new("Thruster Exhaust - with shader"),
         Transform::from_xyz(10.0, 0.0, 0.0),
-        Mesh3d(cone_mesh),
+        Mesh3d(meshes.add(Cone::new(0.4, 0.1))),
         MeshMaterial3d(
             exhaust_materials.add(ExtendedMaterial {
                 base: StandardMaterial {
@@ -223,7 +232,7 @@ fn setup_camera(mut commands: Commands, game_assets: Res<GameAssets>) {
         Name::new("Main Camera"),
         Camera3d::default(),
         WASDCameraController,
-        Transform::from_xyz(0.0, 10.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(10.0, 1.0, 3.0).looking_at(Vec3::new(10.0, 0.0, 0.0), Vec3::Y),
         SkyboxConfig {
             cubemap: game_assets.cubemap.clone(),
             brightness: 1000.0,

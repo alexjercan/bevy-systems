@@ -124,6 +124,7 @@ pub fn turret_section(config: TurretSectionConfig) -> impl Bundle {
         config.transform,
         Visibility::Visible,
         TurretSectionConfigHelper(config),
+        CollisionDamageMarker,
     )
 }
 

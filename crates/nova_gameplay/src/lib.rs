@@ -3,14 +3,14 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
+pub mod damage;
 pub mod destruction;
-pub mod projectile_damage;
 pub mod sections;
 pub mod spaceship;
 
 pub mod prelude {
+    pub use super::damage::prelude::*;
     pub use super::destruction::prelude::*;
-    pub use super::projectile_damage::prelude::*;
     pub use super::sections::prelude::*;
     pub use super::spaceship::prelude::*;
 
@@ -56,13 +56,14 @@ impl Plugin for GameplayPlugin {
         app.add_plugins(bevy_common_systems::prelude::TempEntityPlugin);
         // Core Mechanics
         app.add_plugins(bevy_common_systems::prelude::ProjectilePlugin { render: true });
+        app.add_plugins(bevy_common_systems::prelude::CollisionDamagePlugin);
         app.add_plugins(bevy_common_systems::prelude::HealthPlugin);
 
         // Glue Plugins
         app.add_plugins(spaceship::SpaceshipPlugin {
             render: self.render,
         });
-        app.add_plugins(projectile_damage::ProjectileDamageGluePlugin);
+        app.add_plugins(damage::DamagePlugin);
         app.add_plugins(destruction::DestructionHealthPlugin);
     }
 }

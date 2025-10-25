@@ -23,10 +23,7 @@ impl Plugin for ProjectileDamageGluePlugin {
     }
 }
 
-fn on_projectile_hit_to_damage(
-    hit: On<BulletProjectileHit>,
-    mut commands: Commands,
-) {
+fn on_projectile_hit_to_damage(hit: On<BulletProjectileHit>, mut commands: Commands) {
     commands.trigger(DamageApply {
         target: hit.hit_entity,
         source: Some(hit.projectile),

@@ -5,9 +5,9 @@ use nova_protocol::prelude::*;
 use rand::prelude::*;
 
 #[derive(Parser)]
-#[command(name = "07_health")]
+#[command(name = "07b_slicer")]
 #[command(version = "1.0.0")]
-#[command(about = "A simple example showing how to manage health in nova_protocol", long_about = None)]
+#[command(about = "A simple example showing how to play with the mesh slicer in nova_protocol", long_about = None)]
 struct Cli;
 
 fn main() {
@@ -20,6 +20,7 @@ fn main() {
     );
 
     app.add_observer(on_click_damage_health);
+    app.add_observer(on_fragment_added);
 
     app.run();
 }
@@ -34,17 +35,32 @@ fn on_click_damage_health(
     }
 
     let entity = click.entity;
-    println!("Clicked on entity: {:?}", entity);
 
-    if let Ok(health) = q_health.get(entity) {
-        println!("Entity has health: {:?}", health);
-
+    if let Ok(_) = q_health.get(entity) {
         commands.trigger(DamageApply {
             target: click.entity,
             source: None,
             amount: 10.0,
         });
     }
+}
+
+fn on_fragment_added(
+    add: On<Add, FragmentMeshMarker>,
+    mut commands: Commands,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    commands.entity(add.entity).insert((
+        MeshMaterial3d(materials.add(Color::srgb(rand::random(), rand::random(), rand::random()))),
+        Health::new(10.0),
+        DespawnOnDestroy,
+        ExplodeOnDestroy {
+            mesh_entity: Some(add.entity),
+            fragment_count: 2,
+            force_multiplier_range: (1.0, 2.0),
+            ..default()
+        }
+    ));
 }
 
 fn setup_health_entity(
@@ -59,7 +75,7 @@ fn setup_health_entity(
             Visibility::Visible,
             Mesh3d(meshes.add(Sphere::new(3.0))),
             MeshMaterial3d(materials.add(Color::srgb(0.8, 0.1, 0.1))),
-            Health::new(100.0),
+            Health::new(10.0),
             DespawnOnDestroy,
             Collider::sphere(3.0),
         ))
@@ -67,7 +83,8 @@ fn setup_health_entity(
 
     commands.entity(mesh_entity).insert(ExplodeOnDestroy {
         mesh_entity: Some(mesh_entity),
-        fragment_count: 4,
+        fragment_count: 2,
+        force_multiplier_range: (1.0, 2.0),
         ..default()
     });
 }

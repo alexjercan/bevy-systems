@@ -56,7 +56,7 @@ fn on_damage(
     mut q_health: Query<(Entity, &mut Health), Without<DestroyedMarker>>,
 ) {
     let Ok((entity, mut health)) = q_health.get_mut(damage.target) else {
-        warn!(
+        debug!(
             "DamageApply target entity {:?} missing Health component",
             damage.target
         );

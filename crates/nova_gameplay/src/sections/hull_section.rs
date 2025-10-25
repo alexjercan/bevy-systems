@@ -2,6 +2,7 @@
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
+use bevy_common_systems::prelude::*;
 
 pub mod prelude {
     pub use super::hull_section;
@@ -49,6 +50,7 @@ pub fn hull_section(config: HullSectionConfig) -> impl Bundle {
         config.transform,
         Visibility::Visible,
         HullSectionRenderMesh(config.render_mesh),
+        CollisionDamageMarker,
     )
 }
 
