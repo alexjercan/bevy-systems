@@ -1057,7 +1057,6 @@ dependencies = [
  "ron 0.8.1",
  "serde",
  "thiserror 2.0.17",
- "typetag",
  "wgpu",
 ]
 
@@ -3934,7 +3933,7 @@ dependencies = [
 
 [[package]]
 name = "nova-protocol"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "avian3d",
  "bevy",
@@ -3956,7 +3955,7 @@ dependencies = [
 
 [[package]]
 name = "nova_assets"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_asset_loader",
@@ -3964,7 +3963,7 @@ dependencies = [
 
 [[package]]
 name = "nova_core"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "avian3d",
  "bevy",
@@ -3977,7 +3976,7 @@ dependencies = [
 
 [[package]]
 name = "nova_debug"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "avian3d",
  "bevy",
@@ -3987,7 +3986,7 @@ dependencies = [
 
 [[package]]
 name = "nova_gameplay"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "avian3d",
  "bevy",
@@ -5707,30 +5706,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "562d481066bde0658276a35467c4af00bdc6ee726305698a55b86e61d7ad82bb"
 
 [[package]]
-name = "typetag"
-version = "0.2.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be2212c8a9b9bcfca32024de14998494cf9a5dfa59ea1b829de98bac374b86bf"
-dependencies = [
- "erased-serde",
- "inventory",
- "once_cell",
- "serde",
- "typetag-impl",
-]
-
-[[package]]
-name = "typetag-impl"
-version = "0.2.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27a7a9b72ba121f6f1f6c3632b85604cac41aedb5ddc70accbebb6cac83de846"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "typewit"
 version = "1.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6143,7 +6118,6 @@ dependencies = [
  "smallvec",
  "static_assertions",
  "wasm-bindgen",
- "wasm-bindgen-futures",
  "web-sys",
  "wgpu-core",
  "wgpu-hal",

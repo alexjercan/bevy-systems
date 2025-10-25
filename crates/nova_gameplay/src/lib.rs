@@ -33,6 +33,8 @@ impl Plugin for GameplayPlugin {
         app.add_plugins(PhysicsPickingPlugin);
         app.insert_resource(Gravity::ZERO);
 
+        // FIXME: For now we disable particle effects on wasm because it's not working
+        #[cfg(not(target_family = "wasm"))]
         app.add_plugins(bevy_hanabi::HanabiPlugin);
 
         // Bevy Common Systems - WASD Camera

@@ -192,6 +192,9 @@ impl Plugin for TurretSectionPlugin {
             app.add_observer(insert_turret_yaw_rotator_render);
             app.add_observer(insert_turret_pitch_rotator_render);
             app.add_observer(insert_turret_barrel_render);
+
+            // FIXME: For now we disable particle effects on wasm because it's not working
+            #[cfg(not(target_family = "wasm"))]
             app.add_observer(insert_turret_barrel_muzzle_effect);
         }
 
