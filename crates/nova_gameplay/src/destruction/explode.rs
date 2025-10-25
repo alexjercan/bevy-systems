@@ -24,6 +24,8 @@ pub struct ExplodeOnDestroy {
     pub mesh_entity: Option<Entity>,
     /// The number of fragments to create when the entity is destroyed.
     pub fragment_count: usize,
+    /// The force multiplier range applied to each fragment when exploded.
+    pub force_multiplier_range: (f32, f32),
 }
 
 impl Default for ExplodeOnDestroy {
@@ -31,6 +33,7 @@ impl Default for ExplodeOnDestroy {
         Self {
             mesh_entity: None,
             fragment_count: 10,
+            force_multiplier_range: (2.0, 5.0),
         }
     }
 }
@@ -123,7 +126,12 @@ fn handle_explosion(
             Visibility::Visible,
             RigidBody::Dynamic,
             Collider::convex_hull_from_mesh(&mesh).unwrap_or(Collider::sphere(0.5)),
-            LinearVelocity(normal * rand::rng().random_range(2.0..5.0)),
+            LinearVelocity(
+                normal
+                    * rand::rng().random_range(
+                        explode.force_multiplier_range.0..explode.force_multiplier_range.1,
+                    ),
+            ),
         ));
     }
 }

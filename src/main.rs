@@ -529,6 +529,7 @@ mod simulation {
             commands.entity(planet).insert(ExplodeOnDestroy {
                 mesh_entity: Some(planet),
                 fragment_count: 8,
+                ..default()
             });
         }
 
@@ -564,6 +565,7 @@ mod simulation {
             commands.entity(satellite).insert(ExplodeOnDestroy {
                 mesh_entity: Some(satellite),
                 fragment_count: 4,
+                ..default()
             });
         }
     }
