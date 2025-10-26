@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 bevy = { workspace = true }
 bevy_asset_loader = { workspace = true }
+nova_gameplay = { path = "../nova_gameplay" }
+bevy_common_systems = { path = "../bevy_common_systems" }
 
 [lints]
 workspace = true

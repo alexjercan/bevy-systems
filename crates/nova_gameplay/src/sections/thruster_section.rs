@@ -7,7 +7,6 @@ use bevy::{
     render::render_resource::AsBindGroup,
     shader::ShaderRef,
 };
-use bevy_common_systems::prelude::*;
 
 use crate::prelude::SpaceshipRootMarker;
 
@@ -21,18 +20,12 @@ pub mod prelude {
 }
 
 const THRUSTER_SECTION_DEFAULT_MAGNITUDE: f32 = 1.0;
-const THRUSTER_SECTION_DEFAULT_COLLIDER_DENSITY: f32 = 1.0;
 
 /// Configuration for a thruster section of a spaceship.
 #[derive(Clone, Debug)]
 pub struct ThrusterSectionConfig {
     /// The magnitude of the force produced by this thruster section.
     pub magnitude: f32,
-    /// The transform of the thruster section relative to its parent. This defines the position and
-    /// orientation of the thruster section, which in turn defines the direction of the thrust.
-    pub transform: Transform,
-    /// The collider density / mass of the section.
-    pub collider_density: f32,
     /// The render mesh of the section, defaults to prototype mesh if None.
     pub render_mesh: Option<Handle<Scene>>,
 }
@@ -41,38 +34,29 @@ impl Default for ThrusterSectionConfig {
     fn default() -> Self {
         Self {
             magnitude: THRUSTER_SECTION_DEFAULT_MAGNITUDE,
-            transform: Transform::default(),
-            collider_density: THRUSTER_SECTION_DEFAULT_COLLIDER_DENSITY,
             render_mesh: None,
         }
     }
 }
-
-#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
-struct ThrusterSectionRenderMesh(Option<Handle<Scene>>);
 
 /// Helper function to create an thruster section entity bundle.
 pub fn thruster_section(config: ThrusterSectionConfig) -> impl Bundle {
     debug!("Creating thruster section with config: {:?}", config);
 
     (
-        Name::new("Thruster Section"),
-        super::SectionMarker,
         ThrusterSectionMarker,
-        Collider::cuboid(1.0, 1.0, 1.0),
-        ColliderDensity(config.collider_density),
         ThrusterSectionMagnitude(config.magnitude),
         ThrusterSectionInput(0.0),
-        config.transform,
-        Visibility::Visible,
         ThrusterSectionRenderMesh(config.render_mesh),
-        CollisionDamageMarker,
     )
 }
 
 /// Marker component for thruster sections.
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct ThrusterSectionMarker;
+
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+struct ThrusterSectionRenderMesh(Option<Handle<Scene>>);
 
 /// The thrust magnitude produced by this thruster section. This is a simple scalar value that can be
 /// used to determine the thrust force applied to the ship.
@@ -295,10 +279,6 @@ mod test {
 
         // Assert
         assert!(app.world().get::<ThrusterSectionMarker>(id).is_some());
-        assert!(
-            **app.world().get::<ColliderDensity>(id).unwrap()
-                == THRUSTER_SECTION_DEFAULT_COLLIDER_DENSITY
-        );
     }
 
     #[test]

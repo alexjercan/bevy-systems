@@ -1089,31 +1089,6 @@ mod editor {
                         BackgroundColor(Color::srgb(0.5, 0.5, 0.5)),
                     ),
                     (
-                        Name::new("Spawn Spinner Ship Button"),
-                        button("Spawn Spinner Ship"),
-                        observe(create_new_spaceship_spinner),
-                    ),
-                    (
-                        Name::new("Spawn Huge Ship Button"),
-                        button("Spawn Huge Ship"),
-                        observe(create_new_spaceship_big),
-                    ),
-                    (
-                        Name::new("Spawn Basic Ship Button"),
-                        button("Spawn Basic Ship"),
-                        observe(create_new_spaceship_basic),
-                    ),
-                    (
-                        Name::new("Separator 4"),
-                        Node {
-                            width: percent(80),
-                            height: px(2),
-                            margin: UiRect::all(px(10)),
-                            ..default()
-                        },
-                        BackgroundColor(Color::srgb(0.5, 0.5, 0.5)),
-                    ),
-                    (
                         Name::new("Play Button"),
                         button("Play"),
                         observe(continue_to_simulation),
@@ -1143,11 +1118,18 @@ mod editor {
             .id();
 
         commands.entity(entity).with_children(|parent| {
-            parent.spawn((hull_section(HullSectionConfig {
-                transform: Transform::from_xyz(0.0, 0.0, 0.0),
-                render_mesh: Some(game_assets.hull_01.clone()),
-                ..default()
-            }),));
+            parent.spawn((
+                base_section(BaseSectionConfig {
+                    name: "Basic Hull Section".to_string(),
+                    description: "A basic hull section for spaceships.".to_string(),
+                    mass: 1.0,
+                }),
+                hull_section(HullSectionConfig {
+                    render_mesh: Some(game_assets.hull_01.clone()),
+                    ..default()
+                }),
+                Transform::from_xyz(0.0, 0.0, 0.0),
+            ));
         });
     }
 
@@ -1165,13 +1147,20 @@ mod editor {
             .id();
 
         commands.entity(entity).with_children(|parent| {
-            parent.spawn((controller_section(ControllerSectionConfig {
-                transform: Transform::from_xyz(0.0, 0.0, 0.0),
-                frequency: 4.0,
-                damping_ratio: 4.0,
-                max_torque: 100.0,
-                ..default()
-            }),));
+            parent.spawn((
+                base_section(BaseSectionConfig {
+                    name: "Basic Controller Section".to_string(),
+                    description: "A basic controller section for spaceships.".to_string(),
+                    mass: 1.0,
+                }),
+                controller_section(ControllerSectionConfig {
+                    frequency: 4.0,
+                    damping_ratio: 4.0,
+                    max_torque: 100.0,
+                    ..default()
+                }),
+                Transform::from_xyz(0.0, 0.0, 0.0),
+            ));
         });
     }
 
@@ -1180,185 +1169,6 @@ mod editor {
         mut game_state: ResMut<NextState<super::SceneState>>,
     ) {
         game_state.set(super::SceneState::Simulation);
-    }
-
-    fn create_new_spaceship_spinner(
-        _activate: On<Activate>,
-        mut commands: Commands,
-        q_spaceship: Query<Entity, With<SpaceshipRootMarker>>,
-        game_assets: Res<GameAssets>,
-    ) {
-        for entity in &q_spaceship {
-            commands.entity(entity).despawn();
-        }
-
-        commands.spawn((
-            spaceship_root(SpaceshipConfig { ..default() }),
-            children![
-                (hull_section(HullSectionConfig {
-                    transform: Transform::from_xyz(0.0, 0.0, 0.0),
-                    render_mesh: Some(game_assets.hull_01.clone()),
-                    ..default()
-                }),),
-                (hull_section(HullSectionConfig {
-                    transform: Transform::from_xyz(0.0, 0.0, 1.0),
-                    render_mesh: Some(game_assets.hull_01.clone()),
-                    ..default()
-                }),),
-                (hull_section(HullSectionConfig {
-                    transform: Transform::from_xyz(0.0, 0.0, -1.0),
-                    render_mesh: Some(game_assets.hull_01.clone()),
-                    ..default()
-                }),),
-                (
-                    thruster_section(ThrusterSectionConfig {
-                        magnitude: 1.0,
-                        transform: Transform::from_xyz(1.0, 0.0, 1.0)
-                            .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
-                        ..default()
-                    }),
-                    super::ThrusterInputKey(KeyCode::Space)
-                ),
-                (
-                    thruster_section(ThrusterSectionConfig {
-                        magnitude: 1.0,
-                        transform: Transform::from_xyz(-1.0, 0.0, -1.0)
-                            .with_rotation(Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)),
-                        ..default()
-                    }),
-                    super::ThrusterInputKey(KeyCode::Space)
-                ),
-            ],
-        ));
-    }
-
-    fn create_new_spaceship_big(
-        _activate: On<Activate>,
-        mut commands: Commands,
-        q_spaceship: Query<Entity, With<SpaceshipRootMarker>>,
-        game_assets: Res<GameAssets>,
-    ) {
-        for entity in &q_spaceship {
-            commands.entity(entity).despawn();
-        }
-        let entity = commands
-            .spawn((spaceship_root(SpaceshipConfig { ..default() }),))
-            .id();
-
-        let cube_size = 5;
-        for x in -cube_size..=cube_size {
-            for y in -cube_size..=cube_size {
-                for z in -cube_size..=cube_size {
-                    commands.entity(entity).with_children(|parent| {
-                        parent.spawn((hull_section(HullSectionConfig {
-                            transform: Transform::from_xyz(
-                                x as f32 * 1.0,
-                                y as f32 * 1.0,
-                                z as f32 * 1.0,
-                            ),
-                            render_mesh: Some(game_assets.hull_01.clone()),
-                            ..default()
-                        }),));
-                    });
-                }
-            }
-        }
-
-        let z = cube_size + 1;
-        for x in -cube_size..=cube_size {
-            for y in -cube_size..=cube_size {
-                commands.entity(entity).with_children(|parent| {
-                    parent.spawn((
-                        thruster_section(ThrusterSectionConfig {
-                            magnitude: 1.0,
-                            transform: Transform::from_xyz(
-                                x as f32 * 1.0,
-                                y as f32 * 1.0,
-                                z as f32 * 1.0,
-                            ),
-                            ..default()
-                        }),
-                        super::ThrusterInputKey(KeyCode::Space),
-                    ));
-                });
-            }
-        }
-    }
-
-    fn create_new_spaceship_basic(
-        _activate: On<Activate>,
-        mut commands: Commands,
-        q_spaceship: Query<Entity, With<SpaceshipRootMarker>>,
-        game_assets: Res<GameAssets>,
-    ) {
-        for entity in &q_spaceship {
-            commands.entity(entity).despawn();
-        }
-
-        commands.spawn((
-            spaceship_root(SpaceshipConfig { ..default() }),
-            children![
-                (hull_section(HullSectionConfig {
-                    transform: Transform::from_xyz(0.0, 0.0, 0.0),
-                    render_mesh: Some(game_assets.hull_01.clone()),
-                    ..default()
-                }),),
-                (hull_section(HullSectionConfig {
-                    transform: Transform::from_xyz(0.0, 0.0, 1.0),
-                    render_mesh: Some(game_assets.hull_01.clone()),
-                    ..default()
-                }),),
-                (hull_section(HullSectionConfig {
-                    transform: Transform::from_xyz(0.0, 0.0, -1.0),
-                    render_mesh: Some(game_assets.hull_01.clone()),
-                    ..default()
-                }),),
-                (
-                    thruster_section(ThrusterSectionConfig {
-                        magnitude: 1.0,
-                        transform: Transform::from_xyz(0.0, 0.0, 2.0),
-                        ..default()
-                    }),
-                    super::ThrusterInputKey(KeyCode::KeyW)
-                ),
-                (
-                    thruster_section(ThrusterSectionConfig {
-                        magnitude: 0.1,
-                        transform: Transform::from_xyz(-1.0, 0.0, 1.0)
-                            .with_rotation(Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)),
-                        ..default()
-                    }),
-                    super::ThrusterInputKey(KeyCode::KeyA)
-                ),
-                (
-                    thruster_section(ThrusterSectionConfig {
-                        magnitude: 0.1,
-                        transform: Transform::from_xyz(1.0, 0.0, 1.0)
-                            .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
-                        ..default()
-                    }),
-                    super::ThrusterInputKey(KeyCode::KeyD)
-                ),
-                (
-                    thruster_section(ThrusterSectionConfig {
-                        magnitude: 0.1,
-                        transform: Transform::from_xyz(-1.0, 0.0, -1.0)
-                            .with_rotation(Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)),
-                        ..default()
-                    }),
-                    super::ThrusterInputKey(KeyCode::KeyD)
-                ),
-                (
-                    thruster_section(ThrusterSectionConfig {
-                        magnitude: 0.1,
-                        transform: Transform::from_xyz(1.0, 0.0, -1.0)
-                            .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
-                        ..default()
-                    }),
-                    super::ThrusterInputKey(KeyCode::KeyA)
-                ),
-            ],
-        ));
     }
 
     fn sections() -> impl Bundle {
@@ -1434,14 +1244,21 @@ mod editor {
             SectionChoice::None => {}
             SectionChoice::HullSection => {
                 commands.entity(spaceship).with_children(|parent| {
-                    parent.spawn((hull_section(HullSectionConfig {
-                        transform: Transform {
+                    parent.spawn((
+                        base_section(BaseSectionConfig {
+                            name: "Basic Hull Section".to_string(),
+                            description: "A basic hull section for spaceships.".to_string(),
+                            mass: 1.0,
+                        }),
+                        hull_section(HullSectionConfig {
+                            render_mesh: Some(game_assets.hull_01.clone()),
+                            ..default()
+                        }),
+                        Transform {
                             translation: position,
                             ..default()
                         },
-                        render_mesh: Some(game_assets.hull_01.clone()),
-                        ..default()
-                    }),));
+                    ));
                 });
             }
             SectionChoice::ThrusterSection => {
@@ -1450,16 +1267,21 @@ mod editor {
 
                 commands.entity(spaceship).with_children(|parent| {
                     parent.spawn((
+                        base_section(BaseSectionConfig {
+                            name: "Basic Thruster Section".to_string(),
+                            description: "A basic thruster section for spaceships.".to_string(),
+                            mass: 1.0,
+                        }),
                         thruster_section(ThrusterSectionConfig {
                             magnitude: 1.0,
-                            transform: Transform {
-                                translation: position,
-                                rotation,
-                                ..default()
-                            },
                             ..default()
                         }),
                         super::ThrusterInputKey(bind),
+                        Transform {
+                            translation: position,
+                            rotation,
+                            ..default()
+                        },
                     ));
                 });
             }
@@ -1467,27 +1289,34 @@ mod editor {
                 let rotation = Quat::from_rotation_arc(Vec3::Y, normal.normalize());
 
                 commands.entity(spaceship).with_children(|parent| {
-                    parent.spawn((turret_section(TurretSectionConfig {
-                        transform: Transform {
+                    parent.spawn((
+                        base_section(BaseSectionConfig {
+                            name: "Basic Turret Section".to_string(),
+                            description: "A basic turret section for spaceships.".to_string(),
+                            mass: 1.0,
+                        }),
+                        turret_section(TurretSectionConfig {
+                            render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
+                            render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
+                            pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
+                            render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
+                            barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
+                            muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
+                            fire_rate: 100.0,
+                            projectile: BulletProjectileConfig {
+                                muzzle_speed: 100.0,
+                                lifetime: 5.0,
+                                mass: 0.1,
+                                render_mesh: None,
+                            },
+                            ..default()
+                        }),
+                        Transform {
                             translation: position,
                             rotation,
                             ..default()
                         },
-                        render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
-                        render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
-                        pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
-                        render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
-                        barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
-                        muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
-                        fire_rate: 100.0,
-                        projectile: BulletProjectileConfig {
-                            muzzle_speed: 100.0,
-                            lifetime: 5.0,
-                            mass: 0.1,
-                            render_mesh: None,
-                        },
-                        ..default()
-                    }),));
+                    ));
                 });
             }
             SectionChoice::Delete => {

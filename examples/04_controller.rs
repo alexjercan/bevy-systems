@@ -45,13 +45,20 @@ fn setup_spaceship(mut commands: Commands) {
         .id();
 
     commands.entity(entity).with_children(|parent| {
-        parent.spawn((controller_section(ControllerSectionConfig {
-            transform: Transform::from_xyz(0.0, 0.0, 0.0),
-            frequency: 4.0,
-            damping_ratio: 4.0,
-            max_torque: 100.0,
-            ..default()
-        }),));
+        parent.spawn((
+            base_section(BaseSectionConfig {
+                name: "Basic Controller Section".to_string(),
+                description: "A basic controller section for spaceships.".to_string(),
+                mass: 1.0,
+            }),
+            controller_section(ControllerSectionConfig {
+                frequency: 4.0,
+                damping_ratio: 4.0,
+                max_torque: 100.0,
+                ..default()
+            }),
+            Transform::from_xyz(0.0, 0.0, 0.0),
+        ));
     });
 
     commands.spawn((

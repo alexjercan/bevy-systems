@@ -1,8 +1,6 @@
 //! Module for defining hull sections in a 3D environment using Bevy and Avian3D.
 
-use avian3d::prelude::*;
 use bevy::prelude::*;
-use bevy_common_systems::prelude::*;
 
 pub mod prelude {
     pub use super::hull_section;
@@ -11,15 +9,9 @@ pub mod prelude {
     pub use super::HullSectionPlugin;
 }
 
-const HULL_SECTION_DEFAULT_COLLIDER_DENSITY: f32 = 1.0;
-
 /// Configuration for a hull section.
 #[derive(Clone, Debug)]
 pub struct HullSectionConfig {
-    /// The transform of the hull section relative to its parent.
-    pub transform: Transform,
-    /// The collider density / mass of the hull section.
-    pub collider_density: f32,
     /// The render mesh of the hull section, defaults to a cuboid of size 1x1x1.
     pub render_mesh: Option<Handle<Scene>>,
 }
@@ -27,36 +19,27 @@ pub struct HullSectionConfig {
 impl Default for HullSectionConfig {
     fn default() -> Self {
         Self {
-            transform: Transform::default(),
-            collider_density: HULL_SECTION_DEFAULT_COLLIDER_DENSITY,
             render_mesh: None,
         }
     }
 }
-
-#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
-struct HullSectionRenderMesh(Option<Handle<Scene>>);
 
 /// Helper function to create a hull section entity bundle.
 pub fn hull_section(config: HullSectionConfig) -> impl Bundle {
     debug!("Creating hull section with config: {:?}", config);
 
     (
-        Name::new("Hull Section"),
-        super::SectionMarker,
         HullSectionMarker,
-        Collider::cuboid(1.0, 1.0, 1.0),
-        ColliderDensity(config.collider_density),
-        config.transform,
-        Visibility::Visible,
         HullSectionRenderMesh(config.render_mesh),
-        CollisionDamageMarker,
     )
 }
 
 /// Marker component for hull sections.
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct HullSectionMarker;
+
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+struct HullSectionRenderMesh(Option<Handle<Scene>>);
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct HullSectionPluginSet;
@@ -116,13 +99,6 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_hull_section_config_default() {
-        let config = HullSectionConfig::default();
-        assert_eq!(config.transform, Transform::default());
-        assert_eq!(config.collider_density, 1.0);
-    }
-
-    #[test]
     fn spawns_hull_with_default_config() {
         // Arrange
         let mut app = App::new();
@@ -136,10 +112,6 @@ mod test {
 
         // Assert
         assert!(app.world().get::<HullSectionMarker>(id).is_some());
-        assert!(
-            **app.world().get::<ColliderDensity>(id).unwrap()
-                == HULL_SECTION_DEFAULT_COLLIDER_DENSITY
-        );
     }
 
     #[test]
@@ -149,7 +121,7 @@ mod test {
         let custom_scene = Handle::<Scene>::default();
         let config = HullSectionConfig {
             render_mesh: Some(custom_scene.clone()),
-            ..Default::default()
+            ..default()
         };
         let id = app.world_mut().spawn(hull_section(config)).id();
 

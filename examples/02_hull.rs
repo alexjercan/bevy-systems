@@ -28,11 +28,18 @@ fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {
         .id();
 
     commands.entity(entity).with_children(|parent| {
-        parent.spawn((hull_section(HullSectionConfig {
-            transform: Transform::from_xyz(0.0, 0.0, 0.0),
-            render_mesh: Some(game_assets.hull_01.clone()),
-            ..default()
-        }),));
+        parent.spawn((
+            base_section(BaseSectionConfig {
+                name: "Reinforced Hull Section".to_string(),
+                description: "A reinforced hull section for spaceships.".to_string(),
+                mass: 1.0,
+            }),
+            hull_section(HullSectionConfig {
+                render_mesh: Some(game_assets.hull_01.clone()),
+                ..default()
+            }),
+            Transform::from_xyz(0.0, 0.0, 0.0),
+        ));
     });
 }
 

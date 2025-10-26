@@ -2,7 +2,6 @@
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
-use bevy_common_systems::prelude::*;
 
 use crate::prelude::SpaceshipRootMarker;
 
@@ -15,21 +14,15 @@ pub mod prelude {
     pub use super::ControllerSectionStableTorquePdController;
 }
 
-const CONTROLLER_SECTION_DEFAULT_COLLIDER_DENSITY: f32 = 1.0;
-
 /// Configuration for a controller section.
 #[derive(Clone, Debug)]
 pub struct ControllerSectionConfig {
-    /// The transform of the controller section relative to its parent.
-    pub transform: Transform,
     /// The frequency of the PD controller in Hz.
     pub frequency: f32,
     /// The damping ratio of the PD controller.
     pub damping_ratio: f32,
     /// The maximum torque that can be applied by the PD controller.
     pub max_torque: f32,
-    /// The collider density / mass of the hull section.
-    pub collider_density: f32,
     /// The render mesh of the hull section, defaults to a cuboid of size 1x1x1.
     pub render_mesh: Option<Handle<Scene>>,
 }
@@ -37,11 +30,9 @@ pub struct ControllerSectionConfig {
 impl Default for ControllerSectionConfig {
     fn default() -> Self {
         Self {
-            transform: Transform::default(),
             frequency: 2.0,
             damping_ratio: 2.0,
             max_torque: 1.0,
-            collider_density: CONTROLLER_SECTION_DEFAULT_COLLIDER_DENSITY,
             render_mesh: None,
         }
     }
@@ -55,21 +46,14 @@ pub fn controller_section(config: ControllerSectionConfig) -> impl Bundle {
     debug!("Creating controller section with config: {:?}", config);
 
     (
-        Name::new("Controller Section"),
-        super::SectionMarker,
         ControllerSectionMarker,
-        Collider::cuboid(1.0, 1.0, 1.0),
-        ColliderDensity(config.collider_density),
         ControllerSectionRotationInput::default(),
         ControllerSectionStableTorquePdController {
             frequency: config.frequency,
             damping_ratio: config.damping_ratio,
             max_torque: config.max_torque,
         },
-        config.transform,
-        Visibility::Visible,
         ControllerSectionRenderMesh(config.render_mesh),
-        CollisionDamageMarker,
     )
 }
 

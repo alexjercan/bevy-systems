@@ -5,7 +5,7 @@ use nova_protocol::prelude::*;
 use rand::prelude::*;
 
 #[derive(Parser)]
-#[command(name = "03_thruster")]
+#[command(name = "03a_thruster")]
 #[command(version = "1.0.0")]
 #[command(about = "A simple example showing how to spawn a basic thruster in nova_protocol", long_about = None)]
 struct Cli;
@@ -50,15 +50,18 @@ fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {
         for y in -cube_size..=cube_size {
             for z in -cube_size..=cube_size {
                 commands.entity(entity).with_children(|parent| {
-                    parent.spawn((hull_section(HullSectionConfig {
-                        transform: Transform::from_xyz(
-                            x as f32 * 1.0,
-                            y as f32 * 1.0,
-                            z as f32 * 1.0,
-                        ),
-                        render_mesh: Some(game_assets.hull_01.clone()),
-                        ..default()
-                    }),));
+                    parent.spawn((
+                        base_section(BaseSectionConfig {
+                            name: "Reinforced Hull Section".to_string(),
+                            description: "A reinforced hull section for spaceships.".to_string(),
+                            mass: 1.0,
+                        }),
+                        hull_section(HullSectionConfig {
+                            render_mesh: Some(game_assets.hull_01.clone()),
+                            ..default()
+                        }),
+                        Transform::from_xyz(x as f32 * 1.0, y as f32 * 1.0, z as f32 * 1.0),
+                    ));
                 });
             }
         }
@@ -69,15 +72,16 @@ fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {
         for y in -cube_size..=cube_size {
             commands.entity(entity).with_children(|parent| {
                 parent.spawn((
+                    base_section(BaseSectionConfig {
+                        name: "Basic Thruster Section".to_string(),
+                        description: "A basic thruster section for spaceships.".to_string(),
+                        mass: 1.0,
+                    }),
                     thruster_section(ThrusterSectionConfig {
                         magnitude: 1.0,
-                        transform: Transform::from_xyz(
-                            x as f32 * 1.0,
-                            y as f32 * 1.0,
-                            z as f32 * 1.0,
-                        ),
                         ..default()
                     }),
+                    Transform::from_xyz(x as f32 * 1.0, y as f32 * 1.0, z as f32 * 1.0),
                     ThrusterInputKey(KeyCode::Digit1),
                 ));
             });

@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 
+use crate::sections::register_sections;
+
+mod sections;
+
 pub mod prelude {
     pub use super::GameAssets;
     pub use super::GameAssetsPlugin;
@@ -12,6 +16,7 @@ pub mod prelude {
 pub enum GameAssetsStates {
     #[default]
     Loading,
+    Processing,
     Loaded,
 }
 
@@ -24,8 +29,19 @@ impl Plugin for GameAssetsPlugin {
         app.init_state::<GameAssetsStates>();
         app.add_loading_state(
             LoadingState::new(GameAssetsStates::Loading)
-                .continue_to_state(GameAssetsStates::Loaded)
+                .continue_to_state(GameAssetsStates::Processing)
                 .load_collection::<GameAssets>(),
+        );
+
+        app.add_systems(
+            OnEnter(GameAssetsStates::Processing),
+            (
+                register_sections,
+                |mut state: ResMut<NextState<GameAssetsStates>>| {
+                    state.set(GameAssetsStates::Loaded);
+                },
+            )
+                .chain(),
         );
     }
 }

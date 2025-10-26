@@ -5,7 +5,7 @@ use nova_protocol::prelude::*;
 use rand::prelude::*;
 
 #[derive(Parser)]
-#[command(name = "07_health")]
+#[command(name = "07a_health")]
 #[command(version = "1.0.0")]
 #[command(about = "A simple example showing how to manage health in nova_protocol", long_about = None)]
 struct Cli;

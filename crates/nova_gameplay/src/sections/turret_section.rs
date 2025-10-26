@@ -3,7 +3,6 @@
 
 // TODO: Cleanup the magic numbers into constants
 
-use avian3d::prelude::*;
 use bevy::prelude::*;
 
 use bevy_common_systems::prelude::*;
@@ -19,13 +18,9 @@ pub mod prelude {
     pub use super::TurretSectionTargetInput;
 }
 
-const TURRET_SECTION_DEFAULT_COLLIDER_DENSITY: f32 = 1.0;
-
 /// Configuration for a turret section of a spaceship.
 #[derive(Clone, Debug, Reflect)]
 pub struct TurretSectionConfig {
-    /// The transform of the turret section relative to its parent.
-    pub transform: Transform,
     /// The yaw speed of the turret section in radians per second.
     pub yaw_speed: f32,
     /// The pitch speed of the turret section in radians per second.
@@ -34,8 +29,6 @@ pub struct TurretSectionConfig {
     pub min_pitch: Option<f32>,
     /// The maximum pitch angle of the turret section in radians. If None, there is no limit.
     pub max_pitch: Option<f32>,
-    /// The collider density / mass of the section.
-    pub collider_density: f32,
     /// The render mesh of the base, defaults to a cylinder base
     pub render_mesh_base: Option<Handle<Scene>>,
     /// The offset of the base from the section origin
@@ -65,12 +58,10 @@ pub struct TurretSectionConfig {
 impl Default for TurretSectionConfig {
     fn default() -> Self {
         Self {
-            transform: Transform::default(),
             yaw_speed: std::f32::consts::PI, // 180 degrees per second
             pitch_speed: std::f32::consts::PI, // 180 degrees per second
             min_pitch: Some(-std::f32::consts::FRAC_PI_6),
             max_pitch: Some(std::f32::consts::FRAC_PI_2),
-            collider_density: TURRET_SECTION_DEFAULT_COLLIDER_DENSITY,
             render_mesh_base: None,
             base_offset: Vec3::new(0.0, -0.5, 0.0),
             render_mesh_yaw: None,
@@ -92,6 +83,21 @@ impl Default for TurretSectionConfig {
     }
 }
 
+/// Helper function to create a turret section entity bundle.
+pub fn turret_section(config: TurretSectionConfig) -> impl Bundle {
+    debug!("Creating turret section with config: {:?}", config);
+
+    (
+        TurretSectionMarker,
+        TurretSectionTargetInput(None),
+        TurretSectionConfigHelper(config),
+    )
+}
+
+/// Marker component for turret sections.
+#[derive(Component, Clone, Debug, Reflect)]
+pub struct TurretSectionMarker;
+
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 struct TurretSectionBaseRenderMesh(Option<Handle<Scene>>);
 
@@ -109,28 +115,6 @@ struct TurretSectionConfigHelper(TurretSectionConfig);
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 struct TurretSectionBarrelMuzzleEffect(Option<Handle<EffectAsset>>);
-
-/// Helper function to create a turret section entity bundle.
-pub fn turret_section(config: TurretSectionConfig) -> impl Bundle {
-    debug!("Creating turret section with config: {:?}", config);
-
-    (
-        Name::new("Turret Section"),
-        super::SectionMarker,
-        TurretSectionMarker,
-        Collider::cuboid(1.0, 1.0, 1.0),
-        ColliderDensity(config.collider_density),
-        TurretSectionTargetInput(None),
-        config.transform,
-        Visibility::Visible,
-        TurretSectionConfigHelper(config),
-        CollisionDamageMarker,
-    )
-}
-
-/// Marker component for turret sections.
-#[derive(Component, Clone, Debug, Reflect)]
-pub struct TurretSectionMarker;
 
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 struct TurretRotatorBaseMarker;

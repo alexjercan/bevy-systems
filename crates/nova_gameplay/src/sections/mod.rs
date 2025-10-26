@@ -2,25 +2,22 @@
 
 use bevy::prelude::*;
 
+pub mod base_section;
 pub mod controller_section;
 pub mod hull_section;
 pub mod thruster_section;
 pub mod turret_section;
 
 pub mod prelude {
+    pub use super::base_section::prelude::*;
     pub use super::controller_section::prelude::*;
     pub use super::hull_section::prelude::*;
     pub use super::thruster_section::prelude::*;
     pub use super::turret_section::prelude::*;
 
-    pub use super::SectionMarker;
     pub use super::SectionPlugin;
     pub use super::SectionPluginSet;
 }
-
-/// This will be a generic marker for all spaceship sections.
-#[derive(Component, Clone, Debug, Reflect)]
-pub struct SectionMarker;
 
 /// A system set that will contain all the systems related to the spaceship plugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]

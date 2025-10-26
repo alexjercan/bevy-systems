@@ -199,12 +199,17 @@ fn setup_spaceship(mut commands: Commands) {
 
     commands.entity(entity).with_children(|parent| {
         parent.spawn((
+            base_section(BaseSectionConfig {
+                name: "Basic Thruster Section".to_string(),
+                description: "A basic thruster section for spaceships.".to_string(),
+                mass: 1.0,
+            }),
             thruster_section(ThrusterSectionConfig {
                 magnitude: 1.0,
-                transform: Transform::from_xyz(0.0, 0.0, 0.0),
                 ..default()
             }),
             ThrusterInputKey(KeyCode::Digit1),
+            Transform::from_xyz(0.0, 0.0, 0.0),
         ));
     });
 }
