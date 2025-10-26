@@ -36,7 +36,11 @@ fn setup_camera(mut commands: Commands, game_assets: Res<GameAssets>) {
     ));
 }
 
-fn setup_status_ui(mut commands: Commands, game_assets: Res<GameAssets>, asset_server: Res<AssetServer>) {
+fn setup_status_ui(
+    mut commands: Commands,
+    game_assets: Res<GameAssets>,
+    asset_server: Res<AssetServer>,
+) {
     commands.spawn(status_bar(StatusBarRootConfig::default()));
     commands.spawn(status_bar_item(StatusBarItemConfig {
         icon: Some(game_assets.fps_icon.clone()),

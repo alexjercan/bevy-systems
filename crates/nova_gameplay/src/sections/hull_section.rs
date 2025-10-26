@@ -18,9 +18,7 @@ pub struct HullSectionConfig {
 
 impl Default for HullSectionConfig {
     fn default() -> Self {
-        Self {
-            render_mesh: None,
-        }
+        Self { render_mesh: None }
     }
 }
 
@@ -28,10 +26,7 @@ impl Default for HullSectionConfig {
 pub fn hull_section(config: HullSectionConfig) -> impl Bundle {
     debug!("Creating hull section with config: {:?}", config);
 
-    (
-        HullSectionMarker,
-        HullSectionRenderMesh(config.render_mesh),
-    )
+    (HullSectionMarker, HullSectionRenderMesh(config.render_mesh))
 }
 
 /// Marker component for hull sections.

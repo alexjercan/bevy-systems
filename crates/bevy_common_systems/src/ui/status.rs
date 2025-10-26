@@ -9,13 +9,13 @@ use bevy::{platform::collections::HashMap, prelude::*};
 pub mod prelude {
     pub use super::status_bar;
     pub use super::status_bar_item;
+    pub use super::status_fps_color_fn;
+    pub use super::status_fps_value_fn;
+    pub use super::status_version_color_fn;
+    pub use super::status_version_value_fn;
     pub use super::StatusBarItemConfig;
     pub use super::StatusBarPlugin;
     pub use super::StatusBarRootConfig;
-    pub use super::status_fps_value_fn;
-    pub use super::status_version_value_fn;
-    pub use super::status_fps_color_fn;
-    pub use super::status_version_color_fn;
     pub use super::StatusValue;
 }
 
@@ -75,7 +75,9 @@ pub struct StatusBarItemPrefix(pub String);
 pub struct StatusBarItemSuffix(pub String);
 
 #[derive(Component, Clone, Deref, DerefMut)]
-pub struct StatusBarItemValueFnBoxed(pub Arc<dyn Fn(&World) -> Option<Arc<dyn StatusValue>> + Send + Sync>);
+pub struct StatusBarItemValueFnBoxed(
+    pub Arc<dyn Fn(&World) -> Option<Arc<dyn StatusValue>> + Send + Sync>,
+);
 
 #[derive(Component, Clone, Deref, DerefMut)]
 pub struct StatusBarItemColorFnBoxed(pub Arc<dyn Fn(Box<&dyn Any>) -> Option<Color> + Send + Sync>);
@@ -149,7 +151,9 @@ fn update_status_bar_item(
     )>,
 ) {
     for (value, mut text, mut color, color_fn) in &mut items {
-        **text = value.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string());
+        **text = value
+            .as_ref()
+            .map_or_else(|| "N/A".to_string(), |v| v.to_string());
 
         if let Some(v) = value.as_ref() {
             let v: &dyn Any = v.as_ref();
@@ -247,7 +251,8 @@ fn insert_status_bar_item(
     });
 }
 
-pub fn status_fps_value_fn() -> impl Fn(&World) -> Option<Arc<dyn StatusValue>> + Send + Sync + 'static {
+pub fn status_fps_value_fn(
+) -> impl Fn(&World) -> Option<Arc<dyn StatusValue>> + Send + Sync + 'static {
     move |world: &World| {
         let store = world.resource::<bevy::diagnostic::DiagnosticsStore>();
         store
@@ -272,14 +277,13 @@ pub fn status_fps_color_fn() -> impl Fn(Box<&dyn Any>) -> Option<Color> + Send +
     }
 }
 
-pub fn status_version_value_fn(version: String) -> impl Fn(&World) -> Option<Arc<dyn StatusValue>> + Send + Sync + 'static {
-    move |_world: &World| {
-        Some(Arc::new(version.clone()) as Arc<dyn StatusValue>)
-    }
+pub fn status_version_value_fn(
+    version: String,
+) -> impl Fn(&World) -> Option<Arc<dyn StatusValue>> + Send + Sync + 'static {
+    move |_world: &World| Some(Arc::new(version.clone()) as Arc<dyn StatusValue>)
 }
 
-pub fn status_version_color_fn() -> impl Fn(Box<&dyn Any>) -> Option<Color> + Send + Sync + 'static {
-    move |_value: Box<&dyn Any>| {
-        Some(Color::srgb(1.0, 1.0, 1.0))
-    }
+pub fn status_version_color_fn() -> impl Fn(Box<&dyn Any>) -> Option<Color> + Send + Sync + 'static
+{
+    move |_value: Box<&dyn Any>| Some(Color::srgb(1.0, 1.0, 1.0))
 }

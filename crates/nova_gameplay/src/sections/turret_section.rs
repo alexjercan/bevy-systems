@@ -58,7 +58,7 @@ pub struct TurretSectionConfig {
 impl Default for TurretSectionConfig {
     fn default() -> Self {
         Self {
-            yaw_speed: std::f32::consts::PI, // 180 degrees per second
+            yaw_speed: std::f32::consts::PI,   // 180 degrees per second
             pitch_speed: std::f32::consts::PI, // 180 degrees per second
             min_pitch: Some(-std::f32::consts::FRAC_PI_6),
             max_pitch: Some(std::f32::consts::FRAC_PI_2),

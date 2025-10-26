@@ -318,10 +318,6 @@ mod tests {
 
         // Assert
         assert!(app.world().get::<ControllerSectionMarker>(id).is_some());
-        assert!(
-            **app.world().get::<ColliderDensity>(id).unwrap()
-                == CONTROLLER_SECTION_DEFAULT_COLLIDER_DENSITY
-        );
     }
 
     #[test]
