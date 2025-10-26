@@ -620,15 +620,25 @@ mod editor {
 
     fn reset_spaceship(
         mut commands: Commands,
-        spaceship: Single<(Entity, &Children), With<SpaceshipRootMarker>>,
+        spaceship: Single<Entity, With<SpaceshipRootMarker>>,
+        q_sections: Query<(Entity, &ChildOf), With<SectionMarker>>,
     ) {
-        let (spaceship, children) = spaceship.into_inner();
+        let spaceship = spaceship.into_inner();
+        let sections = q_sections
+            .iter()
+            .filter(|(_, parent)| parent.0 == spaceship)
+            .map(|(entity, _)| entity)
+            .collect::<Vec<_>>();
+
         commands
-            .spawn(spaceship_root(SpaceshipConfig { ..default() }))
-            .add_children(children);
+            .spawn((
+                spaceship_root(SpaceshipConfig { ..default() }),
+                PlayerSpaceshipMarker,
+            ))
+            .add_children(&sections);
         commands
             .entity(spaceship)
-            .remove_children(children)
+            .remove_children(&sections)
             .despawn();
     }
 

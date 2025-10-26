@@ -150,76 +150,64 @@ fn insert_player_spaceship_turret(
 }
 
 fn update_chase_camera_input(
-    mut q_camera: Query<&mut ChaseCameraInput, With<ChaseCamera>>,
-    q_spaceship: Query<&Transform, With<SpaceshipRootMarker>>,
-    q_point: Query<
-        (&PointRotationOutput, &ChildOf),
-        (
-            With<SpaceshipInputMarker>,
-            With<SpaceshipRotationInputActiveMarker>,
-        ),
+    camera: Single<&mut ChaseCameraInput, With<ChaseCamera>>,
+    spaceship: Single<&Transform, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
+    point_rotation: Single<
+        &PointRotationOutput,
+        (With<SpaceshipInputMarker>, With<SpaceshipRotationInputActiveMarker>),
     >,
 ) {
-    for mut camera_input in &mut q_camera {
-        for (point_rotation, ChildOf(parent)) in &q_point {
-            let Ok(spaceship_transform) = q_spaceship.get(*parent) else {
-                warn!("ChaseCamera's parent spaceship not found for ChaseCamera");
-                continue;
-            };
+    let mut camera_input = camera.into_inner();
+    let spaceship_transform = spaceship.into_inner();
+    let point_rotation = point_rotation.into_inner();
 
-            camera_input.anchor_pos = spaceship_transform.translation;
-            camera_input.achor_rot = **point_rotation;
-        }
-    }
+    camera_input.anchor_pos = spaceship_transform.translation;
+    camera_input.achor_rot = **point_rotation;
 }
 
 fn update_controller_target_rotation_torque(
-    q_point: Query<
+    point_rotation: Single<
         (&PointRotationOutput, &ChildOf),
-        (
-            With<SpaceshipInputMarker>,
-            With<SpaceshipControllerInputMarker>,
-        ),
+        (With<SpaceshipInputMarker>, With<SpaceshipControllerInputMarker>),
     >,
     mut q_controller: Query<
         (&mut ControllerSectionRotationInput, &ChildOf),
         With<ControllerSectionMarker>,
     >,
 ) {
-    for (point_rotation, ChildOf(parent)) in &q_point {
-        for (mut controller, _) in q_controller
-            .iter_mut()
-            .filter(|(_, ChildOf(c_parent))| *c_parent == *parent)
-        {
-            **controller = **point_rotation;
-        }
+    let (point_rotation, ChildOf(parent)) = point_rotation.into_inner();
+
+    for (mut controller, _) in q_controller
+        .iter_mut()
+        .filter(|(_, ChildOf(c_parent))| *c_parent == *parent)
+    {
+        **controller = **point_rotation;
     }
 }
 
 fn update_turret_target_input(
-    q_point: Query<
+    point_rotation: Single<
         (&PointRotationOutput, &ChildOf),
         (With<SpaceshipInputMarker>, With<SpaceshipTurretInputMarker>),
     >,
     mut q_turret: Query<(&mut TurretSectionTargetInput, &ChildOf), With<TurretSectionMarker>>,
     q_spaceship: Query<&Transform, With<SpaceshipRootMarker>>,
 ) {
-    for (point_rotation, ChildOf(parent)) in &q_point {
-        let Ok(spaceship_transform) = q_spaceship.get(*parent) else {
-            warn!("Turret's parent spaceship not found for TurretSectionMarker");
-            continue;
-        };
+    let (point_rotation, ChildOf(parent)) = point_rotation.into_inner();
+    let Ok(spaceship_transform) = q_spaceship.get(*parent) else {
+        warn!("Turret's parent spaceship not found for TurretSectionMarker");
+        return;
+    };
 
-        for (mut turret, _) in q_turret
-            .iter_mut()
-            .filter(|(_, ChildOf(t_parent))| *t_parent == *parent)
-        {
-            let forward = **point_rotation * -Vec3::Z;
-            let position = spaceship_transform.translation;
-            let distance = 100.0;
+    for (mut turret, _) in q_turret
+        .iter_mut()
+        .filter(|(_, ChildOf(t_parent))| *t_parent == *parent)
+    {
+        let forward = **point_rotation * -Vec3::Z;
+        let position = spaceship_transform.translation;
+        let distance = 100.0;
 
-            **turret = Some(position + forward * distance);
-        }
+        **turret = Some(position + forward * distance);
     }
 }
 
