@@ -126,10 +126,7 @@ fn on_projectile_input(
 mod simulation {
     use avian3d::prelude::*;
     use bevy::{
-        pbr::{ExtendedMaterial, MaterialExtension},
         prelude::*,
-        render::render_resource::AsBindGroup,
-        shader::ShaderRef,
         window::{CursorGrabMode, CursorOptions, PrimaryWindow},
     };
     use bevy_enhanced_input::prelude::*;
@@ -137,10 +134,6 @@ mod simulation {
     use rand::prelude::*;
 
     pub fn simulation_plugin(app: &mut App) {
-        app.add_plugins(MaterialPlugin::<
-            ExtendedMaterial<StandardMaterial, DirectionMagnitudeMaterial>,
-        >::default());
-
         app.add_systems(
             OnEnter(super::SceneState::Simulation),
             (
@@ -168,61 +161,30 @@ mod simulation {
             Update,
             (
                 update_chase_camera_input.before(ChaseCameraPluginSet),
-                update_velocity_hud_input.before(DirectionalSphereOrbitPluginSet),
                 (
                     update_text_hud,
                     update_spaceship_target_rotation_torque,
                     update_turret_target_input,
                 )
                     .before(SpaceshipPluginSet),
-                sync_orbit_state.after(DirectionalSphereOrbitPluginSet),
-                direction_shader_update_system,
             )
                 .chain(),
         );
     }
 
     #[derive(Component, Debug, Clone)]
-    struct VelocityHudMarker;
-
-    #[derive(Component, Debug, Clone)]
     struct HealthHudMarker;
 
     fn setup_hud(
         mut commands: Commands,
-        mut meshes: ResMut<Assets<Mesh>>,
-        mut direction_materials: ResMut<
-            Assets<ExtendedMaterial<StandardMaterial, DirectionMagnitudeMaterial>>,
-        >,
+        spaceship: Single<Entity, With<SpaceshipRootMarker>>,
     ) {
         commands.spawn((
             DespawnOnExit(super::SceneState::Simulation),
-            Name::new("HUD"),
-            VelocityHudMarker,
-            DirectionalSphereOrbit {
+            velocity_hud(VelocityHudConfig {
                 radius: 5.0,
-                ..default()
-            },
-            Transform::default(),
-            Visibility::Visible,
-            children![(
-                Name::new("Velocity Indicator"),
-                Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
-                Mesh3d(meshes.add(Cone::new(0.2, 0.1))),
-                MeshMaterial3d(
-                    direction_materials.add(ExtendedMaterial {
-                        base: StandardMaterial {
-                            base_color: Color::srgba(1.0, 1.0, 1.0, 1.0),
-                            perceptual_roughness: 1.0,
-                            metallic: 0.0,
-                            ..default()
-                        },
-                        extension: DirectionMagnitudeMaterial::default()
-                            .with_max_height(1.0)
-                            .with_radius(0.2),
-                    }),
-                ),
-            )],
+                target: Some(*spaceship),
+            }),
         ));
 
         commands.spawn((
@@ -241,21 +203,6 @@ mod simulation {
         ));
     }
 
-    fn update_velocity_hud_input(
-        hud: Single<&mut DirectionalSphereOrbitInput, With<VelocityHudMarker>>,
-        spaceship: Single<&LinearVelocity, With<SpaceshipRootMarker>>,
-    ) {
-        let spaceship_velocity = spaceship.into_inner();
-        let spaceship_dir = spaceship_velocity.normalize_or_zero();
-        if spaceship_dir == Vec3::ZERO {
-            return;
-        }
-
-        let mut hud_input = hud.into_inner();
-
-        **hud_input = spaceship_dir;
-    }
-
     fn update_text_hud(
         spaceship: Single<&Health, With<SpaceshipRootMarker>>,
         mut q_hud: Query<&mut Text, With<HealthHudMarker>>,
@@ -265,90 +212,6 @@ mod simulation {
 
         for mut text in &mut q_hud {
             text.0 = format!("Health: {}%", health_percent);
-        }
-    }
-
-    fn sync_orbit_state(
-        mut q_orbit: Query<
-            (&mut Transform, &DirectionalSphereOrbitOutput),
-            (
-                Changed<DirectionalSphereOrbitOutput>,
-                Without<SpaceshipRootMarker>,
-            ),
-        >,
-        spaceship: Single<&Transform, With<SpaceshipRootMarker>>,
-    ) {
-        let spaceship_transform = spaceship.into_inner();
-        let spaceship_origin = spaceship_transform.translation;
-
-        for (mut transform, output) in &mut q_orbit {
-            let dir = **output;
-            transform.translation = spaceship_origin + dir;
-            transform.rotation = Quat::from_rotation_arc(Vec3::NEG_Z, dir.normalize_or_zero());
-        }
-    }
-
-    fn direction_shader_update_system(
-        spaceship: Single<&LinearVelocity, With<SpaceshipRootMarker>>,
-        q_hud: Query<Entity, With<VelocityHudMarker>>,
-        q_render: Query<(
-            &MeshMaterial3d<ExtendedMaterial<StandardMaterial, DirectionMagnitudeMaterial>>,
-            &ChildOf,
-        )>,
-        mut materials: ResMut<
-            Assets<ExtendedMaterial<StandardMaterial, DirectionMagnitudeMaterial>>,
-        >,
-    ) {
-        let spaceship_velocity = spaceship.into_inner();
-        let magnitude = spaceship_velocity.length() / 100.0;
-
-        for (material, &ChildOf(parent)) in &q_render {
-            let Ok(_) = q_hud.get(parent) else {
-                warn!("VelocityHudMarker's parent is not HudMarker");
-                continue;
-            };
-
-            let Some(material) = materials.get_mut(&**material) else {
-                warn!("Failed to get material for VelocityHudMarker");
-                continue;
-            };
-
-            material.extension.magnitude_input = magnitude;
-        }
-    }
-
-    #[derive(Asset, TypePath, AsBindGroup, Debug, Clone, Default)]
-    pub struct DirectionMagnitudeMaterial {
-        #[uniform(100)]
-        pub magnitude_input: f32,
-        #[uniform(100)]
-        pub radius: f32,
-        #[uniform(100)]
-        pub max_height: f32,
-        #[cfg(target_arch = "wasm32")]
-        #[uniform(100)]
-        _webgl2_padding_16b: u32,
-    }
-
-    impl DirectionMagnitudeMaterial {
-        pub fn with_radius(mut self, radius: f32) -> Self {
-            self.radius = radius;
-            self
-        }
-
-        pub fn with_max_height(mut self, height: f32) -> Self {
-            self.max_height = height;
-            self
-        }
-    }
-
-    impl MaterialExtension for DirectionMagnitudeMaterial {
-        fn vertex_shader() -> ShaderRef {
-            "shaders/directional_magnitude.wgsl".into()
-        }
-
-        fn fragment_shader() -> ShaderRef {
-            "shaders/directional_magnitude.wgsl".into()
         }
     }
 

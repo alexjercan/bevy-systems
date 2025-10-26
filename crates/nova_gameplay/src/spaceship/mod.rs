@@ -5,9 +5,11 @@ use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
 pub mod sections;
+pub mod hud;
 
 pub mod prelude {
     pub use super::sections::prelude::*;
+    pub use super::hud::prelude::*;
 
     pub use super::spaceship_root;
     pub use super::SpaceshipConfig;
@@ -56,6 +58,7 @@ impl Plugin for SpaceshipPlugin {
         app.add_plugins(sections::SectionPlugin {
             render: self.render,
         });
+        app.add_plugins(hud::HudPlugin);
 
         app.configure_sets(
             Update,
@@ -64,6 +67,14 @@ impl Plugin for SpaceshipPlugin {
         app.configure_sets(
             FixedUpdate,
             sections::SectionPluginSet.in_set(SpaceshipPluginSet),
+        );
+        app.configure_sets(
+            Update,
+            hud::HudPluginSet.in_set(SpaceshipPluginSet),
+        );
+        app.configure_sets(
+            FixedUpdate,
+            hud::HudPluginSet.in_set(SpaceshipPluginSet),
         );
     }
 }
