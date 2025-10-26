@@ -16,6 +16,7 @@ pub mod prelude {
     pub use super::status_version_value_fn;
     pub use super::status_fps_color_fn;
     pub use super::status_version_color_fn;
+    pub use super::StatusValue;
 }
 
 /// The StatusBarRootMarker component is a marker component that indicates the root node of the status
@@ -60,14 +61,18 @@ where
     pub icon: Option<Handle<Image>>,
     pub value_fn: F,
     pub color_fn: G,
-    pub label: String,
+    pub prefix: String,
+    pub suffix: String,
 }
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct StatusBarItemIcon(pub Handle<Image>);
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
-pub struct StatusBarItemLabel(pub String);
+pub struct StatusBarItemPrefix(pub String);
+
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+pub struct StatusBarItemSuffix(pub String);
 
 #[derive(Component, Clone, Deref, DerefMut)]
 pub struct StatusBarItemValueFnBoxed(pub Arc<dyn Fn(&World) -> Option<Arc<dyn StatusValue>> + Send + Sync>);
@@ -84,7 +89,8 @@ where
         Name::new("StatusBarItem"),
         StatusBarItemMarker,
         StatusBarItemIcon(config.icon.unwrap_or_default()),
-        StatusBarItemLabel(config.label),
+        StatusBarItemPrefix(config.prefix),
+        StatusBarItemSuffix(config.suffix),
         StatusBarItemValueFnBoxed(Arc::new(config.value_fn)),
         StatusBarItemColorFnBoxed(Arc::new(config.color_fn)),
     )
@@ -161,7 +167,8 @@ fn insert_status_bar_item(
     q_item: Query<
         (
             &StatusBarItemIcon,
-            &StatusBarItemLabel,
+            &StatusBarItemPrefix,
+            &StatusBarItemSuffix,
             &StatusBarItemValueFnBoxed,
             &StatusBarItemColorFnBoxed,
         ),
@@ -171,7 +178,7 @@ fn insert_status_bar_item(
 ) {
     let entity = add.entity;
     debug!("Inserting UI element for status bar item {:?}", entity);
-    let Ok((icon, label, value_fn, color_fn)) = q_item.get(entity) else {
+    let Ok((icon, prefix, suffix, value_fn, color_fn)) = q_item.get(entity) else {
         error!(
             "StatusBarItem entity {:?} missing required components",
             entity
@@ -183,7 +190,7 @@ fn insert_status_bar_item(
 
     commands.entity(root).with_children(|parent| {
         parent.spawn((
-            Name::new(format!("StatusBarItem: {}", **label)),
+            Name::new(format!("StatusBarItem: {}-{}", **prefix, **suffix)),
             Node {
                 width: Val::Auto,
                 height: Val::Px(24.0),
@@ -208,6 +215,14 @@ fn insert_status_bar_item(
                     },
                 ),
                 (
+                    Name::new("StatusBarItemPrefix"),
+                    Text::new((**prefix).clone()),
+                    TextFont {
+                        font_size: 14.0,
+                        ..default()
+                    },
+                ),
+                (
                     Name::new("StatusBarItemValue"),
                     StatusBarItemValue(None),
                     value_fn.clone(),
@@ -220,8 +235,8 @@ fn insert_status_bar_item(
                     TextColor(Color::WHITE),
                 ),
                 (
-                    Name::new("StatusBarItemLabel"),
-                    Text::new((**label).clone()),
+                    Name::new("StatusBarItemSuffix"),
+                    Text::new((**suffix).clone()),
                     TextFont {
                         font_size: 14.0,
                         ..default()
