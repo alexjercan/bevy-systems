@@ -4,12 +4,12 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
-pub mod sections;
 pub mod hud;
+pub mod sections;
 
 pub mod prelude {
-    pub use super::sections::prelude::*;
     pub use super::hud::prelude::*;
+    pub use super::sections::prelude::*;
 
     pub use super::spaceship_root;
     pub use super::SpaceshipConfig;
@@ -68,13 +68,7 @@ impl Plugin for SpaceshipPlugin {
             FixedUpdate,
             sections::SectionPluginSet.in_set(SpaceshipPluginSet),
         );
-        app.configure_sets(
-            Update,
-            hud::HudPluginSet.in_set(SpaceshipPluginSet),
-        );
-        app.configure_sets(
-            FixedUpdate,
-            hud::HudPluginSet.in_set(SpaceshipPluginSet),
-        );
+        app.configure_sets(Update, hud::HudPluginSet.in_set(SpaceshipPluginSet));
+        app.configure_sets(FixedUpdate, hud::HudPluginSet.in_set(SpaceshipPluginSet));
     }
 }

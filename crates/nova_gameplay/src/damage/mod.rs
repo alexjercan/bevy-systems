@@ -41,11 +41,11 @@ impl Plugin for DamagePlugin {
 }
 
 /// Add collision damage for all rigid bodies.
-pub fn on_rigidbody_spawn(
-    add: On<Add, ColliderOf>,
-    mut commands: Commands,
-) {
+pub fn on_rigidbody_spawn(add: On<Add, ColliderOf>, mut commands: Commands) {
     let entity = add.entity;
-    debug!("ColliderOf component added to entity {:?} inserting CollisionDamageMarker.", entity);
+    debug!(
+        "ColliderOf component added to entity {:?} inserting CollisionDamageMarker.",
+        entity
+    );
     commands.entity(entity).insert(CollisionDamageMarker);
 }

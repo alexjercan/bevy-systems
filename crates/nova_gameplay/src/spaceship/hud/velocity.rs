@@ -8,10 +8,10 @@ use bevy::{
 use bevy_common_systems::prelude::*;
 
 pub mod prelude {
+    pub use super::velocity_hud;
+    pub use super::VelocityHudConfig;
     pub use super::VelocityHudPlugin;
     pub use super::VelocityHudPluginSet;
-    pub use super::VelocityHudConfig;
-    pub use super::velocity_hud;
 }
 
 #[derive(Component, Debug, Clone, Reflect)]

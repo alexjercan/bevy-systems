@@ -15,8 +15,8 @@ pub mod prelude {
     pub use super::TurretSectionConfig;
     pub use super::TurretSectionMarker;
     pub use super::TurretSectionPlugin;
-    pub use super::TurretSectionTargetInput;
     pub use super::TurretSectionRotatorBarrelMarker;
+    pub use super::TurretSectionTargetInput;
 }
 
 /// Configuration for a turret section of a spaceship.

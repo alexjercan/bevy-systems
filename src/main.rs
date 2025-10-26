@@ -153,32 +153,13 @@ mod simulation {
         app.add_observer(on_combat_input_started);
         app.add_observer(on_combat_input_completed);
 
-        // Spaceship Control Mode for the Camera/Spaceship
-        app.insert_resource(SpaceshipControlMode::default());
-        app.add_systems(Update, sync_spaceship_control_mode);
-
-        app.add_systems(
-            Update,
-            (
-                update_chase_camera_input.before(ChaseCameraPluginSet),
-                (
-                    update_text_hud,
-                    update_spaceship_target_rotation_torque,
-                    update_turret_target_input,
-                )
-                    .before(SpaceshipPluginSet),
-            )
-                .chain(),
-        );
+        app.add_systems(Update, update_text_hud);
     }
 
     #[derive(Component, Debug, Clone)]
     struct HealthHudMarker;
 
-    fn setup_hud(
-        mut commands: Commands,
-        spaceship: Single<Entity, With<SpaceshipRootMarker>>,
-    ) {
+    fn setup_hud(mut commands: Commands, spaceship: Single<Entity, With<SpaceshipRootMarker>>) {
         commands.spawn((
             DespawnOnExit(super::SceneState::Simulation),
             velocity_hud(VelocityHudConfig {
@@ -215,68 +196,7 @@ mod simulation {
         }
     }
 
-    fn update_chase_camera_input(
-        camera: Single<&mut ChaseCameraInput, With<ChaseCamera>>,
-        spaceship: Single<&Transform, With<SpaceshipRootMarker>>,
-        point_rotation: Single<&PointRotationOutput, With<SpaceshipRotationInputActiveMarker>>,
-    ) {
-        let mut camera_input = camera.into_inner();
-        let spaceship_transform = spaceship.into_inner();
-        let rotation = point_rotation.into_inner();
-
-        camera_input.anchor_pos = spaceship_transform.translation;
-        camera_input.achor_rot = **rotation;
-    }
-
-    fn update_spaceship_target_rotation_torque(
-        point_rotation: Single<&PointRotationOutput, With<SpaceshipRotationInputMarker>>,
-        controller: Single<&mut ControllerSectionRotationInput, With<ControllerSectionMarker>>,
-    ) {
-        let rotation = point_rotation.into_inner();
-        let mut controller_target = controller.into_inner();
-        **controller_target = **rotation;
-    }
-
-    #[derive(Component, Clone, Copy, Debug, Reflect)]
-    struct PDCTurretTargetMarker;
-
-    fn update_turret_target_input(
-        target: Option<Single<&GlobalTransform, With<PDCTurretTargetMarker>>>,
-        mut q_turret: Query<&mut TurretSectionTargetInput, With<TurretSectionMarker>>,
-        mode: Res<SpaceshipControlMode>,
-        point_rotation: Single<&PointRotationOutput, With<CombatRotationInputMarker>>,
-        spaceship: Single<&GlobalTransform, With<SpaceshipRootMarker>>,
-    ) {
-        if matches!(*mode, SpaceshipControlMode::Combat) {
-            let rotation = point_rotation.into_inner();
-            let spaceship_transform = spaceship.into_inner();
-
-            for mut turret in &mut q_turret {
-                let forward = **rotation * -Vec3::Z;
-                let position = spaceship_transform.translation();
-                let distance = 100.0;
-
-                **turret = Some(position + forward * distance);
-            }
-        } else {
-            let Some(target) = target else {
-                return;
-            };
-
-            let target_transform = target.into_inner();
-
-            for mut turret in &mut q_turret {
-                **turret = Some(target_transform.translation());
-            }
-        }
-    }
-
-    fn setup_scene(
-        mut commands: Commands,
-        mut meshes: ResMut<Assets<Mesh>>,
-        mut materials: ResMut<Assets<StandardMaterial>>,
-        game_assets: Res<GameAssets>,
-    ) {
+    fn setup_scene(mut commands: Commands, game_assets: Res<GameAssets>) {
         // Spawn a player input controller entity to hold the input from the player
         commands.spawn((
             DespawnOnExit(super::SceneState::Simulation),
@@ -307,31 +227,6 @@ mod simulation {
             ),
         ));
 
-        // Spawn a RotationInput to consume the mouse movement and will be used to rotate the spaceship
-        commands.spawn((
-            DespawnOnExit(super::SceneState::Simulation),
-            Name::new("Spaceship Rotation Input"),
-            SpaceshipRotationInputMarker,
-            SpaceshipRotationInputActiveMarker,
-            PointRotation::default(),
-        ));
-
-        // Spawn a RotationInput to consume the mouse movement and will be used to rotate the free look
-        commands.spawn((
-            DespawnOnExit(super::SceneState::Simulation),
-            Name::new("FreeLook Rotation Input"),
-            FreeLookRotationInputMarker,
-            PointRotation::default(),
-        ));
-
-        // Spawn a RotationInput to consume the mouse movement and will be used to rotate the combat
-        commands.spawn((
-            DespawnOnExit(super::SceneState::Simulation),
-            Name::new("Combat Rotation Input"),
-            CombatRotationInputMarker,
-            PointRotation::default(),
-        ));
-
         // Spawn a 3D camera with a chase camera component
         commands.spawn((
             DespawnOnExit(super::SceneState::Simulation),
@@ -343,19 +238,6 @@ mod simulation {
                 cubemap: game_assets.cubemap.clone(),
                 brightness: 1000.0,
             },
-        ));
-
-        // Spawn a target entity to visualize the target rotation
-        commands.spawn((
-            DespawnOnExit(super::SceneState::Simulation),
-            Name::new("Turret Target"),
-            PDCTurretTargetMarker,
-            Transform::from_xyz(0.0, 0.0, -500.0),
-            Visibility::Visible,
-            Mesh3d(meshes.add(Cuboid::new(3.0, 3.0, 3.0))),
-            MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 0.2))),
-            Collider::cuboid(3.0, 3.0, 3.0),
-            RigidBody::Static,
         ));
     }
 
@@ -457,106 +339,8 @@ mod simulation {
         primary_cursor_options.visible = false;
     }
 
-    #[derive(Resource, Default, Clone, Debug)]
-    enum SpaceshipControlMode {
-        #[default]
-        Normal,
-        FreeLook,
-        Combat,
-    }
-
-    #[derive(Component, Debug, Clone)]
-    struct SpaceshipRotationInputActiveMarker;
-
-    fn sync_spaceship_control_mode(
-        mut commands: Commands,
-        mode: Res<SpaceshipControlMode>,
-        spaceship_input_rotation: Single<
-            (Entity, &PointRotationOutput),
-            With<SpaceshipRotationInputMarker>,
-        >,
-        spaceship_input_free_look: Single<Entity, With<FreeLookRotationInputMarker>>,
-        spaceship_input_combat: Single<Entity, With<CombatRotationInputMarker>>,
-        camera: Single<Entity, With<ChaseCamera>>,
-    ) {
-        if !mode.is_changed() {
-            return;
-        }
-
-        let (spaceship_input_rotation, point_rotation) = spaceship_input_rotation.into_inner();
-        let spaceship_input_free_look = spaceship_input_free_look.into_inner();
-        let spaceship_input_combat = spaceship_input_combat.into_inner();
-        let camera = camera.into_inner();
-
-        match *mode {
-            SpaceshipControlMode::Normal => {
-                commands
-                    .entity(spaceship_input_rotation)
-                    .insert(SpaceshipRotationInputActiveMarker);
-                commands
-                    .entity(spaceship_input_free_look)
-                    .remove::<SpaceshipRotationInputActiveMarker>();
-                commands
-                    .entity(spaceship_input_combat)
-                    .remove::<SpaceshipRotationInputActiveMarker>();
-                commands.entity(camera).insert(ChaseCamera {
-                    offset: Vec3::new(0.0, 5.0, -20.0),
-                    focus_offset: Vec3::new(0.0, 0.0, 20.0),
-                    ..default()
-                });
-            }
-            SpaceshipControlMode::FreeLook => {
-                commands
-                    .entity(spaceship_input_rotation)
-                    .remove::<SpaceshipRotationInputActiveMarker>();
-                commands
-                    .entity(spaceship_input_free_look)
-                    .insert(PointRotation {
-                        initial_rotation: **point_rotation,
-                    })
-                    .insert(SpaceshipRotationInputActiveMarker);
-                commands
-                    .entity(spaceship_input_combat)
-                    .remove::<SpaceshipRotationInputActiveMarker>();
-                commands.entity(camera).insert(ChaseCamera {
-                    offset: Vec3::new(0.0, 10.0, -30.0),
-                    focus_offset: Vec3::new(0.0, 0.0, 0.0),
-                    ..default()
-                });
-            }
-            SpaceshipControlMode::Combat => {
-                commands
-                    .entity(spaceship_input_rotation)
-                    .remove::<SpaceshipRotationInputActiveMarker>();
-                commands
-                    .entity(spaceship_input_free_look)
-                    .remove::<SpaceshipRotationInputActiveMarker>();
-                commands
-                    .entity(spaceship_input_combat)
-                    .insert(PointRotation {
-                        initial_rotation: **point_rotation,
-                    })
-                    .insert(SpaceshipRotationInputActiveMarker);
-                commands.entity(camera).insert(ChaseCamera {
-                    offset: Vec3::new(0.0, 5.0, -10.0),
-                    focus_offset: Vec3::new(0.0, 0.0, 50.0),
-                    ..default()
-                });
-            }
-        }
-    }
-
     #[derive(Component, Debug, Clone)]
     struct PlayerInputMarker;
-
-    #[derive(Component, Debug, Clone)]
-    struct SpaceshipRotationInputMarker;
-
-    #[derive(Component, Debug, Clone)]
-    struct FreeLookRotationInputMarker;
-
-    #[derive(Component, Debug, Clone)]
-    struct CombatRotationInputMarker;
 
     #[derive(InputAction)]
     #[action_output(Vec2)]
@@ -572,7 +356,13 @@ mod simulation {
 
     fn on_rotation_input(
         fire: On<Fire<CameraInputRotate>>,
-        mut q_input: Query<&mut PointRotationInput, With<SpaceshipRotationInputActiveMarker>>,
+        mut q_input: Query<
+            &mut PointRotationInput,
+            (
+                With<SpaceshipInputMarker>,
+                With<SpaceshipRotationInputActiveMarker>,
+            ),
+        >,
     ) {
         for mut input in &mut q_input {
             **input = fire.value;
@@ -581,7 +371,7 @@ mod simulation {
 
     fn on_rotation_input_completed(
         _: On<Complete<CameraInputRotate>>,
-        mut q_input: Query<&mut PointRotationInput>,
+        mut q_input: Query<&mut PointRotationInput, With<SpaceshipInputMarker>>,
     ) {
         for mut input in &mut q_input {
             **input = Vec2::ZERO;
@@ -603,7 +393,7 @@ mod simulation {
     }
 
     fn on_combat_input_started(_: On<Start<CombatInput>>, mut mode: ResMut<SpaceshipControlMode>) {
-        *mode = SpaceshipControlMode::Combat;
+        *mode = SpaceshipControlMode::Turret;
     }
 
     fn on_combat_input_completed(
@@ -975,7 +765,10 @@ mod editor {
             commands.entity(entity).despawn();
         }
         let entity = commands
-            .spawn((spaceship_root(SpaceshipConfig { ..default() }),))
+            .spawn((
+                spaceship_root(SpaceshipConfig { ..default() }),
+                PlayerSpaceshipMarker,
+            ))
             .id();
 
         commands.entity(entity).with_children(|parent| {
@@ -1004,7 +797,10 @@ mod editor {
             commands.entity(entity).despawn();
         }
         let entity = commands
-            .spawn((spaceship_root(SpaceshipConfig { ..default() }),))
+            .spawn((
+                spaceship_root(SpaceshipConfig { ..default() }),
+                PlayerSpaceshipMarker,
+            ))
             .id();
 
         commands.entity(entity).with_children(|parent| {

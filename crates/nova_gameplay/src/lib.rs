@@ -5,11 +5,13 @@ use bevy::prelude::*;
 
 pub mod damage;
 pub mod destruction;
+pub mod input;
 pub mod spaceship;
 
 pub mod prelude {
     pub use super::damage::prelude::*;
     pub use super::destruction::prelude::*;
+    pub use super::input::prelude::*;
     pub use super::spaceship::prelude::*;
 
     pub use super::GameplayPlugin;
@@ -63,11 +65,17 @@ impl Plugin for GameplayPlugin {
         app.add_plugins(bevy_common_systems::prelude::StatusBarPlugin);
 
         // Glue Plugins
+        app.add_plugins(input::SpaceshipInputPlugin);
         app.add_plugins(spaceship::SpaceshipPlugin {
             render: self.render,
         });
         app.add_plugins(damage::DamagePlugin);
         app.add_plugins(destruction::DestructionHealthPlugin);
+
+        app.configure_sets(
+            Update,
+            input::SpaceshipInputPluginSet.before(spaceship::SpaceshipPluginSet),
+        );
 
         // Diagnostics
         if !app.is_plugin_added::<bevy::diagnostic::FrameTimeDiagnosticsPlugin>() {
