@@ -2,7 +2,7 @@
 //! The idea is it should be easy to add what metrics to display via generic components
 //! Then you update the components and the ststaus bar updates automatically.
 
-use std::sync::Arc;
+use std::{any::Any, fmt::Display, sync::Arc};
 
 use bevy::{platform::collections::HashMap, prelude::*};
 
@@ -12,6 +12,10 @@ pub mod prelude {
     pub use super::StatusBarItemConfig;
     pub use super::StatusBarPlugin;
     pub use super::StatusBarRootConfig;
+    pub use super::status_fps_value_fn;
+    pub use super::status_version_value_fn;
+    pub use super::status_fps_color_fn;
+    pub use super::status_version_color_fn;
 }
 
 /// The StatusBarRootMarker component is a marker component that indicates the root node of the status
@@ -43,16 +47,20 @@ pub fn status_bar(_config: StatusBarRootConfig) -> impl Bundle {
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct StatusBarItemMarker;
 
+pub trait StatusValue: Any + Display + Send + Sync + 'static {}
+impl<T> StatusValue for T where T: Any + Display + Send + Sync + 'static {}
+
 /// The StatusBarItemConfig component defines a single item in the status bar.
 #[derive(Debug, Clone, Default)]
-pub struct StatusBarItemConfig<F>
+pub struct StatusBarItemConfig<F, G>
 where
-    F: Fn(&World) -> Option<u32> + Send + Sync + 'static,
+    F: Fn(&World) -> Option<Arc<dyn StatusValue>> + Send + Sync + 'static,
+    G: Fn(Box<&dyn Any>) -> Option<Color> + Send + Sync + 'static,
 {
     pub icon: Option<Handle<Image>>,
     pub value_fn: F,
+    pub color_fn: G,
     pub label: String,
-    pub mapping: Vec<(Option<u32>, Color)>,
 }
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
@@ -61,32 +69,33 @@ pub struct StatusBarItemIcon(pub Handle<Image>);
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct StatusBarItemLabel(pub String);
 
-#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
-pub struct StatusBarItemMapping(pub Vec<(Option<u32>, Color)>);
+#[derive(Component, Clone, Deref, DerefMut)]
+pub struct StatusBarItemValueFnBoxed(pub Arc<dyn Fn(&World) -> Option<Arc<dyn StatusValue>> + Send + Sync>);
 
 #[derive(Component, Clone, Deref, DerefMut)]
-pub struct StatusBarItemValueFnBoxed(pub Arc<dyn Fn(&World) -> Option<u32> + Send + Sync>);
+pub struct StatusBarItemColorFnBoxed(pub Arc<dyn Fn(Box<&dyn Any>) -> Option<Color> + Send + Sync>);
 
-pub fn status_bar_item<F>(config: StatusBarItemConfig<F>) -> impl Bundle
+pub fn status_bar_item<F, G>(config: StatusBarItemConfig<F, G>) -> impl Bundle
 where
-    F: Fn(&World) -> Option<u32> + Send + Sync + 'static,
+    F: Fn(&World) -> Option<Arc<dyn StatusValue>> + Send + Sync + 'static,
+    G: Fn(Box<&dyn Any>) -> Option<Color> + Send + Sync + 'static,
 {
     (
         Name::new("StatusBarItem"),
         StatusBarItemMarker,
         StatusBarItemIcon(config.icon.unwrap_or_default()),
         StatusBarItemLabel(config.label),
-        StatusBarItemMapping(config.mapping),
         StatusBarItemValueFnBoxed(Arc::new(config.value_fn)),
+        StatusBarItemColorFnBoxed(Arc::new(config.color_fn)),
     )
 }
 
-#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
-pub struct StatusBarItemValue(pub Option<u32>);
+#[derive(Component, Clone, Deref, DerefMut)]
+pub struct StatusBarItemValue(pub Option<Arc<dyn StatusValue>>);
 
-#[derive(Resource, Default, Clone, Debug)]
+#[derive(Resource, Default, Clone)]
 pub struct StatusBarStore {
-    pub store: HashMap<Entity, u32>,
+    pub store: HashMap<Entity, Arc<dyn StatusValue>>,
 }
 
 pub struct StatusBarPlugin;
@@ -130,25 +139,19 @@ fn update_status_bar_item(
         &StatusBarItemValue,
         &mut Text,
         &mut TextColor,
-        &StatusBarItemMapping,
+        &StatusBarItemColorFnBoxed,
     )>,
 ) {
-    for (value, mut text, mut color, mapping) in &mut items {
-        **text = value.map_or_else(|| "N/A".to_string(), |v| v.to_string());
+    for (value, mut text, mut color, color_fn) in &mut items {
+        **text = value.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string());
 
-        let new_color = value
-            .and_then(|val| {
-                mapping
-                    .iter()
-                    .find_map(|(threshold, map_color)| match threshold {
-                        Some(thresh) if val <= *thresh => Some(*map_color),
-                        None => Some(*map_color),
-                        _ => None,
-                    })
-            })
-            .unwrap_or(Color::WHITE);
+        if let Some(v) = value.as_ref() {
+            let v: &dyn Any = v.as_ref();
 
-        **color = new_color;
+            if let Some(new_color) = (color_fn)(Box::new(v)) {
+                **color = new_color;
+            }
+        }
     }
 }
 
@@ -160,7 +163,7 @@ fn insert_status_bar_item(
             &StatusBarItemIcon,
             &StatusBarItemLabel,
             &StatusBarItemValueFnBoxed,
-            &StatusBarItemMapping,
+            &StatusBarItemColorFnBoxed,
         ),
         With<StatusBarItemMarker>,
     >,
@@ -168,7 +171,7 @@ fn insert_status_bar_item(
 ) {
     let entity = add.entity;
     debug!("Inserting UI element for status bar item {:?}", entity);
-    let Ok((icon, label, value_fn, mapping)) = q_item.get(entity) else {
+    let Ok((icon, label, value_fn, color_fn)) = q_item.get(entity) else {
         error!(
             "StatusBarItem entity {:?} missing required components",
             entity
@@ -213,8 +216,8 @@ fn insert_status_bar_item(
                         font_size: 14.0,
                         ..default()
                     },
+                    color_fn.clone(),
                     TextColor(Color::WHITE),
-                    mapping.clone(),
                 ),
                 (
                     Name::new("StatusBarItemLabel"),
@@ -227,4 +230,41 @@ fn insert_status_bar_item(
             ],
         ));
     });
+}
+
+pub fn status_fps_value_fn() -> impl Fn(&World) -> Option<Arc<dyn StatusValue>> + Send + Sync + 'static {
+    move |world: &World| {
+        let store = world.resource::<bevy::diagnostic::DiagnosticsStore>();
+        store
+            .get(&bevy::diagnostic::FrameTimeDiagnosticsPlugin::FPS)
+            .and_then(|d| d.average())
+            .map(|v| v.round() as u32)
+            .map(|fps| Arc::new(fps) as Arc<dyn StatusValue>)
+    }
+}
+
+pub fn status_fps_color_fn() -> impl Fn(Box<&dyn Any>) -> Option<Color> + Send + Sync + 'static {
+    move |value: Box<&dyn Any>| {
+        let fps = (*value).downcast_ref::<u32>()?;
+        let color = if *fps < 30 {
+            Color::srgb(1.0, 0.0, 0.0)
+        } else if *fps < 60 {
+            Color::srgb(1.0, 1.0, 0.0)
+        } else {
+            Color::srgb(0.0, 1.0, 0.0)
+        };
+        Some(color)
+    }
+}
+
+pub fn status_version_value_fn(version: String) -> impl Fn(&World) -> Option<Arc<dyn StatusValue>> + Send + Sync + 'static {
+    move |_world: &World| {
+        Some(Arc::new(version.clone()) as Arc<dyn StatusValue>)
+    }
+}
+
+pub fn status_version_color_fn() -> impl Fn(Box<&dyn Any>) -> Option<Color> + Send + Sync + 'static {
+    move |_value: Box<&dyn Any>| {
+        Some(Color::srgb(1.0, 1.0, 1.0))
+    }
 }
