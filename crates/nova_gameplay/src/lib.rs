@@ -61,11 +61,19 @@ impl Plugin for GameplayPlugin {
         app.add_plugins(bevy_common_systems::prelude::CollisionDamagePlugin);
         app.add_plugins(bevy_common_systems::prelude::HealthPlugin);
 
+        // UI Plugins
+        app.add_plugins(bevy_common_systems::prelude::StatusBarPlugin);
+
         // Glue Plugins
         app.add_plugins(spaceship::SpaceshipPlugin {
             render: self.render,
         });
         app.add_plugins(damage::DamagePlugin);
         app.add_plugins(destruction::DestructionHealthPlugin);
+
+        // Diagnostics
+        if !app.is_plugin_added::<bevy::diagnostic::FrameTimeDiagnosticsPlugin>() {
+            app.add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default());
+        }
     }
 }

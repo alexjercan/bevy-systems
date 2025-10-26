@@ -59,7 +59,7 @@ fn on_fragment_added(
             fragment_count: 2,
             force_multiplier_range: (1.0, 2.0),
             ..default()
-        }
+        },
     ));
 }
 

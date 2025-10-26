@@ -8,6 +8,7 @@ pub mod meth;
 pub mod physics;
 pub mod projectiles;
 pub mod transform;
+pub mod ui;
 
 pub mod prelude {
     pub use crate::camera::prelude::*;
@@ -18,4 +19,5 @@ pub mod prelude {
     pub use crate::physics::prelude::*;
     pub use crate::projectiles::prelude::*;
     pub use crate::transform::prelude::*;
+    pub use crate::ui::prelude::*;
 }
