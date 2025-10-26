@@ -39,6 +39,7 @@ impl Plugin for DestructionHealthPlugin {
     }
 }
 
+/// When a Health component is added, ensure the entity has a DespawnOnDestroy marker.
 fn on_health_spawn(
     add: On<Add, Health>,
     mut commands: Commands,
@@ -46,6 +47,7 @@ fn on_health_spawn(
 ) {
     let entity = add.entity;
     debug!("Health component added to entity {:?}", entity);
+
     let Ok(_) = q_despawn.get(entity) else {
         debug!(
             "Entity {:?} does not have DespawnOnDestroy marker, spawning with default behavior.",

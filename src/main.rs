@@ -542,7 +542,6 @@ mod simulation {
                     Collider::sphere(radius),
                     RigidBody::Static,
                     Health::new(100.0),
-                    CollisionDamageMarker,
                 ))
                 .id();
 
@@ -578,7 +577,6 @@ mod simulation {
                     ColliderDensity(1.0),
                     RigidBody::Dynamic,
                     Health::new(100.0),
-                    CollisionDamageMarker,
                 ))
                 .id();
 

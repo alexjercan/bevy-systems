@@ -142,7 +142,7 @@ mod gizmos {
 
 mod turret {
     use super::*;
-    use nova_gameplay::sections::turret_section::*;
+    use nova_gameplay::prelude::*;
 
     pub struct DebugTurretSectionPlugin;
 

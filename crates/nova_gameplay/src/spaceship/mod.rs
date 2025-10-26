@@ -4,7 +4,11 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
+pub mod sections;
+
 pub mod prelude {
+    pub use super::sections::prelude::*;
+
     pub use super::spaceship_root;
     pub use super::SpaceshipConfig;
     pub use super::SpaceshipPlugin;
@@ -49,17 +53,17 @@ pub struct SpaceshipPlugin {
 
 impl Plugin for SpaceshipPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(super::sections::SectionPlugin {
+        app.add_plugins(sections::SectionPlugin {
             render: self.render,
         });
 
         app.configure_sets(
             Update,
-            super::sections::SectionPluginSet.in_set(SpaceshipPluginSet),
+            sections::SectionPluginSet.in_set(SpaceshipPluginSet),
         );
         app.configure_sets(
             FixedUpdate,
-            super::sections::SectionPluginSet.in_set(SpaceshipPluginSet),
+            sections::SectionPluginSet.in_set(SpaceshipPluginSet),
         );
     }
 }
