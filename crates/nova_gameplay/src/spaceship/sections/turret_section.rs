@@ -544,17 +544,35 @@ fn on_shoot_spawn_projectile(
 
 fn on_spawn_projectile_effect(
     spawn: On<SpawnProjectile>,
-    q_muzzle: Query<&GlobalTransform, With<TurretSectionBarrelMuzzleMarker>>,
+    q_muzzle: Query<(&TransformChainWorld, &TurretSectionPartOf), With<TurretSectionBarrelMuzzleMarker>>,
     mut q_effect: Query<
         (&mut EffectProperties, &mut EffectSpawner, &ChildOf),
         Without<TurretSectionBarrelMuzzleMarker>,
     >,
+    q_turret: Query<&ChildOf, With<TurretSectionMarker>>,
+    q_spaceship: Query<(&LinearVelocity, &AngularVelocity), With<SpaceshipRootMarker>>,
 ) {
     let entity = spawn.entity;
-    let Ok(muzzle_transform) = q_muzzle.get(entity) else {
+    let Ok((muzzle_transform, TurretSectionPartOf(turret))) = q_muzzle.get(entity) else {
         warn!(
-            "TurretSectionBarrelMuzzleMarker entity {:?} missing GlobalTransform component",
+            "on_spawn_projectile_effect: entity {:?} not found in q_muzzle",
             entity
+        );
+        return;
+    };
+
+    let Ok(ChildOf(spaceship)) = q_turret.get(*turret) else {
+        warn!(
+            "on_spawn_projectile_effect: turret entity {:?} not found in q_turret",
+            *turret
+        );
+        return;
+    };
+
+    let Ok((lin_vel, _ang_vel)) = q_spaceship.get(*spaceship) else {
+        warn!(
+            "on_spawn_projectile_effect: entity {:?} not found in q_spaceship",
+            *spaceship
         );
         return;
     };
@@ -564,13 +582,13 @@ fn on_spawn_projectile_effect(
         .find(|(_, _, &ChildOf(parent))| parent == entity)
     else {
         warn!(
-            "TurretSectionBarrelMuzzleMarker entity {:?} missing EffectProperties or EffectSpawner component",
+            "on_spawn_projectile_effect: entity {:?} not found in q_effect",
             entity
         );
         return;
     };
 
-    let normal = muzzle_transform.forward();
+    let normal = muzzle_transform.rotation * Vec3::NEG_Z;
 
     let p: f32 = rand::random();
 
@@ -599,6 +617,9 @@ fn on_spawn_projectile_effect(
     // Set the collision normal
     let normal = normal.normalize();
     properties.set("normal", normal.into());
+
+    let base_velocity = **lin_vel;
+    properties.set("base_velocity", base_velocity.into());
 
     // Spawn the particles
     effect_spawner.reset();
@@ -929,6 +950,9 @@ fn insert_turret_barrel_muzzle_effect(
             let normal = writer.add_property("normal", Vec3::ZERO.into());
             let normal = writer.prop(normal);
 
+            let base_velocity = writer.add_property("base_velocity", Vec3::ZERO.into());
+            let base_velocity = writer.prop(base_velocity);
+
             // Set the position to be the collision point, which in this example is always
             // the emitter position (0,0,0) at the ball center, minus the ball radius
             // alongside the collision normal. Also raise particle to Z=0.2 so they appear
@@ -952,6 +976,7 @@ fn insert_turret_barrel_muzzle_effect(
                 + writer.lit(Vec3::Z) * spread_z;
             let speed = writer.rand(ScalarType::Float) * writer.lit(5.0);
             let velocity = (normal + spread * writer.lit(2.5)).normalized() * speed;
+            let velocity = velocity + base_velocity;
             let init_vel = SetAttributeModifier::new(Attribute::VELOCITY, velocity.expr());
 
             let effect = effects.add(
