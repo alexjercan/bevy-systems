@@ -14,8 +14,6 @@ fn main() {
 
     app.init_state::<SceneState>();
 
-    app.add_systems(OnEnter(GameStates::Playing), setup_status_ui);
-
     // We start in the editor state
     app.add_systems(
         OnEnter(GameStates::Playing),
@@ -59,24 +57,6 @@ fn main() {
     );
 
     app.run();
-}
-
-fn setup_status_ui(mut commands: Commands, game_assets: Res<GameAssets>) {
-    commands.spawn(status_bar(StatusBarRootConfig::default()));
-    commands.spawn(status_bar_item(StatusBarItemConfig {
-        icon: Some(game_assets.fps_icon.clone()),
-        value_fn: status_fps_value_fn(),
-        color_fn: status_fps_color_fn(),
-        prefix: "".to_string(),
-        suffix: "fps".to_string(),
-    }));
-    commands.spawn(status_bar_item(StatusBarItemConfig {
-        icon: None,
-        value_fn: status_version_value_fn(env!("CARGO_PKG_VERSION").to_string()),
-        color_fn: status_version_color_fn(),
-        prefix: "v".to_string(),
-        suffix: "".to_string(),
-    }));
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]

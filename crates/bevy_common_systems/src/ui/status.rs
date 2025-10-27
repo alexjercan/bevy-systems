@@ -17,6 +17,8 @@ pub mod prelude {
     pub use super::StatusBarPlugin;
     pub use super::StatusBarRootConfig;
     pub use super::StatusValue;
+    pub use super::StatusBarRootMarker;
+    pub use super::StatusBarItemMarker;
 }
 
 /// The StatusBarRootMarker component is a marker component that indicates the root node of the status
