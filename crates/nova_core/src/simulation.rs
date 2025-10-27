@@ -18,10 +18,7 @@ impl Plugin for SimulationPlugin {
 
         app.add_systems(
             OnEnter(super::GameStates::Simulation),
-            (
-                setup_camera_controller,
-                setup_player_input,
-            ),
+            (setup_camera_controller, setup_player_input),
         );
 
         // Setup the input system to get input from the mouse and keyboard.
@@ -91,7 +88,7 @@ fn setup_hud_velocity(
 fn setup_hud_health(
     add: On<Add, PlayerSpaceshipMarker>,
     mut commands: Commands,
-    q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>
+    q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
 ) {
     let entity = add.entity;
     debug!(
@@ -115,10 +112,7 @@ fn setup_hud_health(
     ));
 }
 
-fn setup_camera_controller(
-    mut commands: Commands,
-    game_assets: Res<GameAssets>,
-) {
+fn setup_camera_controller(mut commands: Commands, game_assets: Res<GameAssets>) {
     // Spawn a 3D camera with a chase camera component
     commands.spawn((
         DespawnOnExit(super::GameStates::Simulation),
@@ -134,9 +128,7 @@ fn setup_camera_controller(
     ));
 }
 
-fn setup_player_input(
-    mut commands: Commands,
-) {
+fn setup_player_input(mut commands: Commands) {
     // Spawn a player input controller entity to hold the input from the player
     commands.spawn((
         DespawnOnExit(super::GameStates::Simulation),

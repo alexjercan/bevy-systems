@@ -11,8 +11,8 @@ use bevy::{
     ui_widgets::{observe, Activate, Button},
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
-use nova_gameplay::prelude::*;
 use nova_assets::prelude::*;
+use nova_gameplay::prelude::*;
 
 const NORMAL_BUTTON: Color = Color::srgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::srgb(0.25, 0.25, 0.25);

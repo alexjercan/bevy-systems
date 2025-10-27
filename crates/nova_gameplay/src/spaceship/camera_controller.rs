@@ -3,15 +3,15 @@ use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
 pub mod prelude {
-    pub use super::SpaceshipCameraInputMarker;
-    pub use super::SpaceshipCameraControllerMarker;
     pub use super::SpaceshipCameraControlMode;
-    pub use super::SpaceshipCameraNormalInputMarker;
-    pub use super::SpaceshipCameraFreeLookInputMarker;
-    pub use super::SpaceshipCameraTurretInputMarker;
-    pub use super::SpaceshipRotationInputActiveMarker;
+    pub use super::SpaceshipCameraControllerMarker;
     pub use super::SpaceshipCameraControllerPlugin;
     pub use super::SpaceshipCameraControllerPluginSet;
+    pub use super::SpaceshipCameraFreeLookInputMarker;
+    pub use super::SpaceshipCameraInputMarker;
+    pub use super::SpaceshipCameraNormalInputMarker;
+    pub use super::SpaceshipCameraTurretInputMarker;
+    pub use super::SpaceshipRotationInputActiveMarker;
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -160,11 +160,17 @@ fn insert_camera_turret(
 }
 
 fn update_chase_camera_input(
-    camera: Single<&mut ChaseCameraInput, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
+    camera: Single<
+        &mut ChaseCameraInput,
+        (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>),
+    >,
     spaceship: Single<&Transform, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
     point_rotation: Single<
         &PointRotationOutput,
-        (With<SpaceshipCameraInputMarker>, With<SpaceshipRotationInputActiveMarker>),
+        (
+            With<SpaceshipCameraInputMarker>,
+            With<SpaceshipRotationInputActiveMarker>,
+        ),
     >,
 ) {
     // NOTE: We assume that only one of the input markers is active at a time.

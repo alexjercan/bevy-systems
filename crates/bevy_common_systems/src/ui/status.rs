@@ -14,11 +14,11 @@ pub mod prelude {
     pub use super::status_version_color_fn;
     pub use super::status_version_value_fn;
     pub use super::StatusBarItemConfig;
+    pub use super::StatusBarItemMarker;
     pub use super::StatusBarPlugin;
     pub use super::StatusBarRootConfig;
-    pub use super::StatusValue;
     pub use super::StatusBarRootMarker;
-    pub use super::StatusBarItemMarker;
+    pub use super::StatusValue;
 }
 
 /// The StatusBarRootMarker component is a marker component that indicates the root node of the status

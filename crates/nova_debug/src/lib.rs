@@ -109,10 +109,7 @@ mod inspector {
         });
     }
 
-    fn on_add_camera(
-        add: On<Add, Camera>,
-        mut commands: Commands,
-    ) {
+    fn on_add_camera(add: On<Add, Camera>, mut commands: Commands) {
         let entity = add.entity;
         debug!(
             "Camera added to entity {:?}, inserting PrimaryEguiContext to it.",

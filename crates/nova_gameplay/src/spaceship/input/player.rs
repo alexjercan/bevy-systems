@@ -22,7 +22,8 @@ impl Plugin for SpaceshipPlayerInputPlugin {
             (
                 update_controller_target_rotation_torque,
                 update_turret_target_input,
-                on_thruster_input, on_projectile_input,
+                on_thruster_input,
+                on_projectile_input,
             )
                 .in_set(SpaceshipPlayerInputPluginSet)
                 .chain(),

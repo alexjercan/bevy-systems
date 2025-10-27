@@ -4,9 +4,9 @@ use bevy_common_systems::prelude::*;
 pub mod prelude {
     pub use super::health_hud;
     pub use super::HealthHudConfig;
+    pub use super::HealthHudMarker;
     pub use super::HealthHudPlugin;
     pub use super::HealthHudPluginSet;
-    pub use super::HealthHudMarker;
 }
 
 #[derive(Component, Debug, Clone, Reflect)]

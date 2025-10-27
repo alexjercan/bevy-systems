@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
-pub mod velocity;
 pub mod health;
+pub mod velocity;
 
 pub mod prelude {
-    pub use super::velocity::prelude::*;
     pub use super::health::prelude::*;
+    pub use super::velocity::prelude::*;
 
     pub use super::HudPlugin;
     pub use super::HudPluginSet;

@@ -22,11 +22,7 @@ fn custom_plugin(app: &mut App) {
 
     app.add_systems(
         OnEnter(GameStates::Simulation),
-        (
-            setup_spaceship,
-            setup_camera,
-            setup_simple_scene,
-        ).chain(),
+        (setup_spaceship, setup_camera, setup_simple_scene).chain(),
     );
 }
 
