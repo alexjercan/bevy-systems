@@ -1,6 +1,7 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use clap::Parser;
+use nova_core::nova_gameplay::spaceship::hud::health::HealthHudTargetEntity;
 use nova_protocol::prelude::*;
 use rand::prelude::*;
 
@@ -20,10 +21,23 @@ fn main() {
 fn custom_plugin(app: &mut App) {
     app.add_systems(
         OnEnter(GameStates::Simulation),
-        (setup_health_entity, setup_camera, setup_simple_scene),
+        (
+            setup_health_entity,
+            setup_hud_health,
+            setup_camera,
+            setup_simple_scene,
+        ),
     );
 
     app.add_observer(on_click_damage_health);
+    app.add_observer(on_hover_set_health_target);
+}
+
+fn setup_hud_health(mut commands: Commands) {
+    commands.spawn((
+        DespawnOnExit(GameStates::Simulation),
+        health_hud(HealthHudConfig { target: None }),
+    ));
 }
 
 fn on_click_damage_health(
@@ -47,6 +61,21 @@ fn on_click_damage_health(
             amount: 10.0,
         });
     }
+}
+
+fn on_hover_set_health_target(
+    hover: On<Pointer<Over>>,
+    q_health: Query<&Health>,
+    q_health_hud: Single<&mut HealthHudTargetEntity, With<HealthHudMarker>>,
+) {
+    let entity = hover.entity;
+
+    let Ok(_) = q_health.get(entity) else {
+        return;
+    };
+
+    let mut health_hud_target = q_health_hud.into_inner();
+    **health_hud_target = Some(entity);
 }
 
 fn setup_health_entity(
@@ -128,7 +157,8 @@ fn setup_simple_scene(
             Mesh3d(meshes.add(Sphere::new(radius))),
             MeshMaterial3d(materials.add(color)),
             Collider::sphere(radius),
-            RigidBody::Static,
+            RigidBody::Dynamic,
+            Health::new(100.0),
         ));
     }
 
@@ -154,6 +184,7 @@ fn setup_simple_scene(
             Collider::cuboid(size, size, size),
             ColliderDensity(1.0),
             RigidBody::Dynamic,
+            Health::new(100.0),
         ));
     }
 }

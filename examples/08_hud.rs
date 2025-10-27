@@ -18,11 +18,12 @@ fn main() {
 }
 
 fn custom_plugin(app: &mut App) {
+    app.add_observer(setup_hud_velocity);
+
     app.add_systems(
         OnEnter(GameStates::Simulation),
         (
             setup_spaceship,
-            setup_hud_velocity,
             setup_camera,
             setup_simple_scene,
         ).chain(),
@@ -55,14 +56,29 @@ fn setup_spaceship(mut commands: Commands) {
 }
 
 fn setup_hud_velocity(
+    add: On<Add, PlayerSpaceshipMarker>,
     mut commands: Commands,
-    spaceship: Single<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
+    q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
 ) {
+    let entity = add.entity;
+    debug!(
+        "PlayerSpaceshipMarker added to entity {:?}, setting up velocity HUD.",
+        entity
+    );
+
+    let Ok(spaceship) = q_spaceship.get(entity) else {
+        warn!(
+            "Failed to get SpaceshipRootMarker for PlayerSpaceshipMarker entity {:?}",
+            entity
+        );
+        return;
+    };
+
     commands.spawn((
         DespawnOnExit(GameStates::Simulation),
         velocity_hud(VelocityHudConfig {
             radius: 5.0,
-            target: Some(*spaceship),
+            target: Some(spaceship),
         }),
     ));
 }

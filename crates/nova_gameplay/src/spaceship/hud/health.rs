@@ -6,6 +6,7 @@ pub mod prelude {
     pub use super::HealthHudConfig;
     pub use super::HealthHudPlugin;
     pub use super::HealthHudPluginSet;
+    pub use super::HealthHudMarker;
 }
 
 #[derive(Component, Debug, Clone, Reflect)]
@@ -65,12 +66,12 @@ fn update_text_hud(
 ) {
     for (mut hud_input, target) in &mut q_hud {
         let Some(target) = **target else {
-            warn!("HealthHudMarker has no target entity");
+            **hud_input = format!("Health: 0%");
             continue;
         };
 
         let Ok(health) = q_target.get(target) else {
-            warn!("HealthHudMarker target entity does not have Health component");
+            **hud_input = format!("Health: 0%");
             continue;
         };
 
