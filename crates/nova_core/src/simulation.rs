@@ -12,12 +12,14 @@ pub struct SimulationPlugin;
 
 impl Plugin for SimulationPlugin {
     fn build(&self, app: &mut App) {
+        // TODO: Might want to use observers more for spawning things to avoid ordering issues
+        app.add_observer(setup_hud_velocity);
+        app.add_observer(setup_hud_health);
+
         app.add_systems(
             OnEnter(super::GameStates::Simulation),
             (
                 setup_camera_controller,
-                setup_hud_velocity,
-                setup_hud_health,
                 setup_player_input,
             ),
         );
@@ -58,10 +60,64 @@ impl Plugin for SimulationPlugin {
     }
 }
 
+fn setup_hud_velocity(
+    add: On<Add, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
+) {
+    let entity = add.entity;
+    debug!(
+        "PlayerSpaceshipMarker added to entity {:?}, setting up velocity HUD.",
+        entity
+    );
+
+    let Ok(spaceship) = q_spaceship.get(entity) else {
+        warn!(
+            "Failed to get SpaceshipRootMarker for PlayerSpaceshipMarker entity {:?}",
+            entity
+        );
+        return;
+    };
+
+    commands.spawn((
+        DespawnOnExit(super::GameStates::Simulation),
+        velocity_hud(VelocityHudConfig {
+            radius: 5.0,
+            target: Some(spaceship),
+        }),
+    ));
+}
+
+fn setup_hud_health(
+    add: On<Add, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>
+) {
+    let entity = add.entity;
+    debug!(
+        "PlayerSpaceshipMarker added to entity {:?}, setting up health HUD.",
+        entity
+    );
+
+    let Ok(spaceship) = q_spaceship.get(entity) else {
+        warn!(
+            "Failed to get SpaceshipRootMarker for PlayerSpaceshipMarker entity {:?}",
+            entity
+        );
+        return;
+    };
+
+    commands.spawn((
+        DespawnOnExit(super::GameStates::Simulation),
+        health_hud(HealthHudConfig {
+            target: Some(spaceship),
+        }),
+    ));
+}
+
 fn setup_camera_controller(
     mut commands: Commands,
     game_assets: Res<GameAssets>,
-    _spaceship: Single<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
 ) {
     // Spawn a 3D camera with a chase camera component
     commands.spawn((
@@ -78,34 +134,8 @@ fn setup_camera_controller(
     ));
 }
 
-fn setup_hud_velocity(
-    mut commands: Commands,
-    spaceship: Single<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
-) {
-    commands.spawn((
-        DespawnOnExit(super::GameStates::Simulation),
-        velocity_hud(VelocityHudConfig {
-            radius: 5.0,
-            target: Some(*spaceship),
-        }),
-    ));
-}
-
-fn setup_hud_health(
-    mut commands: Commands,
-    spaceship: Single<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
-) {
-    commands.spawn((
-        DespawnOnExit(super::GameStates::Simulation),
-        health_hud(HealthHudConfig {
-            target: Some(*spaceship),
-        }),
-    ));
-}
-
 fn setup_player_input(
     mut commands: Commands,
-    _spaceship: Single<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
 ) {
     // Spawn a player input controller entity to hold the input from the player
     commands.spawn((
