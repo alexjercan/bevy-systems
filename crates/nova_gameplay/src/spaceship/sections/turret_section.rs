@@ -165,10 +165,6 @@ pub struct TurretSectionPlugin {
 
 impl Plugin for TurretSectionPlugin {
     fn build(&self, app: &mut App) {
-        if cfg!(feature = "debug") {
-            app.add_plugins(debug::DebugTurretSectionPlugin);
-        }
-
         app.add_observer(insert_turret_section);
 
         // NOTE: How can we check that the SmoothLookRotationPlugin is added?
@@ -886,51 +882,4 @@ fn on_spawn_projectile(
 
     // Spawn the particles
     effect_spawner.reset();
-}
-
-// TODO: move this thing to the debug crate
-mod debug {
-    use super::*;
-
-    pub struct DebugTurretSectionPlugin;
-
-    impl Plugin for DebugTurretSectionPlugin {
-        fn build(&self, app: &mut App) {
-            app.add_systems(
-                Update,
-                (debug_draw_barrel_direction, debug_gizmos_turret_forward)
-                    .in_set(TurretSectionPluginSet),
-            );
-        }
-    }
-
-    const DEBUG_LINE_LENGTH: f32 = 100.0;
-
-    fn debug_draw_barrel_direction(
-        q_barrel: Query<&GlobalTransform, With<TurretSectionRotatorBarrelMarker>>,
-        mut gizmos: Gizmos,
-    ) {
-        for barrel_transform in &q_barrel {
-            let barrel_pos = barrel_transform.translation();
-            let barrel_dir = barrel_transform.forward();
-
-            let line_length = DEBUG_LINE_LENGTH;
-            let line_end = barrel_pos + barrel_dir * line_length;
-
-            gizmos.line(barrel_pos, line_end, Color::srgb(1.0, 0.0, 0.0));
-        }
-    }
-
-    fn debug_gizmos_turret_forward(
-        mut gizmos: Gizmos,
-        q_turret: Query<(&GlobalTransform, &TurretSectionTargetInput), With<TurretSectionMarker>>,
-    ) {
-        for (transform, target) in &q_turret {
-            if let Some(target) = **target {
-                let origin = transform.translation();
-                let dir = (target - origin).normalize() * DEBUG_LINE_LENGTH;
-                gizmos.line(origin, origin + dir, Color::srgb(0.9, 0.9, 0.1));
-            }
-        }
-    }
 }
