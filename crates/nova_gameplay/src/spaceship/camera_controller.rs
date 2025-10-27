@@ -3,160 +3,172 @@ use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
 pub mod prelude {
-    pub use super::PlayerSpaceshipMarker;
-    pub use super::SpaceshipControlMode;
-    pub use super::SpaceshipInputMarker;
-    pub use super::SpaceshipPlayerInputPlugin;
-    pub use super::SpaceshipPlayerInputPluginSet;
+    pub use super::SpaceshipCameraInputMarker;
+    pub use super::SpaceshipCameraControllerMarker;
+    pub use super::SpaceshipCameraControlMode;
+    pub use super::SpaceshipCameraNormalInputMarker;
+    pub use super::SpaceshipCameraFreeLookInputMarker;
+    pub use super::SpaceshipCameraTurretInputMarker;
     pub use super::SpaceshipRotationInputActiveMarker;
+    pub use super::SpaceshipCameraControllerPlugin;
+    pub use super::SpaceshipCameraControllerPluginSet;
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SpaceshipPlayerInputPluginSet;
+pub struct SpaceshipCameraControllerPluginSet;
 
-pub struct SpaceshipPlayerInputPlugin;
+pub struct SpaceshipCameraControllerPlugin;
 
-impl Plugin for SpaceshipPlayerInputPlugin {
+impl Plugin for SpaceshipCameraControllerPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<SpaceshipControlMode>();
+        app.init_resource::<SpaceshipCameraControlMode>();
 
-        app.add_observer(insert_player_spaceship_controller);
-        app.add_observer(insert_player_spaceship_freelook);
-        app.add_observer(insert_player_spaceship_turret);
+        app.add_observer(insert_camera_controller);
+        app.add_observer(insert_camera_freelook);
+        app.add_observer(insert_camera_turret);
 
         app.add_systems(
             Update,
             (
                 update_chase_camera_input.before(ChaseCameraPluginSet),
-                update_controller_target_rotation_torque,
-                update_turret_target_input,
                 sync_spaceship_control_mode,
             )
-                .in_set(SpaceshipPlayerInputPluginSet)
+                .in_set(SpaceshipCameraControllerPluginSet)
                 .chain(),
         );
     }
 }
 
+/// Marker component to identify the camera controller for the player's spaceship.
+///
+/// This should be added to an entity that also has a `ChaseCamera` component.
 #[derive(Component, Debug, Clone, Reflect)]
-pub struct PlayerSpaceshipMarker;
+#[require(ChaseCamera)]
+pub struct SpaceshipCameraControllerMarker;
 
+/// The mode that the camera is currently in for controlling the spaceship.
 #[derive(Resource, Default, Clone, Debug)]
-pub enum SpaceshipControlMode {
+pub enum SpaceshipCameraControlMode {
     #[default]
     Normal,
     FreeLook,
     Turret,
 }
 
+/// General Marker for the rotation input of the spaceship camera.
 #[derive(Component, Debug, Clone)]
-pub struct SpaceshipInputMarker;
+pub struct SpaceshipCameraInputMarker;
 
+/// Marker for the rotation input of the spaceship camera in normal mode.
 #[derive(Component, Debug, Clone)]
-pub struct SpaceshipControllerInputMarker;
+pub struct SpaceshipCameraNormalInputMarker;
 
+/// Marker for the rotation input of the spaceship camera in free look mode.
 #[derive(Component, Debug, Clone)]
-pub struct SpaceshipFreeLookInputMarker;
+pub struct SpaceshipCameraFreeLookInputMarker;
 
+/// Marker for the rotation input of the spaceship camera in turret mode.
 #[derive(Component, Debug, Clone)]
-pub struct SpaceshipTurretInputMarker;
+pub struct SpaceshipCameraTurretInputMarker;
 
 #[derive(Component, Debug, Clone)]
 pub struct SpaceshipRotationInputActiveMarker;
 
-fn insert_player_spaceship_controller(
-    add: On<Add, PlayerSpaceshipMarker>,
+fn insert_camera_controller(
+    add: On<Add, SpaceshipCameraControllerMarker>,
     mut commands: Commands,
-    q_spaceship: Query<Entity, With<SpaceshipRootMarker>>,
+    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
 ) {
     let entity = add.entity;
     debug!(
-        "PlayerSpaceshipMarker added to entity {:?}, inserting SpaceshipRotationInputMarker to it.",
+        "SpaceshipCameraControllerMarker added to entity {:?}, inserting SpaceshipCameraNormalInputMarker to it.",
         entity
     );
 
-    let Ok(spaceship) = q_spaceship.get(entity) else {
+    let Ok(camera) = q_camera.get(entity) else {
         warn!(
-            "Failed to get SpaceshipRootMarker for PlayerSpaceshipMarker entity {:?}",
+            "Failed to get ChaseCamera for SpaceshipCameraControllerMarker entity {:?}",
             add.entity
         );
         return;
     };
 
-    commands.entity(spaceship).with_children(|parent| {
+    commands.entity(camera).with_children(|parent| {
         parent.spawn((
-            SpaceshipInputMarker,
-            SpaceshipControllerInputMarker,
+            SpaceshipCameraInputMarker,
+            SpaceshipCameraNormalInputMarker,
             SpaceshipRotationInputActiveMarker,
             PointRotation::default(),
         ));
     });
 }
 
-fn insert_player_spaceship_freelook(
-    add: On<Add, PlayerSpaceshipMarker>,
+fn insert_camera_freelook(
+    add: On<Add, SpaceshipCameraControllerMarker>,
     mut commands: Commands,
-    q_spaceship: Query<Entity, With<SpaceshipRootMarker>>,
+    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
 ) {
     let entity = add.entity;
     debug!(
-        "PlayerSpaceshipMarker added to entity {:?}, inserting SpaceshipFreeLookInputMarker to it.",
+        "SpaceshipCameraControllerMarker added to entity {:?}, inserting SpaceshipCameraFreeLookInputMarker to it.",
         entity
     );
 
-    let Ok(spaceship) = q_spaceship.get(entity) else {
+    let Ok(camera) = q_camera.get(entity) else {
         warn!(
-            "Failed to get SpaceshipRootMarker for PlayerSpaceshipMarker entity {:?}",
+            "Failed to get ChaseCamera for SpaceshipCameraControllerMarker entity {:?}",
             add.entity
         );
         return;
     };
 
-    commands.entity(spaceship).with_children(|parent| {
+    commands.entity(camera).with_children(|parent| {
         parent.spawn((
-            SpaceshipInputMarker,
-            SpaceshipFreeLookInputMarker,
+            SpaceshipCameraInputMarker,
+            SpaceshipCameraFreeLookInputMarker,
             PointRotation::default(),
         ));
     });
 }
 
-fn insert_player_spaceship_turret(
-    add: On<Add, PlayerSpaceshipMarker>,
+fn insert_camera_turret(
+    add: On<Add, SpaceshipCameraControllerMarker>,
     mut commands: Commands,
-    q_spaceship: Query<Entity, With<SpaceshipRootMarker>>,
+    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
 ) {
     let entity = add.entity;
     debug!(
-        "PlayerSpaceshipMarker added to entity {:?}, inserting SpaceshipTurretInputMarker to it.",
+        "SpaceshipCameraControllerMarker added to entity {:?}, inserting SpaceshipCameraTurretInputMarker to it.",
         entity
     );
 
-    let Ok(spaceship) = q_spaceship.get(entity) else {
+    let Ok(camera) = q_camera.get(entity) else {
         warn!(
-            "Failed to get SpaceshipRootMarker for PlayerSpaceshipMarker entity {:?}",
+            "Failed to get ChaseCamera for SpaceshipCameraControllerMarker entity {:?}",
             add.entity
         );
         return;
     };
 
-    commands.entity(spaceship).with_children(|parent| {
+    commands.entity(camera).with_children(|parent| {
         parent.spawn((
-            SpaceshipInputMarker,
-            SpaceshipTurretInputMarker,
+            SpaceshipCameraInputMarker,
+            SpaceshipCameraTurretInputMarker,
             PointRotation::default(),
         ));
     });
 }
 
 fn update_chase_camera_input(
-    camera: Single<&mut ChaseCameraInput, With<ChaseCamera>>,
+    camera: Single<&mut ChaseCameraInput, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
     spaceship: Single<&Transform, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
     point_rotation: Single<
         &PointRotationOutput,
-        (With<SpaceshipInputMarker>, With<SpaceshipRotationInputActiveMarker>),
+        (With<SpaceshipCameraInputMarker>, With<SpaceshipRotationInputActiveMarker>),
     >,
 ) {
+    // NOTE: We assume that only one of the input markers is active at a time.
+    // We also assume that the spaceship and camera are singletons for the player.
     let mut camera_input = camera.into_inner();
     let spaceship_transform = spaceship.into_inner();
     let point_rotation = point_rotation.into_inner();
@@ -165,74 +177,29 @@ fn update_chase_camera_input(
     camera_input.achor_rot = **point_rotation;
 }
 
-fn update_controller_target_rotation_torque(
-    point_rotation: Single<
-        (&PointRotationOutput, &ChildOf),
-        (With<SpaceshipInputMarker>, With<SpaceshipControllerInputMarker>),
-    >,
-    mut q_controller: Query<
-        (&mut ControllerSectionRotationInput, &ChildOf),
-        With<ControllerSectionMarker>,
-    >,
-) {
-    let (point_rotation, ChildOf(parent)) = point_rotation.into_inner();
-
-    for (mut controller, _) in q_controller
-        .iter_mut()
-        .filter(|(_, ChildOf(c_parent))| *c_parent == *parent)
-    {
-        **controller = **point_rotation;
-    }
-}
-
-fn update_turret_target_input(
-    point_rotation: Single<
-        (&PointRotationOutput, &ChildOf),
-        (With<SpaceshipInputMarker>, With<SpaceshipTurretInputMarker>),
-    >,
-    mut q_turret: Query<(&mut TurretSectionTargetInput, &ChildOf), With<TurretSectionMarker>>,
-    q_spaceship: Query<&Transform, With<SpaceshipRootMarker>>,
-) {
-    let (point_rotation, ChildOf(parent)) = point_rotation.into_inner();
-    let Ok(spaceship_transform) = q_spaceship.get(*parent) else {
-        warn!("Turret's parent spaceship not found for TurretSectionMarker");
-        return;
-    };
-
-    for (mut turret, _) in q_turret
-        .iter_mut()
-        .filter(|(_, ChildOf(t_parent))| *t_parent == *parent)
-    {
-        let forward = **point_rotation * -Vec3::Z;
-        let position = spaceship_transform.translation;
-        let distance = 100.0;
-
-        **turret = Some(position + forward * distance);
-    }
-}
-
 fn sync_spaceship_control_mode(
     mut commands: Commands,
-    mode: Res<SpaceshipControlMode>,
+    mode: Res<SpaceshipCameraControlMode>,
     spaceship_input_rotation: Single<
         (Entity, &PointRotationOutput),
-        With<SpaceshipControllerInputMarker>,
+        With<SpaceshipCameraNormalInputMarker>,
     >,
-    spaceship_input_free_look: Single<Entity, With<SpaceshipFreeLookInputMarker>>,
-    spaceship_input_turret: Single<Entity, With<SpaceshipTurretInputMarker>>,
-    camera: Single<Entity, With<ChaseCamera>>,
+    spaceship_input_free_look: Single<Entity, With<SpaceshipCameraFreeLookInputMarker>>,
+    spaceship_input_turret: Single<Entity, With<SpaceshipCameraTurretInputMarker>>,
+    camera: Single<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
 ) {
     if !mode.is_changed() {
         return;
     }
 
+    // NOTE: We assume that only one of the input markers is active at a time.
     let (spaceship_input_rotation, point_rotation) = spaceship_input_rotation.into_inner();
     let spaceship_input_free_look = spaceship_input_free_look.into_inner();
     let spaceship_input_combat = spaceship_input_turret.into_inner();
     let camera = camera.into_inner();
 
     match *mode {
-        SpaceshipControlMode::Normal => {
+        SpaceshipCameraControlMode::Normal => {
             commands
                 .entity(spaceship_input_rotation)
                 .insert(SpaceshipRotationInputActiveMarker);
@@ -248,7 +215,7 @@ fn sync_spaceship_control_mode(
                 ..default()
             });
         }
-        SpaceshipControlMode::FreeLook => {
+        SpaceshipCameraControlMode::FreeLook => {
             commands
                 .entity(spaceship_input_rotation)
                 .remove::<SpaceshipRotationInputActiveMarker>();
@@ -267,7 +234,7 @@ fn sync_spaceship_control_mode(
                 ..default()
             });
         }
-        SpaceshipControlMode::Turret => {
+        SpaceshipCameraControlMode::Turret => {
             commands
                 .entity(spaceship_input_rotation)
                 .remove::<SpaceshipRotationInputActiveMarker>();

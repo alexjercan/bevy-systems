@@ -4,11 +4,15 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
+pub mod camera_controller;
 pub mod hud;
+pub mod input;
 pub mod sections;
 
 pub mod prelude {
+    pub use super::camera_controller::prelude::*;
     pub use super::hud::prelude::*;
+    pub use super::input::prelude::*;
     pub use super::sections::prelude::*;
 
     pub use super::spaceship_root;
@@ -40,7 +44,7 @@ pub fn spaceship_root(config: SpaceshipConfig) -> impl Bundle {
 
 /// This will be the root component for the entire spaceship. All other sections will be children
 /// of this entity.
-#[derive(Component, Clone, Debug, Reflect)]
+#[derive(Component, Clone, Debug, Default, Reflect)]
 pub struct SpaceshipRootMarker;
 
 /// A system set that will contain all the systems related to the spaceship plugin.
@@ -55,11 +59,17 @@ pub struct SpaceshipPlugin {
 
 impl Plugin for SpaceshipPlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(input::SpaceshipInputPlugin);
         app.add_plugins(sections::SectionPlugin {
             render: self.render,
         });
         app.add_plugins(hud::HudPlugin);
+        app.add_plugins(camera_controller::SpaceshipCameraControllerPlugin);
 
+        app.configure_sets(
+            Update,
+            input::SpaceshipInputPluginSet.before(SpaceshipPluginSet),
+        );
         app.configure_sets(
             Update,
             sections::SectionPluginSet.in_set(SpaceshipPluginSet),
@@ -70,5 +80,9 @@ impl Plugin for SpaceshipPlugin {
         );
         app.configure_sets(Update, hud::HudPluginSet.in_set(SpaceshipPluginSet));
         app.configure_sets(FixedUpdate, hud::HudPluginSet.in_set(SpaceshipPluginSet));
+        app.configure_sets(
+            Update,
+            camera_controller::SpaceshipCameraControllerPluginSet.in_set(SpaceshipPluginSet),
+        );
     }
 }

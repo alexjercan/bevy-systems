@@ -213,6 +213,7 @@ mod simulation {
             Name::new("Chase Camera"),
             Camera3d::default(),
             ChaseCamera::default(),
+            SpaceshipCameraControllerMarker,
             Transform::from_xyz(0.0, 10.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
             SkyboxConfig {
                 cubemap: game_assets.cubemap.clone(),
@@ -339,7 +340,7 @@ mod simulation {
         mut q_input: Query<
             &mut PointRotationInput,
             (
-                With<SpaceshipInputMarker>,
+                With<SpaceshipCameraInputMarker>,
                 With<SpaceshipRotationInputActiveMarker>,
             ),
         >,
@@ -351,7 +352,7 @@ mod simulation {
 
     fn on_rotation_input_completed(
         _: On<Complete<CameraInputRotate>>,
-        mut q_input: Query<&mut PointRotationInput, With<SpaceshipInputMarker>>,
+        mut q_input: Query<&mut PointRotationInput, With<SpaceshipCameraInputMarker>>,
     ) {
         for mut input in &mut q_input {
             **input = Vec2::ZERO;
@@ -360,27 +361,27 @@ mod simulation {
 
     fn on_free_mode_input_started(
         _: On<Start<FreeLookInput>>,
-        mut mode: ResMut<SpaceshipControlMode>,
+        mut mode: ResMut<SpaceshipCameraControlMode>,
     ) {
-        *mode = SpaceshipControlMode::FreeLook;
+        *mode = SpaceshipCameraControlMode::FreeLook;
     }
 
     fn on_free_mode_input_completed(
         _: On<Complete<FreeLookInput>>,
-        mut mode: ResMut<SpaceshipControlMode>,
+        mut mode: ResMut<SpaceshipCameraControlMode>,
     ) {
-        *mode = SpaceshipControlMode::Normal;
+        *mode = SpaceshipCameraControlMode::Normal;
     }
 
-    fn on_combat_input_started(_: On<Start<CombatInput>>, mut mode: ResMut<SpaceshipControlMode>) {
-        *mode = SpaceshipControlMode::Turret;
+    fn on_combat_input_started(_: On<Start<CombatInput>>, mut mode: ResMut<SpaceshipCameraControlMode>) {
+        *mode = SpaceshipCameraControlMode::Turret;
     }
 
     fn on_combat_input_completed(
         _: On<Complete<CombatInput>>,
-        mut mode: ResMut<SpaceshipControlMode>,
+        mut mode: ResMut<SpaceshipCameraControlMode>,
     ) {
-        *mode = SpaceshipControlMode::Normal;
+        *mode = SpaceshipCameraControlMode::Normal;
     }
 }
 
