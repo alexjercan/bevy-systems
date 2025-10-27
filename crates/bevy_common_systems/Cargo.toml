@@ -2,6 +2,7 @@
 name = "bevy_common_systems"
 version = "0.0.1"
 edition = "2021"
+description = "Common systems and utilities for Bevy-based projects"
 
 [dependencies]
 avian3d = { workspace = true }

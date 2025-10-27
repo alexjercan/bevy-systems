@@ -1,4 +1,4 @@
-//! TODO: Add description in this crate
+//! Common Gameplay Components and Systems for Bevy Games.
 //!
 //! Fully copy-pastable crate for common gameplay components and systems.
 

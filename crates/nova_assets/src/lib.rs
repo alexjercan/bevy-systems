@@ -1,3 +1,5 @@
+//! A Bevy plugin for loading game assets and initializing asset resources.
+
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 

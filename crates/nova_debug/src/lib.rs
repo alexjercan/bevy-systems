@@ -1,3 +1,5 @@
+//! A Bevy plugin that adds various debugging tools.
+
 use bevy::{
     pbr::wireframe::{WireframeConfig, WireframePlugin},
     prelude::*,

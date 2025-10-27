@@ -2,13 +2,13 @@
 name = "nova_core"
 version = "0.1.0"
 edition = "2021"
+description = "Core systems and modules for the Nova Protocol game"
 
 [dependencies]
 avian3d = { workspace = true }
 bevy = { workspace = true, features = ["experimental_bevy_ui_widgets"] }
 bevy_enhanced_input = { workspace = true }
 bevy_hanabi = { workspace = true }
-bevy_common_systems = { path = "../bevy_common_systems" }
 nova_assets = { path = "../nova_assets" }
 nova_debug = { path = "../nova_debug", optional = true }
 nova_gameplay = { path = "../nova_gameplay" }

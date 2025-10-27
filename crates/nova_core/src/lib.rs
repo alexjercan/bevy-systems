@@ -11,7 +11,7 @@ use bevy::{
     winit::WinitPlugin,
 };
 
-use bevy_common_systems::prelude::*;
+use nova_gameplay::{prelude::*, bevy_common_systems};
 use nova_assets::prelude::*;
 
 #[cfg(feature = "debug")]
@@ -21,7 +21,8 @@ pub mod simulation;
 
 pub mod prelude {
     pub use super::{new_gui_app, new_headless_app, GameStates};
-    pub use bevy_common_systems::prelude::*;
+
+    // NOTE: These are temporary, until I finis the refactor to move everything to new_gui_app
     pub use nova_assets::prelude::*;
     pub use nova_gameplay::prelude::*;
 
@@ -35,6 +36,7 @@ pub enum GameStates {
     #[default]
     Loading,
     Simulation,
+    Editor,
 }
 
 pub fn new_gui_app() -> App {
@@ -135,7 +137,7 @@ impl Plugin for CorePlugin {
         app.add_plugins(bevy_common_systems::prelude::HealthPlugin);
 
         // UI Plugins
-        app.add_plugins(bevy_common_systems::prelude::StatusBarPlugin);
+        app.add_plugins(nova_gameplay::bevy_common_systems::prelude::StatusBarPlugin);
 
         // Core Plugins for simulation
         app.add_plugins(nova_gameplay::spaceship::SpaceshipPlugin {

@@ -2,6 +2,7 @@
 name = "nova_debug"
 version = "0.1.0"
 edition = "2021"
+description = "Debugging utilities for the Nova Protocol game"
 
 [dependencies]
 avian3d = { workspace = true }

@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_common_systems::prelude::*;
 use nova_gameplay::prelude::*;
 
 pub(crate) fn register_sections(mut commands: Commands, game_assets: Res<super::GameAssets>) {

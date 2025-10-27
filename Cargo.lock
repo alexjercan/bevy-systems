@@ -3959,7 +3959,6 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_asset_loader",
- "bevy_common_systems",
  "nova_gameplay",
 ]
 
@@ -3969,7 +3968,6 @@ version = "0.1.0"
 dependencies = [
  "avian3d",
  "bevy",
- "bevy_common_systems",
  "bevy_enhanced_input",
  "bevy_hanabi",
  "nova_assets",
