@@ -3971,6 +3971,7 @@ dependencies = [
  "bevy",
  "bevy_common_systems",
  "bevy_enhanced_input",
+ "bevy_hanabi",
  "nova_assets",
  "nova_debug",
  "nova_gameplay",
