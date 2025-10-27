@@ -68,8 +68,8 @@ pub(crate) fn register_sections(mut commands: Commands, game_assets: Res<super::
                 barrel_offset: Vec3::new(0.1, 0.2, 0.0),
                 muzzle_offset: Vec3::new(0.0, 0.0, -0.5),
                 fire_rate: 100.0,
+                muzzle_speed: 100.0,
                 projectile: BulletProjectileConfig {
-                    muzzle_speed: 100.0,
                     lifetime: 5.0,
                     mass: 0.1,
                     render_mesh: None,

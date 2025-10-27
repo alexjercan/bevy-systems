@@ -3,8 +3,10 @@
 
 // TODO: Cleanup the magic numbers into constants
 
+use avian3d::prelude::*;
 use bevy::prelude::*;
 
+use crate::spaceship::prelude::*;
 use bevy_common_systems::prelude::*;
 use bevy_hanabi::prelude::*;
 
@@ -17,6 +19,7 @@ pub mod prelude {
     pub use super::TurretSectionPlugin;
     pub use super::TurretSectionRotatorBarrelMarker;
     pub use super::TurretSectionTargetInput;
+    pub use super::TurretShoot;
 }
 
 /// Configuration for a turret section of a spaceship.
@@ -50,6 +53,8 @@ pub struct TurretSectionConfig {
     pub muzzle_offset: Vec3,
     /// The fire rate of the turret in rounds per second.
     pub fire_rate: f32,
+    /// The muzzle speed of the turret in units per second.
+    pub muzzle_speed: f32,
     /// The projectile configuration for the bullets fired by the turret.
     pub projectile: BulletProjectileConfig,
     /// The muzzle particle effect when shooting.
@@ -73,8 +78,8 @@ impl Default for TurretSectionConfig {
             barrel_offset: Vec3::new(0.1, 0.2, 0.0),
             muzzle_offset: Vec3::new(0.0, 0.0, -0.5),
             fire_rate: 100.0,
+            muzzle_speed: 100.0,
             projectile: BulletProjectileConfig {
-                muzzle_speed: 100.0,
                 lifetime: 5.0,
                 mass: 0.1,
                 render_mesh: None,
@@ -93,6 +98,13 @@ pub fn turret_section(config: TurretSectionConfig) -> impl Bundle {
         TurretSectionTargetInput(None),
         TurretSectionConfigHelper(config),
     )
+}
+
+/// Event to request the turret to shoot a projectile.
+#[derive(Event, Debug, Clone)]
+pub struct TurretShoot {
+    /// The turret that will shoot the projectile.
+    pub entity: Entity,
 }
 
 /// Marker component for turret sections.
@@ -179,7 +191,8 @@ impl Plugin for TurretSectionPlugin {
             app.add_observer(insert_turret_barrel_muzzle_effect);
         }
 
-        app.add_observer(on_spawn_projectile);
+        app.add_observer(on_shoot_spawn_projectile);
+        app.add_observer(on_spawn_projectile_effect);
 
         app.add_systems(
             Update,
@@ -345,14 +358,14 @@ fn insert_turret_section(
         .spawn((
             Name::new("Turret Barrel Muzzle"),
             TurretSectionBarrelMuzzleMarker,
-            TurretSectionBarrelMuzzleEffect(config.muzzle_effect.clone()),
-            Transform::from_translation(config.muzzle_offset),
-            Visibility::Inherited,
-            children![(projectile_spawner(ProjectileSpawnerConfig {
+            projectile_spawner(ProjectileSpawnerConfig {
                 fire_rate: config.fire_rate,
                 projectile: config.projectile,
                 ..default()
-            }),)],
+            }),
+            TurretSectionBarrelMuzzleEffect(config.muzzle_effect.clone()),
+            Transform::from_translation(config.muzzle_offset),
+            Visibility::Inherited,
         ))
         .id();
 
@@ -437,6 +450,185 @@ fn insert_turret_section(
                         });
                 });
         });
+}
+
+fn on_shoot_spawn_projectile(
+    shoot: On<TurretShoot>,
+    mut commands: Commands,
+    q_spaceship: Query<(&Transform, &LinearVelocity, &AngularVelocity), With<SpaceshipRootMarker>>,
+    q_turret: Query<
+        (
+            &Transform,
+            &TurretSectionBarrelMuzzleEntity,
+            &ChildOf,
+            &TurretSectionConfigHelper,
+        ),
+        With<TurretSectionMarker>,
+    >,
+    q_base: Query<&Transform, With<TurretRotatorBaseMarker>>,
+    q_rotator_yaw_base: Query<(&Transform, &ChildOf), With<TurretSectionRotatorYawBaseMarker>>,
+    q_rotator_yaw: Query<(&Transform, &ChildOf), With<TurretSectionRotatorYawMarker>>,
+    q_rotator_pitch_base: Query<(&Transform, &ChildOf), With<TurretSectionRotatorPitchBaseMarker>>,
+    q_rotator_pitch: Query<(&Transform, &ChildOf), With<TurretSectionRotatorPitchMarker>>,
+    q_barrel: Query<(&Transform, &ChildOf), With<TurretSectionRotatorBarrelMarker>>,
+    q_muzzle: Query<(&Transform, &ChildOf), With<ProjectileSpawnerMarker<BulletProjectileConfig>>>,
+) {
+    let turret = shoot.entity;
+    let Ok((turret_transform, muzzle, ChildOf(spaceship), config)) = q_turret.get(turret) else {
+        warn!(
+            "Turret entity {:?} missing TurretSectionBarrelMuzzleEntity component",
+            turret
+        );
+        return;
+    };
+
+    let Ok((spaceship_transform, lin_vel, _ang_vel)) = q_spaceship.get(*spaceship) else {
+        warn!(
+            "Spaceship entity {:?} missing LinearVelocity or AngularVelocity component",
+            spaceship
+        );
+        return;
+    };
+
+    let Ok((muzzle_transform, ChildOf(parent))) = q_muzzle.get(**muzzle) else {
+        warn!(
+            "Turret's muzzle entity {:?} missing ProjectileSpawnerMarker component",
+            **muzzle
+        );
+        return;
+    };
+
+    let Ok((barrel_transform, ChildOf(parent))) = q_barrel.get(*parent) else {
+        warn!(
+            "Muzzle's parent entity {:?} missing TurretSectionRotatorBarrelMarker component",
+            *parent
+        );
+        return;
+    };
+
+    let Ok((pitch_transform, ChildOf(parent))) = q_rotator_pitch.get(*parent) else {
+        warn!(
+            "Barrel's parent entity {:?} missing TurretSectionRotatorPitchMarker component",
+            *parent
+        );
+        return;
+    };
+
+    let Ok((pitch_base_transform, ChildOf(parent))) = q_rotator_pitch_base.get(*parent) else {
+        warn!(
+            "Pitch's parent entity {:?} missing TurretSectionRotatorPitchBaseMarker component",
+            *parent
+        );
+        return;
+    };
+
+    let Ok((yaw_transform, ChildOf(parent))) = q_rotator_yaw.get(*parent) else {
+        warn!(
+            "Pitch Base's parent entity {:?} missing TurretSectionRotatorYawMarker component",
+            *parent
+        );
+        return;
+    };
+
+    let Ok((yaw_base_transform, ChildOf(parent))) = q_rotator_yaw_base.get(*parent) else {
+        warn!(
+            "Yaw's parent entity {:?} missing TurretSectionRotatorYawBaseMarker component",
+            *parent
+        );
+        return;
+    };
+
+    let Ok(base_transform) = q_base.get(*parent) else {
+        warn!(
+            "Yaw Base's parent entity {:?} missing TurretRotatorBaseMarker component",
+            *parent
+        );
+        return;
+    };
+
+    let matrix = spaceship_transform.to_matrix()
+        * turret_transform.to_matrix()
+        * base_transform.to_matrix()
+        * yaw_base_transform.to_matrix()
+        * yaw_transform.to_matrix()
+        * pitch_base_transform.to_matrix()
+        * pitch_transform.to_matrix()
+        * barrel_transform.to_matrix()
+        * muzzle_transform.to_matrix();
+
+    let (_, spawn_rotation, spawn_position) = matrix.to_scale_rotation_translation();
+
+    let muzzle_exit_velocity = spawn_rotation * (Vec3::NEG_Z * config.muzzle_speed);
+    let linear_velocity = muzzle_exit_velocity + **lin_vel;
+
+    commands.trigger(SpawnProjectile {
+        entity: **muzzle,
+        initial_velocity: linear_velocity,
+        spawn_position: spawn_position,
+        spawn_rotation: spawn_rotation,
+    });
+}
+
+fn on_spawn_projectile_effect(
+    spawn: On<SpawnProjectile>,
+    q_muzzle: Query<&GlobalTransform, With<TurretSectionBarrelMuzzleMarker>>,
+    mut q_effect: Query<
+        (&mut EffectProperties, &mut EffectSpawner, &ChildOf),
+        Without<TurretSectionBarrelMuzzleMarker>,
+    >,
+) {
+    let entity = spawn.entity;
+    let Ok(muzzle_transform) = q_muzzle.get(entity) else {
+        warn!(
+            "TurretSectionBarrelMuzzleMarker entity {:?} missing GlobalTransform component",
+            entity
+        );
+        return;
+    };
+
+    let Some((mut properties, mut effect_spawner, _)) = q_effect
+        .iter_mut()
+        .find(|(_, _, &ChildOf(parent))| parent == entity)
+    else {
+        warn!(
+            "TurretSectionBarrelMuzzleMarker entity {:?} missing EffectProperties or EffectSpawner component",
+            entity
+        );
+        return;
+    };
+
+    let normal = muzzle_transform.forward();
+
+    let p: f32 = rand::random();
+
+    let (r, g, b) = if p < 0.4 {
+        let r = 255;
+        let g = 240 + rand::random_range(0..16);
+        let b = 200 + rand::random_range(0..56);
+        (r, g, b)
+    } else if p < 0.75 {
+        let r = 255;
+        let g = rand::random_range(100..180);
+        let b = 0;
+        (r, g, b)
+    } else if p < 0.95 {
+        let r = 255;
+        let g = rand::random_range(50..120);
+        let b = 0;
+        (r, g, b)
+    } else {
+        let val = rand::random_range(30..80);
+        (val, val, val)
+    };
+    let color = 0xFF000000u32 | ((b as u32) << 16) | ((g as u32) << 8) | (r as u32);
+    properties.set("spawn_color", color.into());
+
+    // Set the collision normal
+    let normal = normal.normalize();
+    properties.set("normal", normal.into());
+
+    // Spawn the particles
+    effect_spawner.reset();
 }
 
 fn insert_turret_section_render(
@@ -811,75 +1003,4 @@ fn insert_turret_barrel_muzzle_effect(
             ),],));
         }
     }
-}
-
-fn on_spawn_projectile(
-    spawn: On<SpawnProjectile>,
-    q_spawner: Query<&ChildOf, With<ProjectileSpawnerMarker<BulletProjectileConfig>>>,
-    q_muzzle: Query<&GlobalTransform, With<TurretSectionBarrelMuzzleMarker>>,
-    mut q_effect: Query<
-        (&mut EffectProperties, &mut EffectSpawner, &ChildOf),
-        Without<TurretSectionBarrelMuzzleMarker>,
-    >,
-) {
-    let entity = spawn.entity;
-    let Ok(&ChildOf(muzzle)) = q_spawner.get(entity) else {
-        warn!(
-            "SpawnProjectile entity {:?} missing ProjectileSpawnerMarker component",
-            entity
-        );
-        return;
-    };
-
-    let Ok(muzzle_transform) = q_muzzle.get(muzzle) else {
-        warn!(
-            "ProjectileSpawner's parent entity {:?} missing TurretSectionBarrelMuzzleMarker component",
-            muzzle
-        );
-        return;
-    };
-
-    let Some((mut properties, mut effect_spawner, _)) = q_effect
-        .iter_mut()
-        .find(|(_, _, &ChildOf(parent))| parent == muzzle)
-    else {
-        warn!(
-            "TurretSectionBarrelMuzzleMarker entity {:?} missing EffectProperties or EffectSpawner component",
-            muzzle
-        );
-        return;
-    };
-
-    let normal = muzzle_transform.forward();
-
-    let p: f32 = rand::random();
-
-    let (r, g, b) = if p < 0.4 {
-        let r = 255;
-        let g = 240 + rand::random_range(0..16);
-        let b = 200 + rand::random_range(0..56);
-        (r, g, b)
-    } else if p < 0.75 {
-        let r = 255;
-        let g = rand::random_range(100..180);
-        let b = 0;
-        (r, g, b)
-    } else if p < 0.95 {
-        let r = 255;
-        let g = rand::random_range(50..120);
-        let b = 0;
-        (r, g, b)
-    } else {
-        let val = rand::random_range(30..80);
-        (val, val, val)
-    };
-    let color = 0xFF000000u32 | ((b as u32) << 16) | ((g as u32) << 8) | (r as u32);
-    properties.set("spawn_color", color.into());
-
-    // Set the collision normal
-    let normal = normal.normalize();
-    properties.set("normal", normal.into());
-
-    // Spawn the particles
-    effect_spawner.reset();
 }

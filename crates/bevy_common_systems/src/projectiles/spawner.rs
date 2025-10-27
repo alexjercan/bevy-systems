@@ -9,14 +9,15 @@ pub mod prelude {
     pub use super::SpawnProjectile;
 }
 
+/// Configuration for a projectile spawner.
 #[derive(Clone, Debug)]
 pub struct ProjectileSpawnerConfig<T>
 where
     T: Clone + Debug,
 {
-    pub muzzle_offset: Vec3,
+    /// Fire rate in shots per second.
     pub fire_rate: f32,
-    pub transform: Transform,
+    /// Projectile configuration.
     pub projectile: T,
 }
 
@@ -26,9 +27,7 @@ where
 {
     fn default() -> Self {
         Self {
-            muzzle_offset: Vec3::ZERO,
             fire_rate: 2.0,
-            transform: Transform::default(),
             projectile: T::default(),
         }
     }
@@ -43,9 +42,6 @@ where
 }
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
-pub struct ProjectileSpawnerMuzzleOffset(pub Vec3);
-
-#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct ProjectileSpawnerFireRate(pub f32);
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
@@ -55,25 +51,37 @@ pub fn projectile_spawner<T>(config: ProjectileSpawnerConfig<T>) -> impl Bundle
 where
     T: Default + Clone + Debug + Send + Sync + 'static,
 {
-    debug!(
-        "Creating direct projectile spawner with config: {:?}",
-        config
-    );
+    debug!("Creating projectile spawner with config: {:?}", config);
 
     (
-        Name::new("Projectile Spawner"),
         ProjectileSpawnerMarker::<T>::default(),
-        ProjectileSpawnerMuzzleOffset(config.muzzle_offset),
         ProjectileSpawnerFireRate(config.fire_rate),
         ProjectileSpawnerProjectile(config.projectile),
-        config.transform,
-        Visibility::Visible,
     )
 }
 
-#[derive(Event)]
+/// Event to request spawning a projectile from a spawner entity.
+#[derive(Event, Debug, Clone)]
 pub struct SpawnProjectile {
+    /// The spawner entity to spawn the projectile from.
     pub entity: Entity,
+    /// Inherited Velocity to add to the spawned projectile.
+    pub initial_velocity: Vec3,
+    /// Spawn position.
+    pub spawn_position: Vec3,
+    /// Spawn rotation.
+    pub spawn_rotation: Quat,
+}
+
+impl Default for SpawnProjectile {
+    fn default() -> Self {
+        Self {
+            entity: Entity::PLACEHOLDER,
+            initial_velocity: Vec3::ZERO,
+            spawn_position: Vec3::ZERO,
+            spawn_rotation: Quat::IDENTITY,
+        }
+    }
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -147,8 +155,6 @@ fn on_spawn_projectile<T>(
     mut commands: Commands,
     mut q_spawners: Query<
         (
-            &GlobalTransform,
-            &ProjectileSpawnerMuzzleOffset,
             &mut ProjectileSpawnerFireState,
             &ProjectileSpawnerProjectile<T>,
         ),
@@ -158,9 +164,7 @@ fn on_spawn_projectile<T>(
     T: super::ProjectileBundle + Default + Clone + Debug + Send + Sync + 'static,
 {
     let entity = spawn.entity;
-    let Ok((spawner_transform, muzzle_offset, mut fire_state, projectile)) =
-        q_spawners.get_mut(entity)
-    else {
+    let Ok((mut fire_state, projectile)) = q_spawners.get_mut(entity) else {
         warn!(
             "ProjectileSpawner entity {:?} missing required components",
             entity
@@ -169,31 +173,20 @@ fn on_spawn_projectile<T>(
     };
 
     if !fire_state.is_finished() {
-        trace!(
-            "ProjectileSpawner entity {:?} fire rate limit, cannot fire yet",
-            entity
-        );
         return;
     }
-
-    debug!(
-        "Spawning direct projectile from spawner entity: {:?}",
-        entity
-    );
-
-    let matrix = spawner_transform.to_matrix();
-    let offset_world = matrix.transform_point3(**muzzle_offset);
-    let rotation = spawner_transform.rotation();
+    debug!("Spawning projectile from spawner entity: {:?}", entity);
 
     let projectile_transform = Transform {
-        translation: offset_world,
-        rotation,
+        translation: spawn.spawn_position,
+        rotation: spawn.spawn_rotation,
         ..default()
     };
 
     commands.spawn((
         Name::new("Projectile"),
         super::ProjectileMarker,
+        super::ProjectileVelocity(spawn.initial_velocity),
         projectile_transform,
         Visibility::Visible,
         projectile.projectile_bundle(),

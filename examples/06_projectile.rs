@@ -30,29 +30,12 @@ fn custom_plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        (
-            (
-                sync_random_orbit_state.after(SphereRandomOrbitPluginSet),
-                update_turret_target_input.before(SpaceshipPluginSet),
-            )
-                .chain(),
-            on_projectile_input,
-        ),
+        ((
+            sync_random_orbit_state.after(SphereRandomOrbitPluginSet),
+            update_turret_target_input.before(SpaceshipPluginSet),
+        )
+            .chain(),),
     );
-}
-
-fn on_projectile_input(
-    mut commands: Commands,
-    keys: Res<ButtonInput<KeyCode>>,
-    q_spawner: Query<Entity, With<ProjectileSpawnerMarker<BulletProjectileConfig>>>,
-) {
-    for spawner_entity in &q_spawner {
-        if keys.pressed(KeyCode::KeyQ) {
-            commands.trigger(SpawnProjectile {
-                entity: spawner_entity,
-            });
-        }
-    }
 }
 
 fn sync_random_orbit_state(
@@ -121,8 +104,8 @@ fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {
                 barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
                 muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
                 fire_rate: 100.0,
+                muzzle_speed: 100.0,
                 projectile: BulletProjectileConfig {
-                    muzzle_speed: 100.0,
                     lifetime: 5.0,
                     mass: 0.1,
                     render_mesh: None,

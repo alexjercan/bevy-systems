@@ -20,8 +20,6 @@ pub mod prelude {
 /// Configuration for a bullet projectile.
 #[derive(Clone, Debug, Reflect)]
 pub struct BulletProjectileConfig {
-    /// Muzzle speed of the projectile in units per second.
-    pub muzzle_speed: f32,
     /// Lifetime of the projectile in seconds.
     pub lifetime: f32,
     /// The mass of the bullet projectile.
@@ -33,7 +31,6 @@ pub struct BulletProjectileConfig {
 impl Default for BulletProjectileConfig {
     fn default() -> Self {
         Self {
-            muzzle_speed: 50.0,
             lifetime: 5.0,
             mass: 0.1,
             render_mesh: None,
@@ -44,10 +41,6 @@ impl Default for BulletProjectileConfig {
 /// Marker component for bullet projectiles.
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct BulletProjectileMarker;
-
-/// Muzzle speed of the bullet projectile.
-#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
-pub struct BulletProjectileMuzzleSpeed(pub f32);
 
 /// Mass of the bullet projectile.
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
@@ -66,7 +59,6 @@ pub fn bullet_projectile(config: BulletProjectileConfig) -> impl Bundle {
     (
         BulletProjectileMarker,
         TempEntity(config.lifetime),
-        BulletProjectileMuzzleSpeed(config.muzzle_speed),
         BulletProjectileMass(config.mass),
         BulletProjectileRenderMesh(config.render_mesh),
         BulletProjectilePrev(None),
@@ -158,15 +150,14 @@ fn insert_projectile_render(
 
 fn update_ray_projectiles(
     mut q_projectiles: Query<
-        (&BulletProjectileMuzzleSpeed, &mut Transform),
+        (&super::ProjectileVelocity, &mut Transform),
         With<super::ProjectileMarker>,
     >,
     time: Res<Time>,
 ) {
-    for (speed, mut transform) in &mut q_projectiles {
-        let distance = **speed * time.delta_secs();
-        let forward = transform.forward();
-        transform.translation += distance * *forward;
+    for (velocity, mut transform) in &mut q_projectiles {
+        let distance = **velocity * time.delta_secs();
+        transform.translation += distance;
     }
 }
 
@@ -178,15 +169,16 @@ fn update_sweep_collisions(
             Entity,
             &mut Transform,
             &mut BulletProjectilePrev,
-            &BulletProjectileMuzzleSpeed,
+            &super::ProjectileVelocity,
             &BulletProjectileMass,
         ),
         With<super::ProjectileMarker>,
     >,
+    q_name: Query<Option<&Name>>,
 ) {
     let filter = SpatialQueryFilter::default();
 
-    for (entity, transform, mut prev, speed, mass) in &mut q_projectiles {
+    for (entity, transform, mut prev, velocity, mass) in &mut q_projectiles {
         if prev.is_none() {
             **prev = Some(transform.translation);
             continue;
@@ -205,11 +197,22 @@ fn update_sweep_collisions(
             // having penetration. Also I would rather send the speed instead of the energy and
             // compute the energy where it is needed.
 
+            let entity_name = q_name
+                .get(ray_hit_data.entity)
+                .ok()
+                .and_then(|n| n.map(|name| name.as_str()))
+                .unwrap_or("Unnamed");
+            debug!(
+                "BulletProjectile {:?} hit entity {:?} ({}) at distance {}",
+                entity, ray_hit_data.entity, entity_name, ray_hit_data.distance
+            );
+
             commands.entity(entity).despawn();
 
             let distance = ray_hit_data.distance;
             let hit_point = origin + direction * distance;
-            let impact_energy = 0.5 * **mass * (**speed * **speed);
+            let speed = velocity.length();
+            let impact_energy = 0.5 * **mass * speed * speed;
 
             commands.trigger(BulletProjectileHit {
                 projectile: entity,

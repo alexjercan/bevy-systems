@@ -17,6 +17,9 @@ pub mod prelude {
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct ProjectileMarker;
 
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+pub struct ProjectileVelocity(pub Vec3);
+
 pub trait ProjectileBundle {
     fn projectile_bundle(&self) -> impl Bundle;
 }

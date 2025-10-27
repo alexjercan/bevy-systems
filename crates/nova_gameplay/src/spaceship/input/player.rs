@@ -121,13 +121,11 @@ fn on_thruster_input(
 fn on_projectile_input(
     mut commands: Commands,
     mouse: Res<ButtonInput<MouseButton>>,
-    q_spawner: Query<Entity, With<ProjectileSpawnerMarker<BulletProjectileConfig>>>,
+    q_turret: Query<Entity, With<TurretSectionMarker>>,
 ) {
-    for spawner_entity in &q_spawner {
+    for turret in &q_turret {
         if mouse.pressed(MouseButton::Left) {
-            commands.trigger(SpawnProjectile {
-                entity: spawner_entity,
-            });
+            commands.trigger(TurretShoot { entity: turret });
         }
     }
 }
