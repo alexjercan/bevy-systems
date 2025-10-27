@@ -50,7 +50,7 @@ fn insert_collision_events(add: On<Add, CollisionDamageMarker>, mut commands: Co
 fn on_collision_event(
     collision: On<CollisionStart>,
     mut commands: Commands,
-    q_velocity: Query<&LinearVelocity, With<RigidBody>>,
+    q_velocity: Query<(&LinearVelocity, Option<&Name>), With<RigidBody>>,
 ) {
     let Some(body) = collision.body1 else {
         debug!("No body1 found for collision event");
@@ -62,10 +62,21 @@ fn on_collision_event(
         return;
     };
 
-    let velocity1 = q_velocity.get(body).map(|v| v.0).unwrap_or_default();
-    let velocity2 = q_velocity.get(other).map(|v| v.0).unwrap_or_default();
+    let Ok((velocity1, name1)) = q_velocity.get(body) else {
+        debug!("No velocity found for body1: {:?}", body);
+        return;
+    };
+    let Ok((velocity2, name2)) = q_velocity.get(other) else {
+        debug!("No velocity found for body2: {:?}", other);
+        return;
+    };
+    trace!(
+        "Collision detected between {:?} and {:?}",
+        name1.map(|n| n.as_str()).unwrap_or("Unnamed"),
+        name2.map(|n| n.as_str()).unwrap_or("Unnamed")
+    );
 
-    let relative_velocity = velocity1 - velocity2;
+    let relative_velocity = **velocity1 - **velocity2;
 
     commands.trigger(CollisionDamageEvent {
         entity: body,
