@@ -18,6 +18,7 @@ use nova_assets::prelude::*;
 use nova_debug::DebugPlugin;
 
 pub mod simulation;
+pub mod editor;
 
 pub mod prelude {
     pub use super::{new_gui_app, new_headless_app, GameStates};
@@ -57,6 +58,7 @@ pub fn new_gui_app() -> App {
     app.add_plugins(GameAssetsPlugin);
     app.add_plugins(CorePlugin { render: true });
     app.add_plugins(simulation::SimulationPlugin);
+    app.add_plugins(editor::EditorPlugin);
 
     #[cfg(feature = "debug")]
     app.add_plugins(DebugPlugin);
@@ -150,6 +152,9 @@ impl Plugin for CorePlugin {
         if !app.is_plugin_added::<bevy::diagnostic::FrameTimeDiagnosticsPlugin>() {
             app.add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default());
         }
+
+        // Configure system Sets
+        app.configure_sets(Update, SpaceshipInputPluginSet.run_if(in_state(GameStates::Simulation)));
     }
 }
 

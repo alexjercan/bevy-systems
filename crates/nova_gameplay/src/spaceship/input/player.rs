@@ -4,6 +4,9 @@ use bevy_common_systems::prelude::*;
 
 pub mod prelude {
     pub use super::PlayerSpaceshipMarker;
+    pub use super::SpaceshipPlayerInputPlugin;
+    pub use super::SpaceshipPlayerInputPluginSet;
+    pub use super::SpaceshipThrusterInputKey;
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -19,6 +22,7 @@ impl Plugin for SpaceshipPlayerInputPlugin {
             (
                 update_controller_target_rotation_torque,
                 update_turret_target_input,
+                on_thruster_input, on_projectile_input,
             )
                 .in_set(SpaceshipPlayerInputPluginSet)
                 .chain(),
@@ -92,5 +96,37 @@ fn update_turret_target_input(
         let distance = 100.0;
 
         **turret = Some(position + forward * distance);
+    }
+}
+
+// TODO: improve these input systems
+
+#[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]
+pub struct SpaceshipThrusterInputKey(pub KeyCode);
+
+fn on_thruster_input(
+    mut q_input: Query<(&mut ThrusterSectionInput, &SpaceshipThrusterInputKey)>,
+    keys: Res<ButtonInput<KeyCode>>,
+) {
+    for (mut input, key) in &mut q_input {
+        if keys.pressed(key.0) {
+            **input = 1.0;
+        } else {
+            **input = 0.0;
+        }
+    }
+}
+
+fn on_projectile_input(
+    mut commands: Commands,
+    mouse: Res<ButtonInput<MouseButton>>,
+    q_spawner: Query<Entity, With<ProjectileSpawnerMarker<BulletProjectileConfig>>>,
+) {
+    for spawner_entity in &q_spawner {
+        if mouse.pressed(MouseButton::Left) {
+            commands.trigger(SpawnProjectile {
+                entity: spawner_entity,
+            });
+        }
     }
 }

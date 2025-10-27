@@ -1,0 +1,80 @@
+use bevy::prelude::*;
+use bevy_common_systems::prelude::*;
+
+pub mod prelude {
+    pub use super::health_hud;
+    pub use super::HealthHudConfig;
+    pub use super::HealthHudPlugin;
+    pub use super::HealthHudPluginSet;
+}
+
+#[derive(Component, Debug, Clone, Reflect)]
+pub struct HealthHudMarker;
+
+#[derive(Clone, Debug)]
+pub struct HealthHudConfig {
+    pub target: Option<Entity>,
+}
+
+impl Default for HealthHudConfig {
+    fn default() -> Self {
+        Self { target: None }
+    }
+}
+
+pub fn health_hud(config: HealthHudConfig) -> impl Bundle {
+    debug!("Creating health HUD with config: {:?}", config);
+
+    (
+        Name::new("HealthHUD"),
+        HealthHudMarker,
+        HealthHudTargetEntity(config.target),
+        Text::new("Health: 100%"),
+        TextShadow::default(),
+        TextLayout::new_with_justify(Justify::Center),
+        Node {
+            position_type: PositionType::Absolute,
+            bottom: px(5),
+            right: px(5),
+            ..default()
+        },
+    )
+}
+
+#[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]
+pub struct HealthHudTargetEntity(Option<Entity>);
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct HealthHudPluginSet;
+
+#[derive(Default)]
+pub struct HealthHudPlugin;
+
+impl Plugin for HealthHudPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            (update_text_hud,).in_set(HealthHudPluginSet).chain(),
+        );
+    }
+}
+
+fn update_text_hud(
+    mut q_hud: Query<(&mut Text, &HealthHudTargetEntity), With<HealthHudMarker>>,
+    q_target: Query<&Health>,
+) {
+    for (mut hud_input, target) in &mut q_hud {
+        let Some(target) = **target else {
+            warn!("HealthHudMarker has no target entity");
+            continue;
+        };
+
+        let Ok(health) = q_target.get(target) else {
+            warn!("HealthHudMarker target entity does not have Health component");
+            continue;
+        };
+
+        let health_percent = (health.current / health.max * 100.0).round();
+        **hud_input = format!("Health: {}%", health_percent);
+    }
+}
