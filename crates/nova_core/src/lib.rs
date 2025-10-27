@@ -157,6 +157,7 @@ impl Plugin for CorePlugin {
         app.add_plugins(bevy_common_systems::prelude::DirectionalSphereOrbitPlugin);
         // Other helper plugins
         app.add_plugins(bevy_common_systems::prelude::TempEntityPlugin);
+        app.add_plugins(bevy_common_systems::prelude::TransformChainWorldPlugin);
         // Core Mechanics
         app.add_plugins(bevy_common_systems::prelude::ProjectilePlugin {
             render: self.render,

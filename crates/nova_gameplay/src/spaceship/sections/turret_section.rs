@@ -358,6 +358,7 @@ fn insert_turret_section(
         .spawn((
             Name::new("Turret Barrel Muzzle"),
             TurretSectionBarrelMuzzleMarker,
+            TransformChainWorldMarker,
             projectile_spawner(ProjectileSpawnerConfig {
                 fire_rate: config.fire_rate,
                 projectile: config.projectile,
@@ -455,117 +456,55 @@ fn insert_turret_section(
 fn on_shoot_spawn_projectile(
     shoot: On<TurretShoot>,
     mut commands: Commands,
-    q_spaceship: Query<(&Transform, &LinearVelocity, &AngularVelocity), With<SpaceshipRootMarker>>,
+    q_spaceship: Query<(&LinearVelocity, &AngularVelocity), With<SpaceshipRootMarker>>,
     q_turret: Query<
         (
-            &Transform,
             &TurretSectionBarrelMuzzleEntity,
             &ChildOf,
             &TurretSectionConfigHelper,
         ),
         With<TurretSectionMarker>,
     >,
-    q_base: Query<&Transform, With<TurretRotatorBaseMarker>>,
-    q_rotator_yaw_base: Query<(&Transform, &ChildOf), With<TurretSectionRotatorYawBaseMarker>>,
-    q_rotator_yaw: Query<(&Transform, &ChildOf), With<TurretSectionRotatorYawMarker>>,
-    q_rotator_pitch_base: Query<(&Transform, &ChildOf), With<TurretSectionRotatorPitchBaseMarker>>,
-    q_rotator_pitch: Query<(&Transform, &ChildOf), With<TurretSectionRotatorPitchMarker>>,
-    q_barrel: Query<(&Transform, &ChildOf), With<TurretSectionRotatorBarrelMarker>>,
-    q_muzzle: Query<(&Transform, &ChildOf), With<ProjectileSpawnerMarker<BulletProjectileConfig>>>,
+    q_muzzle: Query<&TransformChainWorld, With<ProjectileSpawnerMarker<BulletProjectileConfig>>>,
 ) {
     let turret = shoot.entity;
-    let Ok((turret_transform, muzzle, ChildOf(spaceship), config)) = q_turret.get(turret) else {
+    let Ok((muzzle, ChildOf(spaceship), config)) = q_turret.get(turret) else {
         warn!(
-            "Turret entity {:?} missing TurretSectionBarrelMuzzleEntity component",
+            "on_shoot_spawn_projectile: entity {:?} not found in q_turret",
             turret
         );
         return;
     };
 
-    let Ok((spaceship_transform, lin_vel, _ang_vel)) = q_spaceship.get(*spaceship) else {
+    let Ok((lin_vel, _ang_vel)) = q_spaceship.get(*spaceship) else {
         warn!(
-            "Spaceship entity {:?} missing LinearVelocity or AngularVelocity component",
+            "on_shoot_spawn_projectile: entity {:?} not found in q_spaceship",
             spaceship
         );
         return;
     };
 
-    let Ok((muzzle_transform, ChildOf(parent))) = q_muzzle.get(**muzzle) else {
+    let Ok(TransformChainWorld {
+        rotation,
+        translation,
+        ..
+    }) = q_muzzle.get(**muzzle)
+    else {
         warn!(
-            "Turret's muzzle entity {:?} missing ProjectileSpawnerMarker component",
+            "on_shoot_spawn_projectile: entity {:?} not found in q_muzzle",
             **muzzle
         );
         return;
     };
 
-    let Ok((barrel_transform, ChildOf(parent))) = q_barrel.get(*parent) else {
-        warn!(
-            "Muzzle's parent entity {:?} missing TurretSectionRotatorBarrelMarker component",
-            *parent
-        );
-        return;
-    };
-
-    let Ok((pitch_transform, ChildOf(parent))) = q_rotator_pitch.get(*parent) else {
-        warn!(
-            "Barrel's parent entity {:?} missing TurretSectionRotatorPitchMarker component",
-            *parent
-        );
-        return;
-    };
-
-    let Ok((pitch_base_transform, ChildOf(parent))) = q_rotator_pitch_base.get(*parent) else {
-        warn!(
-            "Pitch's parent entity {:?} missing TurretSectionRotatorPitchBaseMarker component",
-            *parent
-        );
-        return;
-    };
-
-    let Ok((yaw_transform, ChildOf(parent))) = q_rotator_yaw.get(*parent) else {
-        warn!(
-            "Pitch Base's parent entity {:?} missing TurretSectionRotatorYawMarker component",
-            *parent
-        );
-        return;
-    };
-
-    let Ok((yaw_base_transform, ChildOf(parent))) = q_rotator_yaw_base.get(*parent) else {
-        warn!(
-            "Yaw's parent entity {:?} missing TurretSectionRotatorYawBaseMarker component",
-            *parent
-        );
-        return;
-    };
-
-    let Ok(base_transform) = q_base.get(*parent) else {
-        warn!(
-            "Yaw Base's parent entity {:?} missing TurretRotatorBaseMarker component",
-            *parent
-        );
-        return;
-    };
-
-    let matrix = spaceship_transform.to_matrix()
-        * turret_transform.to_matrix()
-        * base_transform.to_matrix()
-        * yaw_base_transform.to_matrix()
-        * yaw_transform.to_matrix()
-        * pitch_base_transform.to_matrix()
-        * pitch_transform.to_matrix()
-        * barrel_transform.to_matrix()
-        * muzzle_transform.to_matrix();
-
-    let (_, spawn_rotation, spawn_position) = matrix.to_scale_rotation_translation();
-
-    let muzzle_exit_velocity = spawn_rotation * (Vec3::NEG_Z * config.muzzle_speed);
+    let muzzle_exit_velocity = rotation * (Vec3::NEG_Z * config.muzzle_speed);
     let linear_velocity = muzzle_exit_velocity + **lin_vel;
 
     commands.trigger(SpawnProjectile {
         entity: **muzzle,
         initial_velocity: linear_velocity,
-        spawn_position: spawn_position,
-        spawn_rotation: spawn_rotation,
+        spawn_position: *translation,
+        spawn_rotation: *rotation,
     });
 }
 
