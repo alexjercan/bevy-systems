@@ -195,12 +195,12 @@ mod turret {
     const DEBUG_LINE_LENGTH: f32 = 100.0;
 
     fn debug_draw_barrel_direction(
-        q_barrel: Query<&GlobalTransform, With<TurretSectionRotatorBarrelMarker>>,
+        q_muzzle: Query<&TransformChainWorld, With<TurretSectionBarrelMuzzleMarker>>,
         mut gizmos: Gizmos,
     ) {
-        for barrel_transform in &q_barrel {
-            let barrel_pos = barrel_transform.translation();
-            let barrel_dir = barrel_transform.forward();
+        for barrel_transform in &q_muzzle {
+            let barrel_pos = barrel_transform.translation;
+            let barrel_dir = barrel_transform.rotation * Vec3::NEG_Z;
 
             let line_length = DEBUG_LINE_LENGTH;
             let line_end = barrel_pos + barrel_dir * line_length;

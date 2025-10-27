@@ -92,7 +92,7 @@ fn update_turret_target_input(
         .iter_mut()
         .filter(|(_, ChildOf(t_parent))| *t_parent == spaceship)
     {
-        let forward = **point_rotation * -Vec3::Z;
+        let forward = **point_rotation * Vec3::NEG_Z;
         let position = transform.translation;
         let distance = 100.0;
 

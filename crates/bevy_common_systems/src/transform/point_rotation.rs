@@ -78,7 +78,7 @@ struct PointRotationState {
 
 impl From<Quat> for PointRotationState {
     fn from(rotation: Quat) -> Self {
-        let forward = rotation * -Vec3::Z;
+        let forward = rotation * Vec3::NEG_Z;
         let right = rotation * Vec3::X;
         Self { forward, right }
     }
@@ -127,7 +127,7 @@ mod test {
     #[test]
     fn test_compute_point_rotation_1() {
         let initial_state = PointRotationState {
-            forward: -Vec3::Z,
+            forward: Vec3::NEG_Z,
             right: Vec3::X,
         };
 
@@ -141,7 +141,7 @@ mod test {
     #[test]
     fn test_compute_point_rotation_2() {
         let initial_state = PointRotationState {
-            forward: -Vec3::Z,
+            forward: Vec3::NEG_Z,
             right: Vec3::X,
         };
 
@@ -155,7 +155,7 @@ mod test {
     #[test]
     fn test_compute_point_rotation_3() {
         let initial_state = PointRotationState {
-            forward: -Vec3::Z,
+            forward: Vec3::NEG_Z,
             right: Vec3::X,
         };
 
@@ -174,28 +174,28 @@ mod test {
     #[test]
     fn test_compute_point_rotation_4() {
         let initial_state = PointRotationState {
-            forward: -Vec3::Z,
+            forward: Vec3::NEG_Z,
             right: Vec3::X,
         };
 
         // Rotate 90 degrees to the left (yaw)
         let input = PointRotationInput(Vec2::new(std::f32::consts::FRAC_PI_2, 0.0));
         let new_state = compute_point_rotation(&initial_state, &input);
-        assert!(new_state.forward.abs_diff_eq(-Vec3::X, 1e-6));
-        assert!(new_state.right.abs_diff_eq(-Vec3::Z, 1e-6));
+        assert!(new_state.forward.abs_diff_eq(Vec3::NEG_X, 1e-6));
+        assert!(new_state.right.abs_diff_eq(Vec3::NEG_Z, 1e-6));
     }
 
     #[test]
     fn test_compute_point_rotation_5() {
         let initial_state = PointRotationState {
-            forward: -Vec3::Z,
+            forward: Vec3::NEG_Z,
             right: Vec3::X,
         };
 
         // Rotate -90 degrees down (pitch)
         let input = PointRotationInput(Vec2::new(0.0, -std::f32::consts::FRAC_PI_2));
         let new_state = compute_point_rotation(&initial_state, &input);
-        assert!(new_state.forward.abs_diff_eq(-Vec3::Y, 1e-6));
+        assert!(new_state.forward.abs_diff_eq(Vec3::NEG_Y, 1e-6));
         assert!(new_state.right.abs_diff_eq(Vec3::X, 1e-6));
     }
 }

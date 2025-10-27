@@ -12,12 +12,10 @@ use bevy_hanabi::prelude::*;
 
 pub mod prelude {
     pub use super::turret_section;
-    pub use super::TurretSectionBarrelMuzzleEntity;
     pub use super::TurretSectionBarrelMuzzleMarker;
     pub use super::TurretSectionConfig;
     pub use super::TurretSectionMarker;
     pub use super::TurretSectionPlugin;
-    pub use super::TurretSectionRotatorBarrelMarker;
     pub use super::TurretSectionTargetInput;
     pub use super::TurretShoot;
 }
@@ -111,6 +109,19 @@ pub struct TurretShoot {
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct TurretSectionMarker;
 
+/// The muzzle marker of the turret section.
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+pub struct TurretSectionBarrelMuzzleMarker;
+
+/// The target input for the turret section. This is a world-space position that the turret will
+/// aim at. If None, the turret will not rotate.
+#[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
+pub struct TurretSectionTargetInput(pub Option<Vec3>);
+
+/// The Turret "parent" entity of the turret component.
+#[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
+struct TurretSectionPartOf(pub Entity);
+
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 struct TurretSectionBaseRenderMesh(Option<Handle<Scene>>);
 
@@ -132,38 +143,24 @@ struct TurretSectionBarrelMuzzleEffect(Option<Handle<EffectAsset>>);
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 struct TurretRotatorBaseMarker;
 
-/// Marker component for the turret section rotator.
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 struct TurretSectionRotatorYawBaseMarker;
 
-/// Marker component for the yaw part of the turret section rotator.
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 struct TurretSectionRotatorYawMarker;
 
-/// Marker component for the pitch part of the turret section rotator.
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 struct TurretSectionRotatorPitchBaseMarker;
 
-/// Marker component for the pitch part of the turret section rotator.
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 struct TurretSectionRotatorPitchMarker;
 
-/// Marker component for the barrel part of the turret section rotator.
 #[derive(Component, Clone, Copy, Debug, Reflect)]
-pub struct TurretSectionRotatorBarrelMarker;
+struct TurretSectionRotatorBarrelMarker;
 
-/// Marker component for the muzzle of the barrel.
-#[derive(Component, Clone, Copy, Debug, Reflect)]
-pub struct TurretSectionBarrelMuzzleMarker;
-
-/// The entity that represents the muzzle of the turret barrel.
+/// The entity that represents the muzzle of the turret.
 #[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
-pub struct TurretSectionBarrelMuzzleEntity(pub Entity);
-
-/// The target input for the turret section. This is a world-space position that the turret will
-/// aim at. If None, the turret will not rotate.
-#[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
-pub struct TurretSectionTargetInput(pub Option<Vec3>);
+struct TurretSectionMuzzleEntity(pub Entity);
 
 /// A system set that will contain all the systems related to the turret section plugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -199,7 +196,8 @@ impl Plugin for TurretSectionPlugin {
             // TODO: put the turret plugin between
             // NOTE: I have no idea what I meant here
             (
-                update_turret_target_system,
+                update_turret_target_yaw_system,
+                update_turret_target_pitch_system,
                 sync_turret_rotator_yaw_system,
                 sync_turret_rotator_pitch_system,
             )
@@ -209,59 +207,167 @@ impl Plugin for TurretSectionPlugin {
     }
 }
 
-fn update_turret_target_system(
-    q_turret: Query<&TurretSectionTargetInput, With<TurretSectionMarker>>,
-    q_base: Query<&ChildOf, With<TurretRotatorBaseMarker>>,
-    mut q_rotator_yaw_base: Query<
-        (&GlobalTransform, &mut SmoothLookRotationTarget, &ChildOf),
-        (
-            With<TurretSectionRotatorYawBaseMarker>,
-            Without<TurretSectionRotatorPitchBaseMarker>,
-        ),
-    >,
-    q_rotator_yaw: Query<&ChildOf, With<TurretSectionRotatorYawMarker>>,
-    mut q_rotator_pitch_base: Query<
-        (&GlobalTransform, &mut SmoothLookRotationTarget, &ChildOf),
-        (
-            With<TurretSectionRotatorPitchBaseMarker>,
-            Without<TurretSectionRotatorYawBaseMarker>,
-        ),
-    >,
-    q_rotator_pitch: Query<&ChildOf, With<TurretSectionRotatorPitchMarker>>,
-    q_barrel: Query<(&GlobalTransform, &ChildOf), With<TurretSectionRotatorBarrelMarker>>,
+fn insert_turret_section(
+    add: On<Add, TurretSectionMarker>,
+    mut commands: Commands,
+    q_config: Query<&TurretSectionConfigHelper, With<TurretSectionMarker>>,
 ) {
-    for (barrel_transform, &ChildOf(entity)) in &q_barrel {
-        let Ok(&ChildOf(entity)) = q_rotator_pitch.get(entity) else {
-            warn!("TurretSectionRotatorBarrel's parent does not have a TurretSectionRotatorPitchMarker component");
+    let turret = add.entity;
+    debug!("Inserting turret section for entity: {:?}", turret);
+
+    let Ok(config) = q_config.get(turret) else {
+        warn!(
+            "TurretSection entity {:?} missing TurretSectionConfigHelper component",
+            turret
+        );
+        return;
+    };
+    let config = (**config).clone();
+
+    let muzzle = commands
+        .spawn((
+            Name::new("Turret Barrel Muzzle"),
+            TurretSectionBarrelMuzzleMarker,
+            TurretSectionPartOf(turret),
+            projectile_spawner(ProjectileSpawnerConfig {
+                fire_rate: config.fire_rate,
+                projectile: config.projectile,
+                ..default()
+            }),
+            TurretSectionBarrelMuzzleEffect(config.muzzle_effect.clone()),
+            Transform::from_translation(config.muzzle_offset),
+            TransformChainWorldMarker,
+            Visibility::Inherited,
+        ))
+        .id();
+
+    let rotator_barrel = commands
+        .spawn((
+            Name::new("Turret Rotator Barrel"),
+            TurretSectionRotatorBarrelMarker,
+            TurretSectionPartOf(turret),
+            TurretSectionMuzzleEntity(muzzle),
+            Transform::from_translation(config.barrel_offset),
+            TurretSectionBarrelRenderMesh(config.render_mesh_barrel),
+            TransformChainWorldMarker,
+            Visibility::Inherited,
+        ))
+        .add_child(muzzle)
+        .id();
+
+    let rotator_pitch = commands
+        .spawn((
+            Name::new("Turret Rotator Pitch"),
+            TurretSectionRotatorPitchMarker,
+            TurretSectionPartOf(turret),
+            TurretSectionMuzzleEntity(muzzle),
+            Transform::default(),
+            TurretSectionPitchRenderMesh(config.render_mesh_pitch),
+            Visibility::Inherited,
+        ))
+        .add_child(rotator_barrel)
+        .id();
+
+    let rotator_pitch_base = commands
+        .spawn((
+            Name::new("Turret Rotator Pitch Base"),
+            TurretSectionRotatorPitchBaseMarker,
+            TurretSectionPartOf(turret),
+            TurretSectionMuzzleEntity(muzzle),
+            SmoothLookRotation {
+                axis: Vec3::X,
+                initial: 0.0,
+                speed: config.pitch_speed,
+                min: config.min_pitch,
+                max: config.max_pitch,
+            },
+            Transform::from_translation(config.pitch_offset),
+            TransformChainWorldMarker,
+            Visibility::Inherited,
+        ))
+        .add_child(rotator_pitch)
+        .id();
+
+    let rotator_yaw = commands
+        .spawn((
+            Name::new("Turret Rotator Yaw"),
+            TurretSectionRotatorYawMarker,
+            TurretSectionPartOf(turret),
+            TurretSectionMuzzleEntity(muzzle),
+            Transform::default(),
+            TurretSectionYawRenderMesh(config.render_mesh_yaw),
+            Visibility::Inherited,
+        ))
+        .add_child(rotator_pitch_base)
+        .id();
+
+    let rotator_yaw_base = commands
+        .spawn((
+            Name::new("Turret Rotator Yaw Base"),
+            TurretSectionRotatorYawBaseMarker,
+            TurretSectionPartOf(turret),
+            TurretSectionMuzzleEntity(muzzle),
+            SmoothLookRotation {
+                axis: Vec3::Y,
+                initial: 0.0,
+                speed: config.yaw_speed,
+                ..default()
+            },
+            Transform::from_translation(config.yaw_offset),
+            TransformChainWorldMarker,
+            Visibility::Inherited,
+        ))
+        .add_child(rotator_yaw)
+        .id();
+
+    let rotator_base = commands
+        .spawn((
+            Name::new("Turret Rotator Base"),
+            TurretRotatorBaseMarker,
+            TurretSectionPartOf(turret),
+            TurretSectionMuzzleEntity(muzzle),
+            Transform::from_translation(config.base_offset),
+            TurretSectionBaseRenderMesh(config.render_mesh_base),
+            Visibility::Inherited,
+        ))
+        .add_child(rotator_yaw_base)
+        .id();
+
+    commands
+        .entity(turret)
+        .insert((TurretSectionMuzzleEntity(muzzle),))
+        .add_child(rotator_base);
+}
+
+fn update_turret_target_yaw_system(
+    q_turret: Query<&TurretSectionTargetInput, With<TurretSectionMarker>>,
+    mut q_rotator_yaw_base: Query<
+        (
+            &mut SmoothLookRotationTarget,
+            &TransformChainWorld,
+            &TurretSectionPartOf,
+            &TurretSectionMuzzleEntity,
+        ),
+        With<TurretSectionRotatorYawBaseMarker>,
+    >,
+    q_muzzle: Query<&TransformChainWorld, With<TurretSectionBarrelMuzzleMarker>>,
+) {
+    for (mut target, yaw_chain, TurretSectionPartOf(turret), TurretSectionMuzzleEntity(muzzle)) in
+        &mut q_rotator_yaw_base
+    {
+        let Ok(muzzle_chain) = q_muzzle.get(*muzzle) else {
+            warn!(
+                "update_turret_target_yaw_system: entity {:?} not found in q_muzzle",
+                *muzzle
+            );
             continue;
         };
 
-        let Ok((pitch_base_transform, mut pitch_rotator_target, &ChildOf(entity))) =
-            q_rotator_pitch_base.get_mut(entity)
-        else {
-            warn!("TurretSectionRotatorPitch's parent does not have a TurretSectionRotatorPitchBaseMarker component");
-            continue;
-        };
-
-        let Ok(&ChildOf(entity)) = q_rotator_yaw.get(entity) else {
-            warn!("TurretSectionRotatorPitchBase's parent does not have a TurretSectionRotatorYawMarker component");
-            continue;
-        };
-
-        let Ok((yaw_base_transform, mut yaw_rotator_target, &ChildOf(entity))) =
-            q_rotator_yaw_base.get_mut(entity)
-        else {
-            warn!("TurretSectionRotatorYaw's parent does not have a TurretSectionRotatorYawBaseMarker component");
-            continue;
-        };
-
-        let Ok(&ChildOf(entity)) = q_base.get(entity) else {
-            warn!("TurretSectionRotatorYawBase's parent does not have a TurretRotatorBaseMarker component");
-            continue;
-        };
-
-        let Ok(target_input) = q_turret.get(entity) else {
-            warn!("TurretRotatorBase's parent does not have a TurretSectionMarker component");
+        let Ok(target_input) = q_turret.get(*turret) else {
+            warn!(
+                "update_turret_target_yaw_system: entity {:?} not found in q_turret",
+                *turret
+            );
             continue;
         };
 
@@ -269,12 +375,11 @@ fn update_turret_target_system(
             continue;
         };
 
-        let world_to_yaw_base = yaw_base_transform.to_matrix().inverse();
-        let world_to_pitch_base = pitch_base_transform.to_matrix().inverse();
+        let world_to_yaw_base = yaw_chain.matrix.inverse();
 
         let target_pos = target_input;
-        let barrel_pos = barrel_transform.translation();
-        let barrel_dir = barrel_transform.forward().into();
+        let barrel_pos = muzzle_chain.translation;
+        let barrel_dir = muzzle_chain.rotation * Vec3::NEG_Z;
         if target_pos == barrel_pos {
             continue;
         }
@@ -290,21 +395,66 @@ fn update_turret_target_system(
         let target_r = target_yaw_local_pos.xz().length();
         if target_r > r.abs() {
             let theta = (phi - (r / target_r).acos()) % (std::f32::consts::TAU);
-            **yaw_rotator_target = theta;
+            **target = theta;
+        }
+    }
+}
+
+fn update_turret_target_pitch_system(
+    q_turret: Query<&TurretSectionTargetInput, With<TurretSectionMarker>>,
+    mut q_rotator_pitch_base: Query<
+        (
+            &mut SmoothLookRotationTarget,
+            &TransformChainWorld,
+            &TurretSectionPartOf,
+            &TurretSectionMuzzleEntity,
+        ),
+        With<TurretSectionRotatorPitchBaseMarker>,
+    >,
+    q_muzzle: Query<&TransformChainWorld, With<TurretSectionBarrelMuzzleMarker>>,
+) {
+    for (mut target, pitch_chain, TurretSectionPartOf(turret), TurretSectionMuzzleEntity(muzzle)) in
+        &mut q_rotator_pitch_base
+    {
+        let Ok(muzzle_chain) = q_muzzle.get(*muzzle) else {
+            warn!(
+                "update_turret_target_pitch_system: entity {:?} not found in q_muzzle",
+                *muzzle
+            );
+            continue;
+        };
+
+        let Ok(target_input) = q_turret.get(*turret) else {
+            warn!(
+                "update_turret_target_pitch_system: entity {:?} not found in q_turret",
+                *turret
+            );
+            continue;
+        };
+
+        let Some(target_input) = **target_input else {
+            continue;
+        };
+
+        let world_to_pitch_base = pitch_chain.matrix.inverse();
+
+        let target_pos = target_input;
+        let barrel_pos = muzzle_chain.translation;
+        let barrel_dir = muzzle_chain.rotation * Vec3::NEG_Z;
+        if target_pos == barrel_pos {
+            continue;
         }
 
-        let barrel_pitch_local_pos =
-            world_to_pitch_base.transform_point3(barrel_transform.translation());
-        let target_pitch_local_pos = world_to_pitch_base.transform_point3(target_input);
-        let barrel_pitch_local_dir =
-            world_to_pitch_base.transform_vector3(barrel_transform.forward().into());
+        let barrel_pitch_local_pos = world_to_pitch_base.transform_point3(barrel_pos);
+        let target_pitch_local_pos = world_to_pitch_base.transform_point3(target_pos);
+        let barrel_pitch_local_dir = world_to_pitch_base.transform_vector3(barrel_dir);
 
         let phi = (-target_pitch_local_pos.z).atan2(target_pitch_local_pos.y);
         let r = -barrel_pitch_local_pos.cross(barrel_pitch_local_dir).x;
         let target_r = target_pitch_local_pos.yz().length();
         if target_r > r.abs() {
             let theta = phi - (r / target_r).acos();
-            **pitch_rotator_target = -theta;
+            **target = -theta;
         }
     }
 }
@@ -337,129 +487,13 @@ fn sync_turret_rotator_pitch_system(
     }
 }
 
-fn insert_turret_section(
-    add: On<Add, TurretSectionMarker>,
-    mut commands: Commands,
-    q_config: Query<&TurretSectionConfigHelper, With<TurretSectionMarker>>,
-) {
-    let entity = add.entity;
-    debug!("Inserting turret section for entity: {:?}", entity);
-
-    let Ok(config) = q_config.get(entity) else {
-        warn!(
-            "TurretSection entity {:?} missing TurretSectionConfigHelper component",
-            entity
-        );
-        return;
-    };
-    let config = (**config).clone();
-
-    let muzzle = commands
-        .spawn((
-            Name::new("Turret Barrel Muzzle"),
-            TurretSectionBarrelMuzzleMarker,
-            TransformChainWorldMarker,
-            projectile_spawner(ProjectileSpawnerConfig {
-                fire_rate: config.fire_rate,
-                projectile: config.projectile,
-                ..default()
-            }),
-            TurretSectionBarrelMuzzleEffect(config.muzzle_effect.clone()),
-            Transform::from_translation(config.muzzle_offset),
-            Visibility::Inherited,
-        ))
-        .id();
-
-    commands
-        .entity(entity)
-        .insert((TurretSectionBarrelMuzzleEntity(muzzle),))
-        .with_children(|parent| {
-            parent
-                .spawn((
-                    Name::new("Turret Rotator Base"),
-                    TurretRotatorBaseMarker,
-                    Transform::from_translation(config.base_offset),
-                    Visibility::Inherited,
-                    TurretSectionBaseRenderMesh(config.render_mesh_base),
-                ))
-                .with_children(|parent| {
-                    parent
-                        .spawn((
-                            Name::new("Turret Rotator Yaw Base"),
-                            TurretSectionRotatorYawBaseMarker,
-                            SmoothLookRotation {
-                                axis: Vec3::Y,
-                                initial: 0.0,
-                                speed: config.yaw_speed,
-                                ..default()
-                            },
-                            Transform::from_translation(config.yaw_offset),
-                            Visibility::Inherited,
-                        ))
-                        .with_children(|parent| {
-                            parent
-                                .spawn((
-                                    Name::new("Turret Rotator Yaw"),
-                                    TurretSectionRotatorYawMarker,
-                                    Transform::default(),
-                                    Visibility::Inherited,
-                                    TurretSectionYawRenderMesh(config.render_mesh_yaw),
-                                ))
-                                .with_children(|parent| {
-                                    parent
-                                        .spawn((
-                                            Name::new("Turret Rotator Pitch Base"),
-                                            TurretSectionRotatorPitchBaseMarker,
-                                            SmoothLookRotation {
-                                                axis: Vec3::X,
-                                                initial: 0.0,
-                                                speed: config.pitch_speed,
-                                                min: config.min_pitch,
-                                                max: config.max_pitch,
-                                            },
-                                            Transform::from_translation(config.pitch_offset),
-                                            Visibility::Inherited,
-                                        ))
-                                        .with_children(|parent| {
-                                            parent
-                                                .spawn((
-                                                    Name::new("Turret Rotator Pitch"),
-                                                    TurretSectionRotatorPitchMarker,
-                                                    Transform::default(),
-                                                    Visibility::Inherited,
-                                                    TurretSectionPitchRenderMesh(
-                                                        config.render_mesh_pitch,
-                                                    ),
-                                                ))
-                                                .with_children(|parent| {
-                                                    parent
-                                                        .spawn((
-                                                            Name::new("Turret Rotator Barrel"),
-                                                            TurretSectionRotatorBarrelMarker,
-                                                            Transform::from_translation(
-                                                                config.barrel_offset,
-                                                            ),
-                                                            Visibility::Inherited,
-                                                            TurretSectionBarrelRenderMesh(
-                                                                config.render_mesh_barrel,
-                                                            ),
-                                                        ))
-                                                        .add_child(muzzle);
-                                                });
-                                        });
-                                });
-                        });
-                });
-        });
-}
-
 fn on_shoot_spawn_projectile(
     shoot: On<TurretShoot>,
     mut commands: Commands,
     q_spaceship: Query<(&LinearVelocity, &AngularVelocity), With<SpaceshipRootMarker>>,
     q_turret: Query<
         (
-            &TurretSectionBarrelMuzzleEntity,
+            &TurretSectionMuzzleEntity,
             &ChildOf,
             &TurretSectionConfigHelper,
         ),
