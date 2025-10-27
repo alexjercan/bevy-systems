@@ -12,8 +12,12 @@ struct Cli;
 
 fn main() {
     let _ = Cli::parse();
-    let mut app = new_gui_app();
+    let mut app = AppBuilder::new().with_game_plugins(custom_plugin).build();
 
+    app.run();
+}
+
+fn custom_plugin(app: &mut App) {
     app.add_systems(
         OnEnter(GameStates::Simulation),
         (setup_spaceship, setup_camera, setup_simple_scene),
@@ -23,8 +27,6 @@ fn main() {
         Update,
         update_spaceship_target_rotation_torque.before(SpaceshipPluginSet),
     );
-
-    app.run();
 }
 
 #[derive(Component, Debug, Clone)]

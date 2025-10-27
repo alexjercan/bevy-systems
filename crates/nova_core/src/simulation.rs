@@ -58,7 +58,11 @@ impl Plugin for SimulationPlugin {
     }
 }
 
-fn setup_camera_controller(mut commands: Commands, game_assets: Res<GameAssets>) {
+fn setup_camera_controller(
+    mut commands: Commands,
+    game_assets: Res<GameAssets>,
+    _spaceship: Single<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
+) {
     // Spawn a 3D camera with a chase camera component
     commands.spawn((
         DespawnOnExit(super::GameStates::Simulation),
@@ -99,7 +103,10 @@ fn setup_hud_health(
     ));
 }
 
-fn setup_player_input(mut commands: Commands) {
+fn setup_player_input(
+    mut commands: Commands,
+    _spaceship: Single<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
+) {
     // Spawn a player input controller entity to hold the input from the player
     commands.spawn((
         DespawnOnExit(super::GameStates::Simulation),

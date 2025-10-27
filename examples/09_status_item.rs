@@ -13,17 +13,14 @@ struct Cli;
 
 fn main() {
     let _ = Cli::parse();
-    let mut app = new_gui_app();
-
-    app.add_systems(
-        OnEnter(GameStates::Simulation),
-        setup_camera,
-    );
-    app.add_observer(
-        setup_status_ui
-    );
+    let mut app = AppBuilder::new().with_game_plugins(custom_plugin).build();
 
     app.run();
+}
+
+fn custom_plugin(app: &mut App) {
+    app.add_systems(OnEnter(GameStates::Simulation), setup_camera);
+    app.add_observer(setup_status_ui);
 }
 
 fn setup_camera(mut commands: Commands, game_assets: Res<GameAssets>) {

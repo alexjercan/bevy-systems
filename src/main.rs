@@ -6,13 +6,13 @@ use rand::prelude::*;
 
 #[derive(Parser)]
 #[command(name = "nova_protocol")]
-#[command(version = "0.0.2")]
+#[command(version = "0.1.0")]
 #[command(about = "Simple spaceship editor scene where you can build custom ships", long_about = None)]
 struct Cli;
 
 fn main() {
     let _ = Cli::parse();
-    let mut app = new_gui_app();
+    let mut app = AppBuilder::new().build();
 
     app.add_systems(OnEnter(GameStates::Simulation), setup_simple_scene);
 

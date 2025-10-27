@@ -1,10 +1,5 @@
 use avian3d::prelude::*;
-use bevy::{
-    pbr::{ExtendedMaterial, MaterialExtension},
-    prelude::*,
-    render::render_resource::AsBindGroup,
-    shader::ShaderRef,
-};
+use bevy::prelude::*;
 use clap::Parser;
 use nova_protocol::prelude::*;
 use rand::prelude::*;
@@ -17,184 +12,29 @@ struct Cli;
 
 fn main() {
     let _ = Cli::parse();
-    let mut app = new_gui_app();
-
-    app.add_plugins(MaterialPlugin::<
-        ExtendedMaterial<StandardMaterial, DirectionMagnitudeMaterial>,
-    >::default());
-
-    app.add_systems(
-        OnEnter(GameStates::Simulation),
-        (setup_spaceship, setup_hud, setup_camera, setup_simple_scene),
-    );
-
-    app.add_systems(Update, on_thruster_input);
-
-    app.add_systems(
-        Update,
-        (
-            update_velocity_hud_input.before(DirectionalSphereOrbitPluginSet),
-            sync_orbit_state.after(DirectionalSphereOrbitPluginSet),
-            direction_shader_update_system,
-        ),
-    );
+    let mut app = AppBuilder::new().with_game_plugins(custom_plugin).build();
 
     app.run();
 }
 
-#[derive(Component, Debug, Clone)]
-struct VelocityHudMarker;
-
-fn setup_hud(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut direction_materials: ResMut<
-        Assets<ExtendedMaterial<StandardMaterial, DirectionMagnitudeMaterial>>,
-    >,
-) {
-    commands.spawn((
-        Name::new("HUD"),
-        VelocityHudMarker,
-        DirectionalSphereOrbit {
-            radius: 5.0,
-            ..default()
-        },
-        Transform::default(),
-        Visibility::Visible,
-        children![(
-            Name::new("Velocity Indicator"),
-            Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
-            Mesh3d(meshes.add(Cone::new(0.2, 0.1))),
-            MeshMaterial3d(
-                direction_materials.add(ExtendedMaterial {
-                    base: StandardMaterial {
-                        base_color: Color::srgba(1.0, 1.0, 1.0, 1.0),
-                        perceptual_roughness: 1.0,
-                        metallic: 0.0,
-                        ..default()
-                    },
-                    extension: DirectionMagnitudeMaterial::default()
-                        .with_max_height(1.0)
-                        .with_radius(0.2),
-                }),
-            ),
-        )],
-    ));
-}
-
-fn update_velocity_hud_input(
-    hud: Single<&mut DirectionalSphereOrbitInput, With<VelocityHudMarker>>,
-    spaceship: Single<&LinearVelocity, With<SpaceshipRootMarker>>,
-) {
-    let spaceship_velocity = spaceship.into_inner();
-    let spaceship_dir = spaceship_velocity.normalize_or_zero();
-    if spaceship_dir == Vec3::ZERO {
-        return;
-    }
-
-    let mut hud_input = hud.into_inner();
-
-    **hud_input = spaceship_dir;
-}
-
-fn sync_orbit_state(
-    mut q_orbit: Query<
-        (&mut Transform, &DirectionalSphereOrbitOutput),
-        Changed<DirectionalSphereOrbitOutput>,
-    >,
-    spaceship: Single<&GlobalTransform, With<SpaceshipRootMarker>>,
-) {
-    let spaceship_transform = spaceship.into_inner();
-    let spaceship_origin = spaceship_transform.translation();
-
-    for (mut transform, output) in &mut q_orbit {
-        let dir = **output;
-        transform.translation = spaceship_origin + dir;
-        transform.rotation = Quat::from_rotation_arc(Vec3::NEG_Z, dir.normalize_or_zero());
-    }
-}
-
-fn direction_shader_update_system(
-    spaceship: Single<&LinearVelocity, With<SpaceshipRootMarker>>,
-    q_hud: Query<Entity, With<VelocityHudMarker>>,
-    q_render: Query<(
-        &MeshMaterial3d<ExtendedMaterial<StandardMaterial, DirectionMagnitudeMaterial>>,
-        &ChildOf,
-    )>,
-    mut materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, DirectionMagnitudeMaterial>>>,
-) {
-    let spaceship_velocity = spaceship.into_inner();
-    let magnitude = spaceship_velocity.length();
-
-    for (material, &ChildOf(parent)) in &q_render {
-        let Ok(_) = q_hud.get(parent) else {
-            warn!("VelocityHudMarker's parent is not HudMarker");
-            continue;
-        };
-
-        let Some(material) = materials.get_mut(&**material) else {
-            warn!("Failed to get material for VelocityHudMarker");
-            continue;
-        };
-
-        material.extension.magnitude_input = magnitude;
-    }
-}
-
-#[derive(Asset, TypePath, AsBindGroup, Debug, Clone, Default)]
-pub struct DirectionMagnitudeMaterial {
-    #[uniform(100)]
-    pub magnitude_input: f32,
-    #[uniform(100)]
-    pub radius: f32,
-    #[uniform(100)]
-    pub max_height: f32,
-    #[cfg(target_arch = "wasm32")]
-    #[uniform(100)]
-    _webgl2_padding_16b: u32,
-}
-
-impl DirectionMagnitudeMaterial {
-    pub fn with_radius(mut self, radius: f32) -> Self {
-        self.radius = radius;
-        self
-    }
-
-    pub fn with_max_height(mut self, height: f32) -> Self {
-        self.max_height = height;
-        self
-    }
-}
-
-impl MaterialExtension for DirectionMagnitudeMaterial {
-    fn vertex_shader() -> ShaderRef {
-        "shaders/directional_magnitude.wgsl".into()
-    }
-
-    fn fragment_shader() -> ShaderRef {
-        "shaders/directional_magnitude.wgsl".into()
-    }
-}
-
-#[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]
-struct ThrusterInputKey(KeyCode);
-
-fn on_thruster_input(
-    mut q_input: Query<(&mut ThrusterSectionInput, &ThrusterInputKey)>,
-    keys: Res<ButtonInput<KeyCode>>,
-) {
-    for (mut input, key) in &mut q_input {
-        if keys.pressed(key.0) {
-            **input = 1.0;
-        } else {
-            **input = 0.0;
-        }
-    }
+fn custom_plugin(app: &mut App) {
+    app.add_systems(
+        OnEnter(GameStates::Simulation),
+        (
+            setup_spaceship,
+            setup_hud_velocity,
+            setup_camera,
+            setup_simple_scene,
+        ).chain(),
+    );
 }
 
 fn setup_spaceship(mut commands: Commands) {
     let entity = commands
-        .spawn((spaceship_root(SpaceshipConfig { ..default() }),))
+        .spawn((
+            spaceship_root(SpaceshipConfig { ..default() }),
+            PlayerSpaceshipMarker,
+        ))
         .id();
 
     commands.entity(entity).with_children(|parent| {
@@ -208,10 +48,23 @@ fn setup_spaceship(mut commands: Commands) {
                 magnitude: 1.0,
                 ..default()
             }),
-            ThrusterInputKey(KeyCode::Digit1),
+            SpaceshipThrusterInputKey(KeyCode::Digit1),
             Transform::from_xyz(0.0, 0.0, 0.0),
         ));
     });
+}
+
+fn setup_hud_velocity(
+    mut commands: Commands,
+    spaceship: Single<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
+) {
+    commands.spawn((
+        DespawnOnExit(GameStates::Simulation),
+        velocity_hud(VelocityHudConfig {
+            radius: 5.0,
+            target: Some(*spaceship),
+        }),
+    ));
 }
 
 fn setup_camera(mut commands: Commands, game_assets: Res<GameAssets>) {

@@ -12,8 +12,12 @@ struct Cli;
 
 fn main() {
     let _ = Cli::parse();
-    let mut app = new_gui_app();
+    let mut app = AppBuilder::new().with_game_plugins(custom_plugin).build();
 
+    app.run();
+}
+
+fn custom_plugin(app: &mut App) {
     app.add_systems(
         OnEnter(GameStates::Simulation),
         (
@@ -35,8 +39,6 @@ fn main() {
             on_projectile_input,
         ),
     );
-
-    app.run();
 }
 
 fn on_projectile_input(

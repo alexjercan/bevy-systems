@@ -12,8 +12,12 @@ struct Cli;
 
 fn main() {
     let _ = Cli::parse();
-    let mut app = new_gui_app();
+    let mut app = AppBuilder::new().with_game_plugins(custom_plugin).build();
 
+    app.run();
+}
+
+fn custom_plugin(app: &mut App) {
     app.add_systems(
         OnEnter(GameStates::Simulation),
         (setup_health_entity, setup_camera, setup_simple_scene),
@@ -21,8 +25,6 @@ fn main() {
 
     app.add_observer(on_click_damage_health);
     app.add_observer(on_fragment_added);
-
-    app.run();
 }
 
 fn on_click_damage_health(

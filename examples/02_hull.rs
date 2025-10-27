@@ -12,14 +12,16 @@ struct Cli;
 
 fn main() {
     let _ = Cli::parse();
-    let mut app = new_gui_app();
+    let mut app = AppBuilder::new().with_game_plugins(custom_plugin).build();
 
+    app.run();
+}
+
+fn custom_plugin(app: &mut App) {
     app.add_systems(
         OnEnter(GameStates::Simulation),
         (setup_spaceship, setup_camera, setup_simple_scene),
     );
-
-    app.run();
 }
 
 fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {

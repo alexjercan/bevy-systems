@@ -12,23 +12,22 @@ struct Cli;
 
 fn main() {
     let _ = Cli::parse();
-    let mut app = new_gui_app();
+    let mut app = AppBuilder::new().with_game_plugins(custom_plugin).build();
 
+    app.run();
+}
+
+fn custom_plugin(app: &mut App) {
     app.add_systems(
         OnEnter(GameStates::Simulation),
         (setup_spaceship, setup_camera, setup_simple_scene),
     );
 
     app.add_systems(Update, on_thruster_input);
-
-    app.run();
 }
 
-#[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]
-struct ThrusterInputKey(KeyCode);
-
 fn on_thruster_input(
-    mut q_input: Query<(&mut ThrusterSectionInput, &ThrusterInputKey)>,
+    mut q_input: Query<(&mut ThrusterSectionInput, &SpaceshipThrusterInputKey)>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
     for (mut input, key) in &mut q_input {
@@ -81,8 +80,8 @@ fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {
                         magnitude: 1.0,
                         ..default()
                     }),
+                    SpaceshipThrusterInputKey(KeyCode::Digit1),
                     Transform::from_xyz(x as f32 * 1.0, y as f32 * 1.0, z as f32 * 1.0),
-                    ThrusterInputKey(KeyCode::Digit1),
                 ));
             });
         }

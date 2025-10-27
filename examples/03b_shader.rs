@@ -7,7 +7,7 @@ use bevy::{
 };
 use clap::Parser;
 use nova_protocol::{
-    nova_gameplay::sections::thruster_section::ThrusterExhaustMaterial, prelude::*,
+    nova_gameplay::spaceship::sections::thruster_section::ThrusterExhaustMaterial, prelude::*,
 };
 use rand::prelude::*;
 
@@ -19,8 +19,12 @@ struct Cli;
 
 fn main() {
     let _ = Cli::parse();
-    let mut app = new_gui_app();
+    let mut app = AppBuilder::new().with_game_plugins(custom_plugin).build();
 
+    app.run();
+}
+
+fn custom_plugin(app: &mut App) {
     app.insert_resource(DemoWidgetStates { slider_value: 0.0 });
 
     app.add_systems(
@@ -40,8 +44,6 @@ fn main() {
         .add_observer(slider_on_change_value::<SliderRange>);
 
     app.add_systems(Update, update_widget_values);
-
-    app.run();
 }
 
 fn thruster_shader_update_system(
