@@ -24,7 +24,7 @@ fn main() {
     app.insert_resource(DemoWidgetStates { slider_value: 0.0 });
 
     app.add_systems(
-        OnEnter(GameStates::Playing),
+        OnEnter(GameStates::Simulation),
         (
             setup_cone_shader,
             setup_camera,

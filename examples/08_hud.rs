@@ -24,7 +24,7 @@ fn main() {
     >::default());
 
     app.add_systems(
-        OnEnter(GameStates::Playing),
+        OnEnter(GameStates::Simulation),
         (setup_spaceship, setup_hud, setup_camera, setup_simple_scene),
     );
 

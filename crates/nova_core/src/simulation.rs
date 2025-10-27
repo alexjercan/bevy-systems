@@ -8,3 +8,8 @@ pub mod prelude {}
 pub struct SimulationPluginSet;
 
 pub struct SimulationPlugin;
+
+impl Plugin for SimulationPlugin {
+    fn build(&self, app: &mut App) {
+    }
+}

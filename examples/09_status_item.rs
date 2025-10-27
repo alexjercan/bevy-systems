@@ -16,7 +16,7 @@ fn main() {
     let mut app = new_gui_app();
 
     app.add_systems(
-        OnEnter(GameStates::Playing),
+        OnEnter(GameStates::Simulation),
         setup_camera,
     );
     app.add_observer(

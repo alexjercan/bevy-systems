@@ -16,7 +16,7 @@ fn main() {
 
     // We start in the editor state
     app.add_systems(
-        OnEnter(GameStates::Playing),
+        OnEnter(GameStates::Simulation),
         |mut state: ResMut<NextState<SceneState>>| {
             state.set(SceneState::Editor);
         },

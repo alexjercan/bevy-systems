@@ -15,7 +15,7 @@ fn main() {
     let mut app = new_gui_app();
 
     app.add_systems(
-        OnEnter(GameStates::Playing),
+        OnEnter(GameStates::Simulation),
         (
             setup_target,
             setup_spaceship,

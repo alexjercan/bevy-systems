@@ -34,7 +34,7 @@ pub mod prelude {
 pub enum GameStates {
     #[default]
     Loading,
-    Playing,
+    Simulation,
 }
 
 pub fn new_gui_app() -> App {
@@ -54,6 +54,7 @@ pub fn new_gui_app() -> App {
     app.add_plugins(bevy_enhanced_input::EnhancedInputPlugin);
     app.add_plugins(GameAssetsPlugin);
     app.add_plugins(CorePlugin { render: true });
+    app.add_plugins(simulation::SimulationPlugin);
 
     #[cfg(feature = "debug")]
     app.add_plugins(DebugPlugin);
@@ -63,12 +64,12 @@ pub fn new_gui_app() -> App {
     app.add_systems(
         OnEnter(GameAssetsStates::Loaded),
         |mut state: ResMut<NextState<GameStates>>| {
-            state.set(GameStates::Playing);
+            state.set(GameStates::Simulation);
         },
     );
 
     // Setup the status UI when entering the Playing state
-    app.add_systems(OnEnter(GameStates::Playing), setup_status_ui);
+    app.add_systems(OnEnter(GameStates::Simulation), setup_status_ui);
 
     app
 }
@@ -136,7 +137,7 @@ impl Plugin for CorePlugin {
         // UI Plugins
         app.add_plugins(bevy_common_systems::prelude::StatusBarPlugin);
 
-        // Glue Plugins -> for simulation
+        // Core Plugins for simulation
         app.add_plugins(nova_gameplay::spaceship::SpaceshipPlugin {
             render: self.render,
         });
@@ -192,12 +193,12 @@ fn assets_plugin() -> AssetPlugin {
 
 fn setup_status_ui(mut commands: Commands, game_assets: Res<GameAssets>) {
     commands.spawn((
-        DespawnOnExit(GameStates::Playing),
+        DespawnOnExit(GameStates::Simulation),
         status_bar(StatusBarRootConfig::default()),
     ));
 
     commands.spawn((
-        DespawnOnExit(GameStates::Playing),
+        DespawnOnExit(GameStates::Simulation),
         status_bar_item(StatusBarItemConfig {
             icon: Some(game_assets.fps_icon.clone()),
             value_fn: status_fps_value_fn(),
@@ -207,7 +208,7 @@ fn setup_status_ui(mut commands: Commands, game_assets: Res<GameAssets>) {
         }),
     ));
     commands.spawn((
-        DespawnOnExit(GameStates::Playing),
+        DespawnOnExit(GameStates::Simulation),
         status_bar_item(StatusBarItemConfig {
             icon: None,
             value_fn: status_version_value_fn(env!("CARGO_PKG_VERSION").to_string()),

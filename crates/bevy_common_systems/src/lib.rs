@@ -1,4 +1,6 @@
 //! TODO: Add description in this crate
+//!
+//! Fully copy-pastable crate for common gameplay components and systems.
 
 pub mod camera;
 pub mod health;
