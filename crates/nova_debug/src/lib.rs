@@ -1,8 +1,7 @@
 //! A Bevy plugin that adds various debugging tools.
 
 use bevy::{
-    pbr::wireframe::{WireframeConfig, WireframePlugin},
-    prelude::*,
+    ecs::schedule::{LogLevel, ScheduleBuildSettings}, pbr::wireframe::{WireframeConfig, WireframePlugin}, prelude::*
 };
 
 pub mod prelude {
@@ -28,6 +27,13 @@ impl Plugin for DebugPlugin {
         app.add_plugins(gizmos::DebugGizmosPlugin);
         app.add_plugins(turret::DebugTurretSectionPlugin);
         app.add_plugins(avian3d::prelude::PhysicsDebugPlugin::default());
+
+        app.edit_schedule(Update, |schedule| {
+            schedule.set_build_settings(ScheduleBuildSettings {
+                ambiguity_detection: LogLevel::Warn,
+                ..default()
+            });
+        });
 
         app.add_systems(Update, (toggle_debug_mode, update_physics_gizmos));
     }

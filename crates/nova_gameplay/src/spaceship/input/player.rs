@@ -20,13 +20,12 @@ impl Plugin for SpaceshipPlayerInputPlugin {
         app.add_systems(
             Update,
             (
-                update_controller_target_rotation_torque,
-                update_turret_target_input,
+                update_controller_target_rotation_torque.after(PointRotationPluginSet),
+                update_turret_target_input.after(PointRotationPluginSet),
                 on_thruster_input,
                 on_projectile_input,
             )
                 .in_set(SpaceshipPlayerInputPluginSet)
-                .chain(),
         );
     }
 }

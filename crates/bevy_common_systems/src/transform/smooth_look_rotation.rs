@@ -3,7 +3,7 @@ use bevy::prelude::*;
 pub mod prelude {
     pub use super::{
         SmoothLookRotation, SmoothLookRotationOutput, SmoothLookRotationPlugin,
-        SmoothLookRotationTarget,
+        SmoothLookRotationTarget, SmoothLookRotationPluginSet,
     };
 }
 
@@ -42,6 +42,9 @@ pub struct SmoothLookRotationTarget(pub f32);
 #[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
 pub struct SmoothLookRotationOutput(pub f32);
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SmoothLookRotationPluginSet;
+
 /// A plugin that will enable the SmoothLookRotation system.
 ///
 /// SmoothLookRotation allows an entity to smoothly rotate to face a target angle around a
@@ -52,7 +55,10 @@ pub struct SmoothLookRotationPlugin;
 impl Plugin for SmoothLookRotationPlugin {
     fn build(&self, app: &mut App) {
         app.add_observer(initialize_smooth_look_system);
-        app.add_systems(Update, smooth_look_rotation_update_system);
+        app.add_systems(
+            Update,
+            smooth_look_rotation_update_system.in_set(SmoothLookRotationPluginSet),
+        );
     }
 }
 

@@ -12,6 +12,9 @@ pub mod prelude {
     pub use super::VelocityHudConfig;
     pub use super::VelocityHudPlugin;
     pub use super::VelocityHudPluginSet;
+    pub use super::VelocityHudMarker;
+    pub use super::VelocityHudIndicatorMarker;
+    pub use super::VelocityHudTargetEntity;
 }
 
 #[derive(Component, Debug, Clone, Reflect)]

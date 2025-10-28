@@ -78,11 +78,11 @@ impl Plugin for SpaceshipPlugin {
             FixedUpdate,
             sections::SectionPluginSet.in_set(SpaceshipPluginSet),
         );
-        app.configure_sets(Update, hud::HudPluginSet.in_set(SpaceshipPluginSet));
-        app.configure_sets(FixedUpdate, hud::HudPluginSet.in_set(SpaceshipPluginSet));
+        app.configure_sets(Update, hud::HudPluginSet.after(SpaceshipPluginSet));
+        app.configure_sets(FixedUpdate, hud::HudPluginSet.after(SpaceshipPluginSet));
         app.configure_sets(
             Update,
-            camera_controller::SpaceshipCameraControllerPluginSet.in_set(SpaceshipPluginSet),
+            camera_controller::SpaceshipCameraControllerPluginSet.after(SpaceshipPluginSet),
         );
     }
 }

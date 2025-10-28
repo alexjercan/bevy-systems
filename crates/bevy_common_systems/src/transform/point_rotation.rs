@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::{PointRotation, PointRotationInput, PointRotationOutput, PointRotationPlugin};
+    pub use super::{
+        PointRotation, PointRotationInput, PointRotationOutput, PointRotationPlugin,
+        PointRotationPluginSet,
+    };
 }
 
 /// Component that marks an entity as a point that can be rotated.
@@ -29,6 +32,9 @@ pub struct PointRotationInput(pub Vec2);
 #[derive(Component, Clone, Copy, Debug, Default, Deref, DerefMut, Reflect)]
 pub struct PointRotationOutput(pub Quat);
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct PointRotationPluginSet;
+
 /// A plugin that will enable the PointRotation system.
 ///
 /// PointRotation allows an entity to be rotated based on input deltas, typically from mouse
@@ -39,7 +45,10 @@ pub struct PointRotationPlugin;
 impl Plugin for PointRotationPlugin {
     fn build(&self, app: &mut App) {
         app.add_observer(initialize_point_rotation_system);
-        app.add_systems(Update, point_rotation_update_system);
+        app.add_systems(
+            Update,
+            point_rotation_update_system.in_set(PointRotationPluginSet),
+        );
     }
 }
 

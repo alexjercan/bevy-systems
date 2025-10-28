@@ -193,15 +193,18 @@ impl Plugin for TurretSectionPlugin {
 
         app.add_systems(
             Update,
-            // TODO: put the turret plugin between
-            // NOTE: I have no idea what I meant here
             (
-                update_turret_target_yaw_system,
-                update_turret_target_pitch_system,
-                sync_turret_rotator_yaw_system,
-                sync_turret_rotator_pitch_system,
+                (
+                    update_turret_target_yaw_system,
+                    update_turret_target_pitch_system,
+                )
+                    .before(SmoothLookRotationPluginSet),
+                (
+                    sync_turret_rotator_yaw_system,
+                    sync_turret_rotator_pitch_system,
+                )
+                    .after(SmoothLookRotationPluginSet),
             )
-                .chain()
                 .in_set(TurretSectionPluginSet),
         );
     }
