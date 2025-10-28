@@ -12,7 +12,7 @@ struct Cli;
 
 fn main() {
     let _ = Cli::parse();
-    let mut app = AppBuilder::new().build();
+    let mut app = AppBuilder::new().with_rendering(cfg!(not(feature = "norender"))).build();
 
     app.add_systems(OnEnter(GameStates::Simulation), setup_simple_scene);
 

@@ -42,6 +42,7 @@ pub enum GameStates {
 pub struct AppBuilder {
     app: App,
     use_default_plugins: bool,
+    render: bool,
 }
 
 impl AppBuilder {
@@ -49,12 +50,18 @@ impl AppBuilder {
         Self {
             app: App::new(),
             use_default_plugins: true,
+            render: true,
         }
     }
 
     pub fn with_game_plugins<M>(mut self, plugins: impl Plugins<M>) -> Self {
         self.app.add_plugins(plugins);
         self.use_default_plugins = false;
+        self
+    }
+
+    pub fn with_rendering(mut self, render: bool) -> Self {
+        self.render = render;
         self
     }
 
@@ -74,7 +81,7 @@ impl AppBuilder {
         self.app
             .add_plugins(bevy_enhanced_input::EnhancedInputPlugin);
         self.app.add_plugins(GameAssetsPlugin);
-        self.app.add_plugins(CorePlugin { render: true });
+        self.app.add_plugins(CorePlugin { render: self.render });
 
         // Add default game plugins if none were provided
         if self.use_default_plugins {
