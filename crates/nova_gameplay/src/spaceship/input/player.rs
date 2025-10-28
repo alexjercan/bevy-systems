@@ -18,8 +18,8 @@ impl Plugin for SpaceshipPlayerInputPlugin {
         app.add_systems(
             Update,
             (
-                update_controller_target_rotation_torque.after(PointRotationSystems::Sync),
-                update_turret_target_input.after(PointRotationSystems::Sync),
+                update_controller_target_rotation_torque,
+                update_turret_target_input,
                 on_thruster_input,
                 on_projectile_input,
             )

@@ -27,10 +27,7 @@ impl Plugin for SpaceshipCameraControllerPlugin {
 
         app.add_systems(
             Update,
-            (
-                update_chase_camera_input.before(ChaseCameraSystems::Sync),
-                sync_spaceship_control_mode,
-            )
+            (update_chase_camera_input, sync_spaceship_control_mode)
                 .in_set(SpaceshipSystems::Camera),
         );
     }

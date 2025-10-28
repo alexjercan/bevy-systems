@@ -23,11 +23,7 @@ fn custom_plugin(app: &mut App) {
         (setup_camera, setup_simple_scene, setup_jitter).chain(),
     );
 
-    app.add_systems(
-        Update,
-        check_jitter, // .after(PhysicsSystems::Last)
-                      // .before(TransformSystems::Propagate),
-    );
+    app.add_systems(Update, check_jitter);
 }
 
 #[derive(Component)]
@@ -38,7 +34,7 @@ fn setup_jitter(mut commands: Commands) {
     commands.spawn((
         Name::new("Jitter Test Body"),
         JitterTestMarker,
-        TransformChainWorldMarker,
+        TransformChainWorld::default(),
         Transform::default(),
         RigidBody::Dynamic,
         Collider::cuboid(1.0, 1.0, 1.0),
@@ -65,7 +61,7 @@ fn check_jitter(
             "{}: GlobalTransform: {:?}, ChainTransform {:?}, Transform: {:?}, Position: {:?}, LinearVelocity: {:?}",
             name,
             global_transform.translation().adjust_precision(),
-            chain.translation.adjust_precision(),
+            chain.translation().adjust_precision(),
             transform.translation,
             position.0,
             linear_velocity.0

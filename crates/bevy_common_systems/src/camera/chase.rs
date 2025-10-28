@@ -66,7 +66,7 @@ impl Plugin for ChaseCameraPlugin {
         app.add_observer(initialize_chase_camera);
 
         app.add_systems(
-            Update,
+            PostUpdate,
             (
                 chase_camera_update_state_system,
                 chase_camera_sync_transform_system,

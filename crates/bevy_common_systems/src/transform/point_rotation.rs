@@ -52,7 +52,7 @@ impl Plugin for PointRotationPlugin {
         app.add_observer(initialize_point_rotation_system);
 
         app.add_systems(
-            Update,
+            PostUpdate,
             point_rotation_update_system.in_set(PointRotationSystems::Sync),
         );
     }

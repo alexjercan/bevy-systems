@@ -59,7 +59,7 @@ impl Plugin for SphereRandomOrbitPlugin {
         app.add_observer(initialize_random_sphere_orbit_system);
 
         app.add_systems(
-            Update,
+            PostUpdate,
             (
                 random_sphere_choose_next,
                 random_sphere_update_state,

@@ -74,8 +74,8 @@ impl Plugin for VelocityHudPlugin {
         app.add_systems(
             Update,
             (
-                update_velocity_hud_input.before(DirectionalSphereOrbitSystems::Sync),
-                sync_orbit_state.after(DirectionalSphereOrbitSystems::Sync),
+                update_velocity_hud_input,
+                sync_orbit_state,
                 direction_shader_update_system,
             )
                 .in_set(SpaceshipSystems::Hud),

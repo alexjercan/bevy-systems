@@ -62,7 +62,7 @@ impl Plugin for SmoothLookRotationPlugin {
         app.add_observer(initialize_smooth_look_system);
 
         app.add_systems(
-            Update,
+            PostUpdate,
             smooth_look_rotation_update_system.in_set(SmoothLookRotationSystems::Sync),
         );
     }

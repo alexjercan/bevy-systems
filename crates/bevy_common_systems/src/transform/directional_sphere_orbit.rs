@@ -52,7 +52,7 @@ impl Plugin for DirectionalSphereOrbitPlugin {
         app.add_observer(initialize_sphere_orbit_system);
 
         app.add_systems(
-            Update,
+            PostUpdate,
             (sphere_update_state, sphere_update_output)
                 .chain()
                 .in_set(DirectionalSphereOrbitSystems::Sync),

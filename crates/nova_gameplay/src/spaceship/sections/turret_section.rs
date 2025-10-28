@@ -194,13 +194,11 @@ impl Plugin for TurretSectionPlugin {
                     update_turret_target_yaw_system,
                     update_turret_target_pitch_system,
                 )
-                    .after(TransformChainWorldSystems::Sync)
-                    .before(SmoothLookRotationSystems::Sync),
+                    .after(TransformChainWorldSystems::Sync),
                 (
                     sync_turret_rotator_yaw_system,
                     sync_turret_rotator_pitch_system,
-                )
-                    .after(SmoothLookRotationSystems::Sync),
+                ),
             )
                 .in_set(SpaceshipSystems::Sections),
         );

@@ -66,7 +66,7 @@ impl Plugin for WASDCameraPlugin {
 
         app.add_observer(initialize_wasd_camera);
         app.add_systems(
-            Update,
+            PostUpdate,
             (update_target, update_state, sync_transform)
                 .chain()
                 .in_set(WASDCameraSystems::Sync),
