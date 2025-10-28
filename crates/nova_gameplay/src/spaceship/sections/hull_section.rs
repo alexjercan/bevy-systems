@@ -24,7 +24,7 @@ impl Default for HullSectionConfig {
 
 /// Helper function to create a hull section entity bundle.
 pub fn hull_section(config: HullSectionConfig) -> impl Bundle {
-    debug!("Creating hull section with config: {:?}", config);
+    debug!("hull_section: config {:?}", config);
 
     (HullSectionMarker, HullSectionRenderMesh(config.render_mesh))
 }

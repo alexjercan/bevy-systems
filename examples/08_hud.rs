@@ -57,14 +57,11 @@ fn setup_hud_velocity(
     q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
 ) {
     let entity = add.entity;
-    debug!(
-        "PlayerSpaceshipMarker added to entity {:?}, setting up velocity HUD.",
-        entity
-    );
+    debug!("setup_hud_velocity: entity {:?}", entity);
 
     let Ok(spaceship) = q_spaceship.get(entity) else {
         warn!(
-            "Failed to get SpaceshipRootMarker for PlayerSpaceshipMarker entity {:?}",
+            "setup_hud_velocity: entity {:?} not found in q_spaceship",
             entity
         );
         return;

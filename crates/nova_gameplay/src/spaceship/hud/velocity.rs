@@ -40,7 +40,7 @@ impl Default for VelocityHudConfig {
 }
 
 pub fn velocity_hud(config: VelocityHudConfig) -> impl Bundle {
-    debug!("Creating velocity HUD with config: {:?}", config);
+    debug!("velocity_hud: config {:?}", config);
 
     (
         Name::new("VelocityHUD"),

@@ -188,10 +188,7 @@ fn on_spawn_projectile<T>(
     if !fire_state.is_finished() {
         return;
     }
-    debug!(
-        "on_spawn_projectile: spawning projectile from entity {:?}",
-        entity
-    );
+    debug!("on_spawn_projectile: entity {:?}", entity);
 
     let projectile_transform = Transform {
         translation: spawner_transform.translation(),

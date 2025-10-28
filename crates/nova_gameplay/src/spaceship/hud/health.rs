@@ -26,7 +26,7 @@ impl Default for HealthHudConfig {
 }
 
 pub fn health_hud(config: HealthHudConfig) -> impl Bundle {
-    debug!("Creating health HUD with config: {:?}", config);
+    debug!("health_hud: config {:?}", config);
 
     (
         Name::new("HealthHUD"),

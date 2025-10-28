@@ -54,7 +54,7 @@ fn thruster_shader_update_system(
     let material = material.into_inner();
 
     let Some(material) = materials.get_mut(&**material) else {
-        warn!("ThrusterSectionExhaustShaderMarker's material not found");
+        warn!("thruster_shader_update_system: material not found in assets");
         return;
     };
 

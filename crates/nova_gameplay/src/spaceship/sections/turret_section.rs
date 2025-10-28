@@ -89,6 +89,8 @@ impl Default for TurretSectionConfig {
 
 /// Helper function to create a turret section entity bundle.
 pub fn turret_section(config: TurretSectionConfig) -> impl Bundle {
+    debug!("turret_section: config {:?}", config);
+
     (
         TurretSectionMarker,
         TurretSectionTargetInput(None),

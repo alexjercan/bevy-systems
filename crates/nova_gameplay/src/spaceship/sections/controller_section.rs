@@ -43,7 +43,7 @@ struct ControllerSectionRenderMesh(Option<Handle<Scene>>);
 
 /// Helper function to create a controller section entity bundle.
 pub fn controller_section(config: ControllerSectionConfig) -> impl Bundle {
-    debug!("Creating controller section with config: {:?}", config);
+    debug!("controller_section: config {:?}", config);
 
     (
         ControllerSectionMarker,

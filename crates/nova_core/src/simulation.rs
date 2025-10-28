@@ -65,14 +65,11 @@ fn setup_hud_velocity(
     q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
 ) {
     let entity = add.entity;
-    debug!(
-        "PlayerSpaceshipMarker added to entity {:?}, setting up velocity HUD.",
-        entity
-    );
+    debug!("setup_hud_velocity: entity {:?}", entity);
 
     let Ok(spaceship) = q_spaceship.get(entity) else {
         warn!(
-            "Failed to get SpaceshipRootMarker for PlayerSpaceshipMarker entity {:?}",
+            "setup_hud_velocity: entity {:?} not found in q_spaceship",
             entity
         );
         return;
@@ -93,10 +90,7 @@ fn remove_hud_velocity(
     q_hud: Query<(Entity, &VelocityHudTargetEntity), With<VelocityHudMarker>>,
 ) {
     let entity = remove.entity;
-    debug!(
-        "PlayerSpaceshipMarker removed to entity {:?}, removing velocity HUD.",
-        entity
-    );
+    debug!("remove_hud_velocity: entity {:?}", entity);
 
     for (hud_entity, target) in &q_hud {
         if let Some(target_entity) = **target {
@@ -113,14 +107,11 @@ fn setup_hud_health(
     q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
 ) {
     let entity = add.entity;
-    debug!(
-        "PlayerSpaceshipMarker added to entity {:?}, setting up health HUD.",
-        entity
-    );
+    debug!("setup_hud_health: entity {:?}", entity);
 
     let Ok(spaceship) = q_spaceship.get(entity) else {
         warn!(
-            "Failed to get SpaceshipRootMarker for PlayerSpaceshipMarker entity {:?}",
+            "setup_hud_health: entity {:?} not found in q_spaceship",
             entity
         );
         return;
@@ -140,10 +131,7 @@ fn remove_hud_health(
     q_hud: Query<(Entity, &HealthHudTargetEntity), With<HealthHudMarker>>,
 ) {
     let entity = remove.entity;
-    debug!(
-        "PlayerSpaceshipMarker removed to entity {:?}, removing health HUD.",
-        entity
-    );
+    debug!("remove_hud_health: entity {:?}", entity);
 
     for (hud_entity, target) in &q_hud {
         if let Some(target_entity) = **target {
@@ -274,6 +262,7 @@ fn switch_scene_editor(
     mut state: ResMut<NextState<super::GameStates>>,
 ) {
     if keys.just_pressed(KeyCode::F1) {
+        debug!("switch_scene_editor: F1 pressed, switching to Editor state.");
         state.set(super::GameStates::Editor);
     }
 }
@@ -283,6 +272,7 @@ fn switch_scene_on_no_player(
     q_spaceship: Query<&Health, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
 ) {
     if q_spaceship.is_empty() {
+        debug!("switch_scene_on_no_player: No player spaceship found, switching to Editor state.");
         state.set(super::GameStates::Editor);
     }
 }

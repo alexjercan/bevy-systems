@@ -40,7 +40,7 @@ pub struct SectionConfig {
 pub struct GameSections(pub Vec<SectionConfig>);
 
 pub fn base_section(config: BaseSectionConfig) -> impl Bundle {
-    debug!("Creating thruster section with config: {:?}", config);
+    debug!("base_section: config {:?}", config);
 
     (
         Name::new(config.name.clone()),

@@ -57,10 +57,7 @@ fn inspector_ui(world: &mut World) {
 
 fn on_add_camera(add: On<Add, Camera>, mut commands: Commands) {
     let entity = add.entity;
-    debug!(
-        "Camera added to entity {:?}, inserting PrimaryEguiContext to it.",
-        entity
-    );
+    debug!("on_add_camera: entity {:?}", entity);
 
     commands.entity(entity).insert(PrimaryEguiContext);
 }

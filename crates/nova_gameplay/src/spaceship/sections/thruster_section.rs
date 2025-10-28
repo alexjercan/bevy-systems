@@ -41,7 +41,7 @@ impl Default for ThrusterSectionConfig {
 
 /// Helper function to create an thruster section entity bundle.
 pub fn thruster_section(config: ThrusterSectionConfig) -> impl Bundle {
-    debug!("Creating thruster section with config: {:?}", config);
+    debug!("thruster_section: config {:?}", config);
 
     (
         ThrusterSectionMarker,
