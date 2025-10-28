@@ -1,9 +1,9 @@
 use bevy::{color::palettes::tailwind, prelude::*};
 use nova_gameplay::prelude::*;
 
-pub struct DebugTurretSectionPlugin;
+pub struct TurretSectionDebugPlugin;
 
-impl Plugin for DebugTurretSectionPlugin {
+impl Plugin for TurretSectionDebugPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,

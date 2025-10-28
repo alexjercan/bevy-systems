@@ -1,16 +1,15 @@
 //! A Bevy plugin that adds various debugging tools.
 
-use bevy::{
-    ecs::schedule::{LogLevel, ScheduleBuildSettings},
-    prelude::*,
-};
+use bevy::prelude::*;
 
-pub mod spawner;
 pub mod inspector;
-pub mod wireframe;
+pub mod physics;
+pub mod spawner;
 pub mod turret;
+pub mod wireframe;
 
 pub mod prelude {
+    pub use super::debugdump;
     pub use super::DebugPlugin;
 }
 
@@ -32,20 +31,12 @@ impl Plugin for DebugPlugin {
         app.insert_resource(DebugEnabled(true));
 
         app.add_plugins(inspector::InpsectorDebugPlugin);
-        app.add_plugins(spawner::SpawnerPlugin);
+        app.add_plugins(spawner::SpawnerDebugPlugin);
         app.add_plugins(wireframe::WireframeDebugPlugin);
-        app.add_plugins(turret::DebugTurretSectionPlugin);
+        app.add_plugins(turret::TurretSectionDebugPlugin);
+        app.add_plugins(physics::PhysicsDebugPlugin);
 
-        app.add_plugins(avian3d::prelude::PhysicsDebugPlugin::default());
-
-        app.edit_schedule(Update, |schedule| {
-            schedule.set_build_settings(ScheduleBuildSettings {
-                ambiguity_detection: LogLevel::Warn,
-                ..default()
-            });
-        });
-
-        app.add_systems(Update, (toggle_debug_mode, update_physics_gizmos));
+        app.add_systems(Update, toggle_debug_mode);
 
         app.configure_sets(
             Update,
@@ -60,11 +51,8 @@ fn toggle_debug_mode(mut debug: ResMut<DebugEnabled>, keyboard: Res<ButtonInput<
     }
 }
 
-fn update_physics_gizmos(debug: Res<DebugEnabled>, mut store: ResMut<GizmoConfigStore>) {
-    if debug.is_changed() {
-        store
-            .config_mut::<avian3d::prelude::PhysicsGizmos>()
-            .0
-            .enabled = **debug;
-    }
+pub fn debugdump(app: &mut App) {
+    bevy_mod_debugdump::print_schedule_graph(app, Update);
+    // bevy_mod_debugdump::print_schedule_graph(app, PostUpdate);
+    // bevy_mod_debugdump::print_schedule_graph(app, FixedUpdate);
 }

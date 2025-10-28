@@ -107,7 +107,7 @@ where
         debug!("ProjectileSpawnerPlugin: build");
 
         app.add_systems(
-            FixedUpdate,
+            Update,
             update_projectile_spawners::<T>.in_set(ProjectileSpawnerSystems::Sync),
         );
 

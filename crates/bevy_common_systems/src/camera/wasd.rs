@@ -73,7 +73,8 @@ impl Plugin for WASDCameraPlugin {
             PostUpdate,
             (update_target, update_state, sync_transform)
                 .chain()
-                .in_set(WASDCameraSystems::Sync),
+                .in_set(WASDCameraSystems::Sync)
+                .before(TransformSystems::Propagate),
         );
     }
 }

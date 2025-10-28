@@ -16,6 +16,10 @@ fn main() {
 
     app.add_systems(OnEnter(GameStates::Simulation), setup_simple_scene);
 
+    #[cfg(feature = "debugdump")]
+    debugdump(&mut app);
+
+    #[cfg(not(feature = "debugdump"))]
     app.run();
 }
 

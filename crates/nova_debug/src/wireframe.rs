@@ -1,4 +1,7 @@
-use bevy::{pbr::wireframe::{WireframeConfig, WireframePlugin}, prelude::*};
+use bevy::{
+    pbr::wireframe::{WireframeConfig, WireframePlugin},
+    prelude::*,
+};
 
 pub struct WireframeDebugPlugin;
 
@@ -10,22 +13,15 @@ impl Plugin for WireframeDebugPlugin {
             ..default()
         });
 
-        app.add_systems(
-            Update,
-            (
-                toggle_wireframe,
-            ),
-        );
+        app.add_systems(Update, (toggle_wireframe,));
     }
 }
 
 fn toggle_wireframe(
     mut wireframe_config: ResMut<WireframeConfig>,
-    keyboard: Res<ButtonInput<KeyCode>>,
+    debug: Res<super::DebugEnabled>,
 ) {
-    // TODO: I would rather not have to hardcode key press here...
-    if keyboard.just_pressed(super::DEBUG_TOGGLE_KEYCODE) {
-        wireframe_config.global = !wireframe_config.global;
+    if debug.is_changed() {
+        wireframe_config.global = **debug;
     }
 }
-

@@ -1,9 +1,11 @@
 use bevy::{color::palettes::tailwind, prelude::*};
-use nova_gameplay::{bevy_common_systems::projectiles::spawner::ProjectileSpawnerFireState, prelude::*};
+use nova_gameplay::{
+    bevy_common_systems::projectiles::spawner::ProjectileSpawnerFireState, prelude::*,
+};
 
-pub struct SpawnerPlugin;
+pub struct SpawnerDebugPlugin;
 
-impl Plugin for SpawnerPlugin {
+impl Plugin for SpawnerDebugPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, (draw_debug_gizmos,).in_set(super::DebugSystems));
     }
@@ -11,7 +13,10 @@ impl Plugin for SpawnerPlugin {
 
 fn draw_debug_gizmos(
     mut gizmos: Gizmos,
-    q_spawner: Query<(&GlobalTransform, &ProjectileSpawnerFireState), With<ProjectileSpawnerMarker>>,
+    q_spawner: Query<
+        (&GlobalTransform, &ProjectileSpawnerFireState),
+        With<ProjectileSpawnerMarker>,
+    >,
 ) {
     for (transform, fire_state) in &q_spawner {
         let origin = transform.translation();
