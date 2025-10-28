@@ -198,6 +198,7 @@ impl Plugin for TurretSectionPlugin {
                     update_turret_target_yaw_system,
                     update_turret_target_pitch_system,
                 )
+                    .after(TransformChainWorldPluginSet)
                     .before(SmoothLookRotationPluginSet),
                 (
                     sync_turret_rotator_yaw_system,

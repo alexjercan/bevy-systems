@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::TransformChainWorldPlugin;
-    pub use super::TransformChainWorldMarker;
     pub use super::TransformChainWorld;
+    pub use super::TransformChainWorldMarker;
+    pub use super::TransformChainWorldPlugin;
+    pub use super::TransformChainWorldPluginSet;
 }
 
 /// Marker component for entities that should have their world transforms computed via going up the
@@ -19,6 +20,9 @@ pub struct TransformChainWorld {
     pub matrix: Mat4,
 }
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TransformChainWorldPluginSet;
+
 /// Plugin to compute world transforms for entities with TransformChainWorldMarker.
 pub struct TransformChainWorldPlugin;
 
@@ -26,7 +30,10 @@ impl Plugin for TransformChainWorldPlugin {
     fn build(&self, app: &mut App) {
         app.add_observer(initialize_cache_spawner_world);
 
-        app.add_systems(Update, cache_spawner_world);
+        app.add_systems(
+            Update,
+            cache_spawner_world.in_set(TransformChainWorldPluginSet),
+        );
     }
 }
 

@@ -24,10 +24,10 @@ fn custom_plugin(app: &mut App) {
     );
 
     app.add_systems(
-        PostUpdate,
+        Update,
         check_jitter
-            .after(PhysicsSystems::Last)
-            .before(TransformSystems::Propagate),
+            // .after(PhysicsSystems::Last)
+            // .before(TransformSystems::Propagate),
     );
 }
 
@@ -39,6 +39,7 @@ fn setup_jitter(mut commands: Commands) {
     commands.spawn((
         Name::new("Jitter Test Body"),
         JitterTestMarker,
+        TransformChainWorldMarker,
         Transform::default(),
         RigidBody::Dynamic,
         Collider::cuboid(1.0, 1.0, 1.0),
@@ -52,6 +53,7 @@ fn check_jitter(
         (
             &Name,
             &GlobalTransform,
+            &TransformChainWorld,
             &Transform,
             &Position,
             &LinearVelocity,
@@ -59,11 +61,12 @@ fn check_jitter(
         With<JitterTestMarker>,
     >,
 ) {
-    for (name, global_transform, transform, position, linear_velocity) in query.iter() {
+    for (name, global_transform, chain, transform, position, linear_velocity) in query.iter() {
         println!(
-            "{}: GlobalTransform: {:?}, Transform: {:?}, Position: {:?}, LinearVelocity: {:?}",
+            "{}: GlobalTransform: {:?}, ChainTransform {:?}, Transform: {:?}, Position: {:?}, LinearVelocity: {:?}",
             name,
             global_transform.translation().adjust_precision(),
+            chain.translation.adjust_precision(),
             transform.translation,
             position.0,
             linear_velocity.0

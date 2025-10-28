@@ -108,6 +108,9 @@ pub struct StatusBarStore {
     pub store: HashMap<Entity, Arc<dyn StatusValue>>,
 }
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct StatusBarPluginSet;
+
 pub struct StatusBarPlugin;
 
 impl Plugin for StatusBarPlugin {
@@ -118,7 +121,9 @@ impl Plugin for StatusBarPlugin {
 
         app.add_systems(
             Update,
-            (update_status_bar_items, update_status_bar_item).chain(),
+            (update_status_bar_items, update_status_bar_item)
+                .chain()
+                .in_set(StatusBarPluginSet),
         );
     }
 }
