@@ -67,8 +67,6 @@ fn setup_spaceship(mut commands: Commands) {
         Name::new("Spaceship Rotation Target"),
         SpaceshipRotationInputMarker,
         Transform::from_xyz(0.0, 0.0, 0.0),
-        #[cfg(feature = "debug")]
-        DebugAxisMarker,
     ));
 }
 

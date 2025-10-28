@@ -503,7 +503,7 @@ fn on_shoot_spawn_projectile(
         ),
         With<TurretSectionMarker>,
     >,
-    q_muzzle: Query<&TransformChainWorld, With<ProjectileSpawnerMarker<BulletProjectileConfig>>>,
+    q_muzzle: Query<&TransformChainWorld, With<ProjectileSpawnerOfMarker<BulletProjectileConfig>>>,
 ) {
     let turret = shoot.entity;
     let Ok((muzzle, ChildOf(spaceship), config)) = q_turret.get(turret) else {

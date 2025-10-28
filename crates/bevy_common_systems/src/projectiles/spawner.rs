@@ -7,6 +7,7 @@ pub mod prelude {
     pub use super::projectile_spawner;
     pub use super::ProjectileSpawnerConfig;
     pub use super::ProjectileSpawnerMarker;
+    pub use super::ProjectileSpawnerOfMarker;
     pub use super::ProjectileSpawnerPlugin;
     pub use super::ProjectileSpawnerSystems;
     pub use super::SpawnProjectile;
@@ -37,7 +38,10 @@ where
 }
 
 #[derive(Component, Default, Clone, Debug, Reflect)]
-pub struct ProjectileSpawnerMarker<T>
+pub struct ProjectileSpawnerMarker;
+
+#[derive(Component, Default, Clone, Debug, Reflect)]
+pub struct ProjectileSpawnerOfMarker<T>
 where
     T: Default + Clone + Debug + 'static,
 {
@@ -55,7 +59,8 @@ where
     T: Default + Clone + Debug + Send + Sync + 'static,
 {
     (
-        ProjectileSpawnerMarker::<T>::default(),
+        ProjectileSpawnerMarker,
+        ProjectileSpawnerOfMarker::<T>::default(),
         ProjectileSpawnerFireRate(config.fire_rate),
         ProjectileSpawnerProjectile(config.projectile),
     )
@@ -112,10 +117,10 @@ where
 }
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
-struct ProjectileSpawnerFireState(Timer);
+pub struct ProjectileSpawnerFireState(pub Timer);
 
 fn update_projectile_spawners<T>(
-    mut q_spawners: Query<&mut ProjectileSpawnerFireState, With<ProjectileSpawnerMarker<T>>>,
+    mut q_spawners: Query<&mut ProjectileSpawnerFireState, With<ProjectileSpawnerOfMarker<T>>>,
     time: Res<Time>,
 ) where
     T: Default + Clone + Debug + Send + Sync + 'static,
@@ -126,7 +131,7 @@ fn update_projectile_spawners<T>(
 }
 
 fn on_insert_projectile_spawner<T>(
-    insert: On<Insert, ProjectileSpawnerMarker<T>>,
+    insert: On<Insert, ProjectileSpawnerOfMarker<T>>,
     mut commands: Commands,
     q_fire_rate: Query<&ProjectileSpawnerFireRate>,
 ) where
@@ -164,7 +169,7 @@ fn on_spawn_projectile<T>(
             &mut ProjectileSpawnerFireState,
             &ProjectileSpawnerProjectile<T>,
         ),
-        With<ProjectileSpawnerMarker<T>>,
+        With<ProjectileSpawnerOfMarker<T>>,
     >,
 ) where
     T: super::ProjectileBundle + Default + Clone + Debug + Send + Sync + 'static,
