@@ -15,6 +15,7 @@ pub mod prelude {
     pub use super::ProjectileBundle;
     pub use super::ProjectileMarker;
     pub use super::ProjectilePlugin;
+    pub use super::ProjectileVelocity;
 }
 
 #[derive(Component, Clone, Debug, Reflect)]

@@ -78,11 +78,11 @@ impl Plugin for ThrusterSectionPlugin {
     fn build(&self, app: &mut App) {
         debug!("ThrusterSectionPlugin: build");
 
-        if self.render {
-            app.add_plugins(MaterialPlugin::<
-                ExtendedMaterial<StandardMaterial, ThrusterExhaustMaterial>,
-            >::default());
+        app.add_plugins(MaterialPlugin::<
+            ExtendedMaterial<StandardMaterial, ThrusterExhaustMaterial>,
+        >::default());
 
+        if self.render {
             app.add_observer(insert_thruster_section_render);
         }
 
