@@ -4,7 +4,7 @@ pub mod prelude {
     pub use super::TransformChainWorld;
     pub use super::TransformChainWorldMarker;
     pub use super::TransformChainWorldPlugin;
-    pub use super::TransformChainWorldPluginSet;
+    pub use super::TransformChainWorldSystems;
 }
 
 /// Marker component for entities that should have their world transforms computed via going up the
@@ -21,18 +21,22 @@ pub struct TransformChainWorld {
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TransformChainWorldPluginSet;
+pub enum TransformChainWorldSystems {
+    Sync,
+}
 
 /// Plugin to compute world transforms for entities with TransformChainWorldMarker.
 pub struct TransformChainWorldPlugin;
 
 impl Plugin for TransformChainWorldPlugin {
     fn build(&self, app: &mut App) {
+        debug!("TransformChainWorldPlugin: build");
+
         app.add_observer(initialize_cache_spawner_world);
 
         app.add_systems(
             Update,
-            cache_spawner_world.in_set(TransformChainWorldPluginSet),
+            cache_spawner_world.in_set(TransformChainWorldSystems::Sync),
         );
     }
 }
@@ -42,6 +46,8 @@ fn initialize_cache_spawner_world(
     mut commands: Commands,
 ) {
     let entity = insert.entity;
+    trace!("initialize_cache_spawner_world: entity {:?}", entity);
+
     commands.entity(entity).insert(TransformChainWorld {
         scale: Vec3::ONE,
         rotation: Quat::IDENTITY,

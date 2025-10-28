@@ -31,8 +31,8 @@ fn custom_plugin(app: &mut App) {
     app.add_systems(
         Update,
         ((
-            sync_random_orbit_state.after(SphereRandomOrbitPluginSet),
-            update_turret_target_input.before(SpaceshipPluginSet),
+            sync_random_orbit_state.after(SphereRandomOrbitSystems),
+            update_turret_target_input.before(SpaceshipSystems),
         )
             .chain(),),
     );

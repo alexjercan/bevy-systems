@@ -5,27 +5,25 @@ use bevy_common_systems::prelude::*;
 pub mod prelude {
     pub use super::PlayerSpaceshipMarker;
     pub use super::SpaceshipPlayerInputPlugin;
-    pub use super::SpaceshipPlayerInputPluginSet;
     pub use super::SpaceshipThrusterInputKey;
 }
-
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SpaceshipPlayerInputPluginSet;
 
 pub struct SpaceshipPlayerInputPlugin;
 
 // TODO: Add some input for the thrusters and shooting, etc. here
 impl Plugin for SpaceshipPlayerInputPlugin {
     fn build(&self, app: &mut App) {
+        debug!("SpaceshipPlayerInputPlugin: build");
+
         app.add_systems(
             Update,
             (
-                update_controller_target_rotation_torque.after(PointRotationPluginSet),
-                update_turret_target_input.after(PointRotationPluginSet),
+                update_controller_target_rotation_torque.after(PointRotationSystems::Sync),
+                update_turret_target_input.after(PointRotationSystems::Sync),
                 on_thruster_input,
                 on_projectile_input,
             )
-                .in_set(SpaceshipPlayerInputPluginSet)
+                .in_set(SpaceshipSystems::Input),
         );
     }
 }

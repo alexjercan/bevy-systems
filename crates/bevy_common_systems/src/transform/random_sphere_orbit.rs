@@ -5,10 +5,10 @@ use bevy::prelude::*;
 use rand::prelude::*;
 
 pub mod prelude {
-    pub use super::{
-        RandomSphereOrbit, RandomSphereOrbitOutput, SphereRandomOrbitPlugin,
-        SphereRandomOrbitPluginSet,
-    };
+    pub use super::RandomSphereOrbit;
+    pub use super::RandomSphereOrbitOutput;
+    pub use super::SphereRandomOrbitPlugin;
+    pub use super::SphereRandomOrbitSystems;
 }
 
 /// Component to define a spherical orbit around a center point.
@@ -42,7 +42,9 @@ struct RandomSphereOrbitNext {
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SphereRandomOrbitPluginSet;
+pub enum SphereRandomOrbitSystems {
+    Sync,
+}
 
 /// Plugin to manage entities with `RandomSphereOrbit` component.
 ///
@@ -52,6 +54,8 @@ pub struct SphereRandomOrbitPlugin;
 
 impl Plugin for SphereRandomOrbitPlugin {
     fn build(&self, app: &mut App) {
+        debug!("SphereRandomOrbitPlugin: build");
+
         app.add_observer(initialize_random_sphere_orbit_system);
 
         app.add_systems(
@@ -62,7 +66,7 @@ impl Plugin for SphereRandomOrbitPlugin {
                 random_sphere_update_output,
             )
                 .chain()
-                .in_set(SphereRandomOrbitPluginSet),
+                .in_set(SphereRandomOrbitSystems::Sync),
         );
     }
 }
@@ -74,8 +78,13 @@ fn initialize_random_sphere_orbit_system(
     q_orbit: Query<&RandomSphereOrbit, With<RandomSphereOrbit>>,
 ) {
     let entity = insert.entity;
+    trace!("initialize_random_sphere_orbit_system: entity {:?}", entity);
+
     let Ok(orbit) = q_orbit.get(entity) else {
-        warn!("initialize_random_sphere_orbit_system: entity does not have RandomSphereOrbit component");
+        warn!(
+            "initialize_random_sphere_orbit_system: entity {:?} not found in q_orbit",
+            entity
+        );
         return;
     };
 
@@ -162,6 +171,6 @@ fn random_sphere_update_output(
 ) {
     for (orbit, state, mut output) in query.iter_mut() {
         let pos = spherical_to_cartesian(orbit.radius, state.theta, state.phi) + orbit.center;
-        output.0 = pos;
+        **output = pos;
     }
 }

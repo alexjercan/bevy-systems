@@ -8,6 +8,12 @@ use crate::prelude::{WASDCamera, WASDCameraInput};
 pub mod prelude {
     pub use super::WASDCameraController;
     pub use super::WASDCameraControllerPlugin;
+    pub use super::WASDCameraControllerSystems;
+}
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum WASDCameraControllerSystems {
+    Sync,
 }
 
 /// A plugin that sets up WASD and mouse controls for a camera.
@@ -15,6 +21,8 @@ pub struct WASDCameraControllerPlugin;
 
 impl Plugin for WASDCameraControllerPlugin {
     fn build(&self, app: &mut App) {
+        debug!("WASDCameraControllerPlugin: build");
+
         app.add_input_context::<WASDCameraInputMarker>();
 
         app.add_observer(setup_wasd_camera);
@@ -55,7 +63,10 @@ struct WASDCameraLookEnabled(bool);
 pub struct WASDCameraController;
 
 fn setup_wasd_camera(insert: On<Insert, WASDCameraController>, mut commands: Commands) {
-    commands.entity(insert.entity).insert((
+    let entity = insert.entity;
+    trace!("setup_wasd_camera: entity {:?}", entity);
+
+    commands.entity(entity).insert((
         Camera3d::default(),
         WASDCamera {
             wasd_sensitivity: 0.1,

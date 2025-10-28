@@ -2,10 +2,11 @@ use crate::meth::prelude::*;
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::{
-        DirectionalSphereOrbit, DirectionalSphereOrbitInput, DirectionalSphereOrbitOutput,
-        DirectionalSphereOrbitPlugin, DirectionalSphereOrbitPluginSet,
-    };
+    pub use super::DirectionalSphereOrbit;
+    pub use super::DirectionalSphereOrbitInput;
+    pub use super::DirectionalSphereOrbitOutput;
+    pub use super::DirectionalSphereOrbitPlugin;
+    pub use super::DirectionalSphereOrbitSystems;
 }
 
 /// Component to define a spherical orbit around a center point.
@@ -35,7 +36,9 @@ struct DirectionalSphereOrbitState {
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct DirectionalSphereOrbitPluginSet;
+pub enum DirectionalSphereOrbitSystems {
+    Sync,
+}
 
 /// Plugin to manage entities with `DirectionalSphereOrbit` component.
 ///
@@ -44,13 +47,15 @@ pub struct DirectionalSphereOrbitPlugin;
 
 impl Plugin for DirectionalSphereOrbitPlugin {
     fn build(&self, app: &mut App) {
+        debug!("DirectionalSphereOrbitPlugin: build");
+
         app.add_observer(initialize_sphere_orbit_system);
 
         app.add_systems(
             Update,
             (sphere_update_state, sphere_update_output)
                 .chain()
-                .in_set(DirectionalSphereOrbitPluginSet),
+                .in_set(DirectionalSphereOrbitSystems::Sync),
         );
     }
 }
@@ -62,9 +67,12 @@ fn initialize_sphere_orbit_system(
     q_orbit: Query<&DirectionalSphereOrbit, With<DirectionalSphereOrbit>>,
 ) {
     let entity = insert.entity;
+    trace!("initialize_sphere_orbit_system: entity {:?}", entity);
+
     let Ok(orbit) = q_orbit.get(entity) else {
         warn!(
-            "initialize_sphere_orbit_system: entity does not have DirectionalSphereOrbit component"
+            "initialize_sphere_orbit_system: entity {:?} not found in q_orbit",
+            entity
         );
         return;
     };
@@ -111,6 +119,6 @@ fn sphere_update_output(
 ) {
     for (orbit, state, mut output) in query.iter_mut() {
         let pos = spherical_to_cartesian(orbit.radius, state.theta, state.phi) + orbit.center;
-        output.0 = pos;
+        **output = pos;
     }
 }

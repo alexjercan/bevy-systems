@@ -89,8 +89,6 @@ impl Default for TurretSectionConfig {
 
 /// Helper function to create a turret section entity bundle.
 pub fn turret_section(config: TurretSectionConfig) -> impl Bundle {
-    debug!("Creating turret section with config: {:?}", config);
-
     (
         TurretSectionMarker,
         TurretSectionTargetInput(None),
@@ -162,10 +160,6 @@ struct TurretSectionRotatorBarrelMarker;
 #[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
 struct TurretSectionMuzzleEntity(pub Entity);
 
-/// A system set that will contain all the systems related to the turret section plugin.
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TurretSectionPluginSet;
-
 /// A plugin that enables the TurretSection component and its related systems.
 #[derive(Default)]
 pub struct TurretSectionPlugin {
@@ -174,6 +168,8 @@ pub struct TurretSectionPlugin {
 
 impl Plugin for TurretSectionPlugin {
     fn build(&self, app: &mut App) {
+        debug!("TurretSectionPlugin: build");
+
         app.add_observer(insert_turret_section);
 
         // NOTE: How can we check that the SmoothLookRotationPlugin is added?
@@ -198,15 +194,15 @@ impl Plugin for TurretSectionPlugin {
                     update_turret_target_yaw_system,
                     update_turret_target_pitch_system,
                 )
-                    .after(TransformChainWorldPluginSet)
-                    .before(SmoothLookRotationPluginSet),
+                    .after(TransformChainWorldSystems::Sync)
+                    .before(SmoothLookRotationSystems::Sync),
                 (
                     sync_turret_rotator_yaw_system,
                     sync_turret_rotator_pitch_system,
                 )
-                    .after(SmoothLookRotationPluginSet),
+                    .after(SmoothLookRotationSystems::Sync),
             )
-                .in_set(TurretSectionPluginSet),
+                .in_set(SpaceshipSystems::Sections),
         );
     }
 }
@@ -217,11 +213,11 @@ fn insert_turret_section(
     q_config: Query<&TurretSectionConfigHelper, With<TurretSectionMarker>>,
 ) {
     let turret = add.entity;
-    debug!("Inserting turret section for entity: {:?}", turret);
+    trace!("insert_turret_section: entity {:?}", turret);
 
     let Ok(config) = q_config.get(turret) else {
         warn!(
-            "TurretSection entity {:?} missing TurretSectionConfigHelper component",
+            "insert_turret_section: entity {:?} not found in q_config",
             turret
         );
         return;
@@ -469,7 +465,10 @@ fn sync_turret_rotator_yaw_system(
 ) {
     for (mut yaw_transform, &ChildOf(entity)) in &mut q_yaw_rotator {
         let Ok(rotator_output) = q_base.get(entity) else {
-            warn!("TurretSectionRotatorYaw's parent does not have a TurretSectionRotatorMarker component");
+            warn!(
+                "sync_turret_rotator_yaw_system: entity {:?} not found in q_base",
+                entity
+            );
             continue;
         };
 
@@ -483,7 +482,10 @@ fn sync_turret_rotator_pitch_system(
 ) {
     for (mut pitch_transform, &ChildOf(entity)) in &mut q_pitch_rotator {
         let Ok(rotator_output) = q_base.get(entity) else {
-            warn!("TurretSectionRotatorPitch's parent does not have a TurretSectionRotatorPitchBaseMarker component");
+            warn!(
+                "sync_turret_rotator_pitch_system: entity {:?} not found in q_base",
+                entity
+            );
             continue;
         };
 
@@ -548,7 +550,10 @@ fn on_shoot_spawn_projectile(
 
 fn on_spawn_projectile_effect(
     spawn: On<SpawnProjectile>,
-    q_muzzle: Query<(&TransformChainWorld, &TurretSectionPartOf), With<TurretSectionBarrelMuzzleMarker>>,
+    q_muzzle: Query<
+        (&TransformChainWorld, &TurretSectionPartOf),
+        With<TurretSectionBarrelMuzzleMarker>,
+    >,
     mut q_effect: Query<
         (&mut EffectProperties, &mut EffectSpawner, &ChildOf),
         Without<TurretSectionBarrelMuzzleMarker>,
@@ -637,11 +642,11 @@ fn insert_turret_section_render(
     q_base: Query<&TurretSectionBaseRenderMesh, With<TurretRotatorBaseMarker>>,
 ) {
     let entity = add.entity;
-    debug!("Inserting render for TurretRotatorBaseMarker: {:?}", entity);
+    trace!("insert_turret_section_render: entity {:?}", entity);
 
     let Ok(render_mesh) = q_base.get(entity) else {
         warn!(
-            "TurretRotatorBaseMarker entity {:?} missing TurretSectionBaseRenderMesh component",
+            "insert_turret_section_render: entity {:?} not found in q_base",
             entity
         );
         return;
@@ -673,14 +678,11 @@ fn insert_turret_yaw_rotator_render(
     q_yaw: Query<&TurretSectionYawRenderMesh, With<TurretSectionRotatorYawMarker>>,
 ) {
     let entity = add.entity;
-    debug!(
-        "Inserting render for TurretSectionRotatorYawMarker: {:?}",
-        entity
-    );
+    trace!("insert_turret_yaw_rotator_render: entity {:?}", entity);
 
     let Ok(render_mesh) = q_yaw.get(entity) else {
         warn!(
-            "TurretSectionRotatorYawMarker entity {:?} missing TurretSectionYawRenderMesh component",
+            "insert_turret_yaw_rotator_render: entity {:?} not found in q_yaw",
             entity
         );
         return;
@@ -751,14 +753,11 @@ fn insert_turret_pitch_rotator_render(
     q_pitch: Query<&TurretSectionPitchRenderMesh, With<TurretSectionRotatorPitchMarker>>,
 ) {
     let entity = add.entity;
-    debug!(
-        "Inserting render for TurretSectionRotatorPitchMarker: {:?}",
-        entity
-    );
+    trace!("insert_turret_pitch_rotator_render: entity {:?}", entity);
 
     let Ok(render_mesh) = q_pitch.get(entity) else {
         warn!(
-            "TurretSectionRotatorPitchMarker entity {:?} missing TurretSectionPitchRenderMesh component",
+            "insert_turret_pitch_rotator_render: entity {:?} not found in q_pitch",
             entity
         );
         return;
@@ -830,14 +829,11 @@ fn insert_turret_barrel_render(
     q_barrel: Query<&TurretSectionBarrelRenderMesh, With<TurretSectionRotatorBarrelMarker>>,
 ) {
     let entity = add.entity;
-    debug!(
-        "Inserting render for TurretSectionRotatorBarrelMarker: {:?}",
-        entity
-    );
+    trace!("insert_turret_barrel_render: entity {:?}", entity);
 
     let Ok(render_mesh) = q_barrel.get(entity) else {
         warn!(
-            "TurretSectionRotatorBarrelMarker entity {:?} missing TurretSectionBarrelRenderMesh component",
+            "insert_turret_barrel_render: entity {:?} not found in q_barrel",
             entity
         );
         return;
@@ -907,14 +903,11 @@ fn insert_turret_barrel_muzzle_effect(
     q_effect: Query<&TurretSectionBarrelMuzzleEffect, With<TurretSectionBarrelMuzzleMarker>>,
 ) {
     let entity = add.entity;
-    debug!(
-        "Inserting muzzle effect for TurretSectionBarrelMuzzleMarker: {:?}",
-        entity
-    );
+    trace!("insert_turret_barrel_muzzle_effect: entity {:?}", entity);
 
     let Ok(effect_handle) = q_effect.get(entity) else {
         warn!(
-            "TurretSectionBarrelMuzzleMarker entity {:?} missing TurretSectionBarrelMuzzleEffect component",
+            "insert_turret_barrel_muzzle_effect: entity {:?} not found in q_effect",
             entity
         );
         return;

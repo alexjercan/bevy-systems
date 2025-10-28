@@ -16,6 +16,7 @@ pub mod prelude {
     pub use super::StatusBarItemConfig;
     pub use super::StatusBarItemMarker;
     pub use super::StatusBarPlugin;
+    pub use super::StatusBarPluginSystems;
     pub use super::StatusBarRootConfig;
     pub use super::StatusBarRootMarker;
     pub use super::StatusValue;
@@ -109,21 +110,25 @@ pub struct StatusBarStore {
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct StatusBarPluginSet;
+pub enum StatusBarPluginSystems {
+    Sync,
+}
 
 pub struct StatusBarPlugin;
 
 impl Plugin for StatusBarPlugin {
     fn build(&self, app: &mut App) {
+        debug!("StatusBarPlugin: build");
+
         app.init_resource::<StatusBarStore>();
 
         app.add_observer(insert_status_bar_item);
 
         app.add_systems(
             Update,
-            (update_status_bar_items, update_status_bar_item)
+            (update_status_bar_item_values, update_status_bar_item_ui)
                 .chain()
-                .in_set(StatusBarPluginSet),
+                .in_set(StatusBarPluginSystems::Sync),
         );
     }
 }
@@ -132,7 +137,7 @@ impl Plugin for StatusBarPlugin {
 // "exclusive system".
 // WARNING: These will block all parallel execution of other systems until they finish, so they
 // should generally be avoided if you want to maximize parallelism.
-fn update_status_bar_items(world: &mut World) {
+fn update_status_bar_item_values(world: &mut World) {
     let mut query =
         world.query_filtered::<(Entity, &StatusBarItemValueFnBoxed), With<StatusBarItemValue>>();
     let values: HashMap<_, _> = query
@@ -149,7 +154,7 @@ fn update_status_bar_items(world: &mut World) {
     }
 }
 
-fn update_status_bar_item(
+fn update_status_bar_item_ui(
     mut items: Query<(
         &StatusBarItemValue,
         &mut Text,
@@ -188,10 +193,11 @@ fn insert_status_bar_item(
     root: Single<Entity, With<StatusBarRootMarker>>,
 ) {
     let entity = add.entity;
-    debug!("Inserting UI element for status bar item {:?}", entity);
+    trace!("insert_status_bar_item: entity {:?}", entity);
+
     let Ok((icon, prefix, suffix, value_fn, color_fn)) = q_item.get(entity) else {
         error!(
-            "StatusBarItem entity {:?} missing required components",
+            "insert_status_bar_item: entity {:?} not found in q_item",
             entity
         );
         return;

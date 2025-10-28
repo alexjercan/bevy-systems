@@ -6,6 +6,7 @@ pub mod prelude {
     pub use super::WASDCamera;
     pub use super::WASDCameraInput;
     pub use super::WASDCameraPlugin;
+    pub use super::WASDCameraSystems;
 }
 
 /// The WASD camera component, which allows for wasd movement and mouse look.
@@ -50,14 +51,25 @@ struct WASDCameraState {
     pitch: f32,
 }
 
+/// The SystemSet for the WASDCameraPlugin
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum WASDCameraSystems {
+    Sync,
+}
+
+/// Plugin to manage entities with `WASDCamera` component.
 pub struct WASDCameraPlugin;
 
 impl Plugin for WASDCameraPlugin {
     fn build(&self, app: &mut App) {
+        debug!("WASDCameraPlugin: build");
+
         app.add_observer(initialize_wasd_camera);
         app.add_systems(
             Update,
-            (update_target, update_state, sync_transform).chain(),
+            (update_target, update_state, sync_transform)
+                .chain()
+                .in_set(WASDCameraSystems::Sync),
         );
     }
 }
@@ -68,8 +80,13 @@ fn initialize_wasd_camera(
     q_transform: Query<&Transform, With<WASDCamera>>,
 ) {
     let entity = insert.entity;
+    trace!("initialize_wasd_camera: entity {:?}", entity);
+
     let Ok(transform) = q_transform.get(entity) else {
-        warn!("WASDCamera added to entity without Transform");
+        warn!(
+            "initialize_wasd_camera: entity {:?} not found in q_transform",
+            entity
+        );
         return;
     };
 

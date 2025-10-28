@@ -37,7 +37,7 @@ enum SectionChoice {
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct EditorPluginSet;
+pub struct EditorSystems;
 
 pub struct EditorPlugin;
 

@@ -3,6 +3,7 @@ use bevy::prelude::*;
 pub mod prelude {
     pub use super::TempEntity;
     pub use super::TempEntityPlugin;
+    pub use super::TempEntitySystems;
 }
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
@@ -11,15 +12,27 @@ pub struct TempEntity(pub f32);
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 struct TempEntityState(Timer);
 
+/// System sets for TempEntityPlugin
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TempEntityPluginSet;
+pub enum TempEntitySystems {
+    Sync,
+}
 
+/// Plugin to handle temporary entities that despawn after a set duration.
 pub struct TempEntityPlugin;
 
 impl Plugin for TempEntityPlugin {
     fn build(&self, app: &mut App) {
+        debug!("TempEntityPlugin: build");
+
         app.add_observer(on_insert_temp_entity);
-        app.add_systems(Update, update_temp_entities.in_set(TempEntityPluginSet));
+
+        app.add_systems(
+            Update,
+            (update_temp_entities,)
+                .chain()
+                .in_set(TempEntitySystems::Sync),
+        );
     }
 }
 
@@ -29,10 +42,11 @@ fn on_insert_temp_entity(
     q_temp: Query<&TempEntity>,
 ) {
     let entity = insert.entity;
-    debug!("Inserting TempEntity: {:?}", entity);
+    trace!("on_insert_temp_entity: entity {:?}", entity);
+
     let Ok(temp_entity) = q_temp.get(entity) else {
         warn!(
-            "TempEntity entity {:?} missing TempEntity component",
+            "on_insert_temp_entity: entity {:?} not found in q_temp",
             entity
         );
         return;
@@ -56,7 +70,7 @@ fn update_temp_entities(
 
         if temp_state.is_finished() {
             commands.entity(entity).despawn();
-            debug!("Despawning TempEntity: {:?}", entity);
+            debug!("update_temp_entities: despawn entity {:?}", entity);
         }
     }
 }

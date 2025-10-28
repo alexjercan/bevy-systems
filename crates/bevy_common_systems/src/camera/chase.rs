@@ -1,9 +1,12 @@
+//! A Bevy plugin to implement a chase camera that follows a target entity with smoothing and
+//! offset.
+
 use bevy::prelude::*;
 
 use crate::prelude::LerpSnap;
 
 pub mod prelude {
-    pub use super::{ChaseCamera, ChaseCameraInput, ChaseCameraPlugin, ChaseCameraPluginSet};
+    pub use super::{ChaseCamera, ChaseCameraInput, ChaseCameraPlugin, ChaseCameraSystems};
 }
 
 /// The Case Camera Component is used to add some attributes to the camera
@@ -13,6 +16,7 @@ pub mod prelude {
 /// add a focus offset point. The Chase Camera will also have a rotation orbit style to look around
 /// the focus point at the target.
 #[derive(Component, Debug, Reflect)]
+#[require(Transform)]
 pub struct ChaseCamera {
     /// Offset distance behind the target
     pub offset: Vec3,
@@ -48,14 +52,19 @@ struct ChaseCameraState {
 
 /// The SystemSet for the ChaseCameraPlugin
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ChaseCameraPluginSet;
+pub enum ChaseCameraSystems {
+    Sync,
+}
 
 /// Plugin to manage entities with `ChaseCamera` component.
 pub struct ChaseCameraPlugin;
 
 impl Plugin for ChaseCameraPlugin {
     fn build(&self, app: &mut App) {
+        debug!("ChaseCameraPlugin: build");
+
         app.add_observer(initialize_chase_camera);
+
         app.add_systems(
             Update,
             (
@@ -63,7 +72,7 @@ impl Plugin for ChaseCameraPlugin {
                 chase_camera_sync_transform_system,
             )
                 .chain()
-                .in_set(ChaseCameraPluginSet),
+                .in_set(ChaseCameraSystems::Sync),
         );
     }
 }
@@ -75,8 +84,13 @@ fn initialize_chase_camera(
     q_state: Query<Has<ChaseCameraState>, With<ChaseCamera>>,
 ) {
     let entity = insert.entity;
+    trace!("initialize_chase_camera: entity {:?}", entity);
+
     let Ok(has_state) = q_state.get(entity) else {
-        warn!("initialize_chase_camera: entity does not have ChaseCamera component");
+        warn!(
+            "initialize_chase_camera: entity {:?} not found in q_state",
+            entity
+        );
         return;
     };
 

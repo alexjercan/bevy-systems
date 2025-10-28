@@ -6,7 +6,7 @@ use nova_assets::prelude::*;
 use nova_gameplay::prelude::*;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SimulationPluginSet;
+pub struct SimulationSystems;
 
 pub struct SimulationPlugin;
 

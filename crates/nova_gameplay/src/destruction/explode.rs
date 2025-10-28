@@ -8,7 +8,6 @@ use std::collections::VecDeque;
 pub mod prelude {
     pub use super::ExplodeOnDestroy;
     pub use super::ExplodeOnDestroyPlugin;
-    pub use super::ExplodeOnDestroyPluginSet;
     pub use super::FragmentMeshMarker;
 }
 
@@ -38,15 +37,13 @@ impl Default for ExplodeOnDestroy {
     }
 }
 
-/// A system set that will contain all the systems related to the explode on destroy plugin.
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ExplodeOnDestroyPluginSet;
-
 /// A plugin that makes entities explode into pieces when they are destroyed.
 pub struct ExplodeOnDestroyPlugin;
 
 impl Plugin for ExplodeOnDestroyPlugin {
     fn build(&self, app: &mut App) {
+        debug!("ExplodeOnDestroyPlugin: build");
+
         app.add_observer(handle_explosion);
     }
 }
@@ -64,40 +61,45 @@ fn handle_explosion(
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     let entity = add.entity;
-    debug!("Handling explosion for entity {:?}", entity);
+    trace!("handle_explosion: entity {:?}", entity);
 
     let Ok(explode) = q_explode.get(entity) else {
-        debug!(
-            "Destroyed entity {:?} missing ExplodeOnDestroy component, skipping explosion.",
+        warn!(
+            "handle_explosion: entity {:?} not found in q_explode.",
             entity
         );
         return;
     };
 
     let Some(mesh_entity) = explode.mesh_entity else {
-        debug!(
-            "ExplodeOnDestroy component on entity {:?} has no mesh_entity set, skipping explosion.",
+        warn!(
+            "handle_explosion: entity {:?} has no mesh_entity specified.",
             entity
         );
         return;
     };
 
     let Ok((transform, mesh3d, material3d, mut visibility)) = q_mesh.get_mut(mesh_entity) else {
-        warn!("Mesh entity {:?} for explosion on entity {:?} does not have a Mesh3d component, skipping explosion.", mesh_entity, entity);
+        warn!(
+            "handle_explosion: entity {:?} mesh_entity {:?} not found in q_mesh.",
+            entity, mesh_entity
+        );
         return;
     };
 
     let Some(mesh) = meshes.get(&**mesh3d) else {
         warn!(
-            "Mesh asset for entity {:?} not found, skipping explosion.",
-            mesh_entity
+            "handle_explosion: entity {:?} mesh_entity {:?} has no mesh data.",
+            entity, mesh_entity
         );
         return;
     };
 
-    debug!(
-        "Exploding entity {:?} with mesh entity {:?} into {} fragments.",
-        entity, mesh_entity, explode.fragment_count
+    trace!(
+        "handle_explosion: entity {:?} mesh_entity {:?} fragment_count {}",
+        entity,
+        mesh_entity,
+        explode.fragment_count
     );
 
     *visibility = Visibility::Hidden;
@@ -106,7 +108,7 @@ fn handle_explosion(
         slice_mesh_into_fragments(&mesh.clone(), explode.fragment_count, MAX_ITERATIONS)
     else {
         warn!(
-            "Failed to slice mesh for entity {:?} into fragments.",
+            "handle_explosion: entity {:?} failed to slice mesh into fragments.",
             entity
         );
         return;
@@ -157,7 +159,8 @@ fn slice_mesh_into_fragments(
 
             let Some((pos, neg)) = mesh_slice(&mesh, plane_normal, plane_point) else {
                 warn!(
-                    "Failed to slice mesh into fragments... implement better code next time, bruh."
+                    "slice_mesh_into_fragments: could not slice mesh with plane normal {:?} at point {:?}.",
+                    plane_normal, plane_point
                 );
                 continue;
             };
@@ -169,7 +172,7 @@ fn slice_mesh_into_fragments(
         if fragments.len() >= fragment_count {
             return Some(fragments);
         } else if fragments.is_empty() {
-            warn!("Could not generate more fragments, returning what we have.");
+            warn!("slice_mesh_into_fragments: no fragments generated after slicing.");
             return None;
         } else {
             queue = VecDeque::from(fragments);

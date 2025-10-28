@@ -6,6 +6,7 @@ pub mod prelude {
     pub use super::ProjectileSpawnerConfig;
     pub use super::ProjectileSpawnerMarker;
     pub use super::ProjectileSpawnerPlugin;
+    pub use super::ProjectileSpawnerSystems;
     pub use super::SpawnProjectile;
 }
 
@@ -51,8 +52,6 @@ pub fn projectile_spawner<T>(config: ProjectileSpawnerConfig<T>) -> impl Bundle
 where
     T: Default + Clone + Debug + Send + Sync + 'static,
 {
-    debug!("Creating projectile spawner with config: {:?}", config);
-
     (
         ProjectileSpawnerMarker::<T>::default(),
         ProjectileSpawnerFireRate(config.fire_rate),
@@ -85,7 +84,9 @@ impl Default for SpawnProjectile {
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ProjectileSpawnerPluginSet;
+pub enum ProjectileSpawnerSystems {
+    Sync,
+}
 
 #[derive(Default)]
 pub struct ProjectileSpawnerPlugin<T>
@@ -100,9 +101,11 @@ where
     T: super::ProjectileBundle + Default + Clone + Debug + Send + Sync + 'static,
 {
     fn build(&self, app: &mut App) {
+        debug!("ProjectileSpawnerPlugin: build");
+
         app.add_systems(
             FixedUpdate,
-            update_projectile_spawners::<T>.in_set(ProjectileSpawnerPluginSet),
+            update_projectile_spawners::<T>.in_set(ProjectileSpawnerSystems::Sync),
         );
 
         app.add_observer(on_insert_projectile_spawner::<T>);
@@ -132,10 +135,11 @@ fn on_insert_projectile_spawner<T>(
     T: Default + Clone + Debug + Send + Sync + 'static,
 {
     let entity = insert.entity;
-    debug!("Inserting ProjectileSpawner: {:?}", entity);
+    trace!("on_insert_projectile_spawner: entity {:?}", entity);
+
     let Ok(fire_rate) = q_fire_rate.get(entity) else {
         warn!(
-            "ProjectileSpawner entity {:?} missing ProjectileSpawnerFireRate component",
+            "on_insert_projectile_spawner: entity {:?} not found in q_fire_rate",
             entity
         );
         return;
@@ -164,9 +168,11 @@ fn on_spawn_projectile<T>(
     T: super::ProjectileBundle + Default + Clone + Debug + Send + Sync + 'static,
 {
     let entity = spawn.entity;
+    trace!("on_spawn_projectile: entity {:?}", entity);
+
     let Ok((mut fire_state, projectile)) = q_spawners.get_mut(entity) else {
         warn!(
-            "ProjectileSpawner entity {:?} missing required components",
+            "on_spawn_projectile: entity {:?} not found in q_spawners",
             entity
         );
         return;
@@ -175,7 +181,10 @@ fn on_spawn_projectile<T>(
     if !fire_state.is_finished() {
         return;
     }
-    debug!("Spawning projectile from spawner entity: {:?}", entity);
+    debug!(
+        "on_spawn_projectile: spawning projectile from entity {:?}",
+        entity
+    );
 
     let projectile_transform = Transform {
         translation: spawn.spawn_position,

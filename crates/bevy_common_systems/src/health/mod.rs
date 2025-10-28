@@ -3,11 +3,11 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::DamageApply;
     pub use super::DestroyedMarker;
     pub use super::Health;
+    pub use super::HealthApplyDamage;
     pub use super::HealthPlugin;
-    pub use super::HealthPluginSet;
+    pub use super::HealthPluginSystems;
 }
 
 /// Component representing the health of an entity.
@@ -30,7 +30,7 @@ impl Health {
 
 /// Event to apply damage to an entity.
 #[derive(Event, Clone, Debug)]
-pub struct DamageApply {
+pub struct HealthApplyDamage {
     pub target: Entity,
     pub source: Option<Entity>,
     pub amount: f32,
@@ -38,7 +38,9 @@ pub struct DamageApply {
 
 /// System set for the bullet projectile plugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct HealthPluginSet;
+pub enum HealthPluginSystems {
+    Sync,
+}
 
 /// A plugin that enables the Health component and its related systems.
 #[derive(Default)]
@@ -46,20 +48,22 @@ pub struct HealthPlugin;
 
 impl Plugin for HealthPlugin {
     fn build(&self, app: &mut App) {
+        debug!("HealthPlugin: build");
+
         app.add_observer(on_damage);
     }
 }
 
 fn on_damage(
-    damage: On<DamageApply>,
+    damage: On<HealthApplyDamage>,
     mut commands: Commands,
     mut q_health: Query<(Entity, &mut Health), Without<DestroyedMarker>>,
 ) {
-    let Ok((entity, mut health)) = q_health.get_mut(damage.target) else {
-        debug!(
-            "DamageApply target entity {:?} missing Health component",
-            damage.target
-        );
+    let target = damage.target;
+    trace!("on_damage: target {:?}, damage {:?}", target, damage.amount);
+
+    let Ok((entity, mut health)) = q_health.get_mut(target) else {
+        debug!("on_damage: entity {:?} not found in q_health", target);
         return;
     };
 

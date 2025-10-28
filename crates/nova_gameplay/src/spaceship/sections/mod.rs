@@ -15,21 +15,16 @@ pub mod prelude {
     pub use super::thruster_section::prelude::*;
     pub use super::turret_section::prelude::*;
 
-    pub use super::SectionPlugin;
-    pub use super::SectionPluginSet;
+    pub use super::SpaceshipSectionPlugin;
 }
-
-/// A system set that will contain all the systems related to the spaceship plugin.
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SectionPluginSet;
 
 /// A plugin that adds all the spaceship sections and their related systems.
 #[derive(Default, Clone, Debug)]
-pub struct SectionPlugin {
+pub struct SpaceshipSectionPlugin {
     pub render: bool,
 }
 
-impl Plugin for SectionPlugin {
+impl Plugin for SpaceshipSectionPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((
             hull_section::HullSectionPlugin {
@@ -49,38 +44,5 @@ impl Plugin for SectionPlugin {
                 ..default()
             },
         ));
-
-        app.configure_sets(
-            Update,
-            thruster_section::ThrusterSectionPluginSet.in_set(SectionPluginSet),
-        );
-        app.configure_sets(
-            FixedUpdate,
-            thruster_section::ThrusterSectionPluginSet.in_set(SectionPluginSet),
-        );
-        app.configure_sets(
-            Update,
-            controller_section::ControllerSectionPluginSet.in_set(SectionPluginSet),
-        );
-        app.configure_sets(
-            FixedUpdate,
-            controller_section::ControllerSectionPluginSet.in_set(SectionPluginSet),
-        );
-        app.configure_sets(
-            Update,
-            turret_section::TurretSectionPluginSet.in_set(SectionPluginSet),
-        );
-        app.configure_sets(
-            FixedUpdate,
-            turret_section::TurretSectionPluginSet.in_set(SectionPluginSet),
-        );
-        app.configure_sets(
-            Update,
-            hull_section::HullSectionPluginSet.in_set(SectionPluginSet),
-        );
-        app.configure_sets(
-            FixedUpdate,
-            hull_section::HullSectionPluginSet.in_set(SectionPluginSet),
-        );
     }
 }

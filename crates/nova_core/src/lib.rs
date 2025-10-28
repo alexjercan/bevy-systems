@@ -183,7 +183,7 @@ impl Plugin for CorePlugin {
         // Configure system Sets
         app.configure_sets(
             Update,
-            SpaceshipInputPluginSet.run_if(in_state(GameStates::Simulation)),
+            SpaceshipSystems::Input.run_if(in_state(GameStates::Simulation)),
         );
     }
 }

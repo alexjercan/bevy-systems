@@ -7,22 +7,17 @@ pub mod prelude {
     pub use super::health::prelude::*;
     pub use super::velocity::prelude::*;
 
-    pub use super::HudPlugin;
-    pub use super::HudPluginSet;
+    pub use super::SpacehipHudPlugin;
 }
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct HudPluginSet;
-
 #[derive(Default)]
-pub struct HudPlugin;
+pub struct SpacehipHudPlugin;
 
-impl Plugin for HudPlugin {
+impl Plugin for SpacehipHudPlugin {
     fn build(&self, app: &mut App) {
+        debug!("HudPlugin: build");
+
         app.add_plugins(velocity::VelocityHudPlugin);
         app.add_plugins(health::HealthHudPlugin);
-
-        app.configure_sets(Update, velocity::VelocityHudPluginSet.in_set(HudPluginSet));
-        app.configure_sets(Update, health::HealthHudPluginSet.in_set(HudPluginSet));
     }
 }

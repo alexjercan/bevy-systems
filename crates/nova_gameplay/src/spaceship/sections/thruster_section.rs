@@ -8,7 +8,7 @@ use bevy::{
     shader::ShaderRef,
 };
 
-use crate::prelude::SpaceshipRootMarker;
+use crate::prelude::{SpaceshipRootMarker, SpaceshipSystems};
 
 pub mod prelude {
     pub use super::thruster_section;
@@ -68,10 +68,6 @@ pub struct ThrusterSectionMagnitude(pub f32);
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct ThrusterSectionInput(pub f32);
 
-/// A system set that will contain all the systems related to the thruster section plugin.
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ThrusterSectionPluginSet;
-
 /// A plugin that enables the ThrusterSection component and its related systems.
 #[derive(Default)]
 pub struct ThrusterSectionPlugin {
@@ -80,9 +76,7 @@ pub struct ThrusterSectionPlugin {
 
 impl Plugin for ThrusterSectionPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<ThrusterSectionMarker>()
-            .register_type::<ThrusterSectionMagnitude>()
-            .register_type::<ThrusterSectionInput>();
+        debug!("ThrusterSectionPlugin: build");
 
         if self.render {
             app.add_plugins(MaterialPlugin::<
@@ -94,11 +88,11 @@ impl Plugin for ThrusterSectionPlugin {
 
         app.add_systems(
             Update,
-            thruster_shader_update_system.in_set(ThrusterSectionPluginSet),
+            thruster_shader_update_system.in_set(SpaceshipSystems::Sections),
         );
         app.add_systems(
             FixedUpdate,
-            thruster_impulse_system.in_set(ThrusterSectionPluginSet),
+            thruster_impulse_system.in_set(SpaceshipSystems::Sections),
         );
     }
 }
@@ -117,7 +111,10 @@ fn thruster_impulse_system(
 ) {
     for (transform, &ChildOf(root), magnitude, input) in &q_thruster {
         let Ok(mut force) = q_root.get_mut(root) else {
-            warn!("ThrusterSection's root entity does not have a RootSectionMarker component");
+            warn!(
+                "thruster_impulse_system: entity {:?} not found in q_root",
+                root
+            );
             continue;
         };
 
@@ -145,12 +142,18 @@ fn thruster_shader_update_system(
 ) {
     for (material, &ChildOf(parent)) in &q_render {
         let Ok(input) = q_thruster.get(parent) else {
-            warn!("ThrusterSectionExhaustShaderMarker's parent does not have a ThrusterSectionMarker component");
+            warn!(
+                "thruster_shader_update_system: entity {:?} not found in q_thruster",
+                parent
+            );
             continue;
         };
 
         let Some(material) = materials.get_mut(&**material) else {
-            warn!("ThrusterSectionExhaustShaderMarker's material not found");
+            warn!(
+                "thruster_shader_update_system: material for entity {:?} not found",
+                parent
+            );
             continue;
         };
 
@@ -169,10 +172,11 @@ fn insert_thruster_section_render(
     q_thruster: Query<&ThrusterSectionRenderMesh, With<ThrusterSectionMarker>>,
 ) {
     let entity = add.entity;
-    debug!("Inserting render for ThrusterSection: {:?}", entity);
+    trace!("insert_thruster_section_render: entity {:?}", entity);
+
     let Ok(render_mesh) = q_thruster.get(entity) else {
         warn!(
-            "ThrusterSection entity {:?} missing ThrusterRenderMesh component",
+            "insert_thruster_section_render: entity {:?} not found in q_thruster",
             entity
         );
         return;

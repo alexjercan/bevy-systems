@@ -25,9 +25,8 @@ fn custom_plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        check_jitter
-            // .after(PhysicsSystems::Last)
-            // .before(TransformSystems::Propagate),
+        check_jitter, // .after(PhysicsSystems::Last)
+                      // .before(TransformSystems::Propagate),
     );
 }
 

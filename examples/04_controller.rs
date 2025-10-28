@@ -25,7 +25,7 @@ fn custom_plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        update_spaceship_target_rotation_torque.before(SpaceshipPluginSet),
+        update_spaceship_target_rotation_torque.before(SpaceshipSystems),
     );
 }
 

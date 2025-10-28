@@ -13,8 +13,7 @@ pub mod prelude {
     pub use super::BulletProjectileHit;
     pub use super::BulletProjectileMarker;
     pub use super::BulletProjectilePlugin;
-    pub use super::BulletProjectilePluginSet;
-    pub use super::BulletProjectileRenderMesh;
+    pub use super::BulletProjectileSystems;
 }
 
 /// Configuration for a bullet projectile.
@@ -88,7 +87,9 @@ pub struct BulletProjectileHit {
 
 /// System set for the bullet projectile plugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct BulletProjectilePluginSet;
+pub enum BulletProjectileSystems {
+    Sync,
+}
 
 /// A plugin that enables the BulletProjectile component and its related systems.
 #[derive(Default)]
@@ -98,14 +99,16 @@ pub struct BulletProjectilePlugin {
 
 impl Plugin for BulletProjectilePlugin {
     fn build(&self, app: &mut App) {
+        debug!("BulletProjectilePlugin: build");
+
         app.add_systems(
             Update,
-            update_ray_projectiles.in_set(BulletProjectilePluginSet),
+            update_ray_projectiles.in_set(BulletProjectileSystems::Sync),
         );
 
         app.add_systems(
             FixedUpdate,
-            update_sweep_collisions.in_set(BulletProjectilePluginSet),
+            update_sweep_collisions.in_set(BulletProjectileSystems::Sync),
         );
 
         if self.render {
@@ -122,10 +125,11 @@ fn insert_projectile_render(
     q_render_mesh: Query<&BulletProjectileRenderMesh>,
 ) {
     let entity = add.entity;
-    debug!("Inserting BulletProjectile render for entity: {:?}", entity);
+    trace!("insert_projectile_render: entity {:?}", entity);
+
     let Ok(render_mesh) = q_render_mesh.get(entity) else {
         warn!(
-            "BulletProjectile entity {:?} missing BulletProjectileRenderMesh component",
+            "insert_projectile_render: entity {:?} not found in q_render_mesh",
             entity
         );
         return;
@@ -174,7 +178,6 @@ fn update_sweep_collisions(
         ),
         With<super::ProjectileMarker>,
     >,
-    q_name: Query<Option<&Name>>,
 ) {
     let filter = SpatialQueryFilter::default();
 
@@ -197,14 +200,11 @@ fn update_sweep_collisions(
             // having penetration. Also I would rather send the speed instead of the energy and
             // compute the energy where it is needed.
 
-            let entity_name = q_name
-                .get(ray_hit_data.entity)
-                .ok()
-                .and_then(|n| n.map(|name| name.as_str()))
-                .unwrap_or("Unnamed");
-            debug!(
-                "BulletProjectile {:?} hit entity {:?} ({}) at distance {}",
-                entity, ray_hit_data.entity, entity_name, ray_hit_data.distance
+            trace!(
+                "update_sweep_collisions: projectile {:?} hit entity {:?} at distance {}",
+                entity,
+                ray_hit_data.entity,
+                ray_hit_data.distance
             );
 
             commands.entity(entity).despawn();

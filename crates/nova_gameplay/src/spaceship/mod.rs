@@ -18,8 +18,8 @@ pub mod prelude {
     pub use super::spaceship_root;
     pub use super::SpaceshipConfig;
     pub use super::SpaceshipPlugin;
-    pub use super::SpaceshipPluginSet;
     pub use super::SpaceshipRootMarker;
+    pub use super::SpaceshipSystems;
 }
 
 /// Configuration for the spaceship root entity.
@@ -49,7 +49,14 @@ pub struct SpaceshipRootMarker;
 
 /// A system set that will contain all the systems related to the spaceship plugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SpaceshipPluginSet;
+pub enum SpaceshipSystems {
+    First,
+    Input,
+    Sections,
+    Hud,
+    Camera,
+    Last,
+}
 
 /// A plugin that adds all the spaceship sections and their related systems.
 #[derive(Default, Clone, Debug)]
@@ -60,29 +67,36 @@ pub struct SpaceshipPlugin {
 impl Plugin for SpaceshipPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(input::SpaceshipInputPlugin);
-        app.add_plugins(sections::SectionPlugin {
+        app.add_plugins(sections::SpaceshipSectionPlugin {
             render: self.render,
         });
-        app.add_plugins(hud::HudPlugin);
+        app.add_plugins(hud::SpacehipHudPlugin);
         app.add_plugins(camera_controller::SpaceshipCameraControllerPlugin);
 
         app.configure_sets(
             Update,
-            input::SpaceshipInputPluginSet.before(SpaceshipPluginSet),
+            (
+                SpaceshipSystems::First,
+                SpaceshipSystems::Input,
+                SpaceshipSystems::Sections,
+                SpaceshipSystems::Hud,
+                SpaceshipSystems::Camera,
+                SpaceshipSystems::Last,
+            )
+                .chain(),
         );
-        app.configure_sets(
-            Update,
-            sections::SectionPluginSet.in_set(SpaceshipPluginSet),
-        );
+
         app.configure_sets(
             FixedUpdate,
-            sections::SectionPluginSet.in_set(SpaceshipPluginSet),
-        );
-        app.configure_sets(Update, hud::HudPluginSet.after(SpaceshipPluginSet));
-        app.configure_sets(FixedUpdate, hud::HudPluginSet.after(SpaceshipPluginSet));
-        app.configure_sets(
-            Update,
-            camera_controller::SpaceshipCameraControllerPluginSet.after(SpaceshipPluginSet),
+            (
+                SpaceshipSystems::First,
+                SpaceshipSystems::Input,
+                SpaceshipSystems::Sections,
+                SpaceshipSystems::Hud,
+                SpaceshipSystems::Camera,
+                SpaceshipSystems::Last,
+            )
+                .chain(),
         );
     }
 }

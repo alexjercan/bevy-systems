@@ -1,7 +1,9 @@
 //! A Bevy plugin that adds various debugging tools.
 
 use bevy::{
-    ecs::schedule::{LogLevel, ScheduleBuildSettings}, pbr::wireframe::{WireframeConfig, WireframePlugin}, prelude::*
+    ecs::schedule::{LogLevel, ScheduleBuildSettings},
+    pbr::wireframe::{WireframeConfig, WireframePlugin},
+    prelude::*,
 };
 
 pub mod prelude {

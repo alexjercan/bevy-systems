@@ -2,9 +2,11 @@ use crate::meth::prelude::*;
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::{
-        SphereOrbit, SphereOrbitInput, SphereOrbitOutput, SphereOrbitPlugin, SphereOrbitPluginSet,
-    };
+    pub use super::SphereOrbit;
+    pub use super::SphereOrbitInput;
+    pub use super::SphereOrbitOutput;
+    pub use super::SphereOrbitPlugin;
+    pub use super::SphereOrbitSystems;
 }
 
 /// Component to define a spherical orbit around a center point.
@@ -39,7 +41,9 @@ struct SphereOrbitState {
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SphereOrbitPluginSet;
+pub enum SphereOrbitSystems {
+    Sync,
+}
 
 /// Plugin to manage entities with `SphereOrbit` component.
 ///
@@ -48,13 +52,15 @@ pub struct SphereOrbitPlugin;
 
 impl Plugin for SphereOrbitPlugin {
     fn build(&self, app: &mut App) {
+        debug!("SphereOrbitPlugin: build");
+
         app.add_observer(initialize_sphere_orbit_system);
 
         app.add_systems(
             Update,
             (sphere_update_state, sphere_update_output)
                 .chain()
-                .in_set(SphereOrbitPluginSet),
+                .in_set(SphereOrbitSystems::Sync),
         );
     }
 }
@@ -66,8 +72,13 @@ fn initialize_sphere_orbit_system(
     q_orbit: Query<&SphereOrbit, With<SphereOrbit>>,
 ) {
     let entity = insert.entity;
+    trace!("initialize_sphere_orbit_system: entity {:?}", entity);
+
     let Ok(orbit) = q_orbit.get(entity) else {
-        warn!("initialize_sphere_orbit_system: entity does not have SphereOrbit component");
+        warn!(
+            "initialize_sphere_orbit_system: entity {:?} not found in q_orbit",
+            entity
+        );
         return;
     };
 
@@ -108,6 +119,6 @@ fn sphere_update_output(
 ) {
     for (orbit, state, mut output) in query.iter_mut() {
         let pos = spherical_to_cartesian(orbit.radius, state.theta, state.phi) + orbit.center;
-        output.0 = pos;
+        **output = pos;
     }
 }

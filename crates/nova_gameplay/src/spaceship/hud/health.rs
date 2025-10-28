@@ -1,12 +1,13 @@
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
+use crate::prelude::SpaceshipSystems;
+
 pub mod prelude {
     pub use super::health_hud;
     pub use super::HealthHudConfig;
     pub use super::HealthHudMarker;
     pub use super::HealthHudPlugin;
-    pub use super::HealthHudPluginSet;
     pub use super::HealthHudTargetEntity;
 }
 
@@ -46,18 +47,12 @@ pub fn health_hud(config: HealthHudConfig) -> impl Bundle {
 #[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]
 pub struct HealthHudTargetEntity(Option<Entity>);
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct HealthHudPluginSet;
-
 #[derive(Default)]
 pub struct HealthHudPlugin;
 
 impl Plugin for HealthHudPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (update_text_hud,).in_set(HealthHudPluginSet).chain(),
-        );
+        app.add_systems(Update, update_text_hud.in_set(SpaceshipSystems::Hud));
     }
 }
 

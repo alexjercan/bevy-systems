@@ -8,6 +8,7 @@ pub mod prelude {
     pub use super::CollisionDamageEvent;
     pub use super::CollisionDamageMarker;
     pub use super::CollisionDamagePlugin;
+    pub use super::CollisionDamageSystems;
 }
 
 #[derive(Component, Clone, Debug, Reflect)]
@@ -28,10 +29,17 @@ pub struct CollisionDamageEvent {
     pub relative_velocity: Vec3,
 }
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum CollisionDamageSystems {
+    Sync,
+}
+
 pub struct CollisionDamagePlugin;
 
 impl Plugin for CollisionDamagePlugin {
     fn build(&self, app: &mut App) {
+        debug!("CollisionDamagePlugin: build");
+
         app.add_observer(insert_collision_events);
         app.add_observer(on_collision_event);
     }
@@ -39,10 +47,7 @@ impl Plugin for CollisionDamagePlugin {
 
 fn insert_collision_events(add: On<Add, CollisionDamageMarker>, mut commands: Commands) {
     let entity = add.entity;
-    debug!(
-        "Inserting collision events for CollisionDamageMarker: {:?}",
-        entity
-    );
+    trace!("insert_collision_events: entity {:?}", entity);
 
     commands.entity(entity).insert(CollisionEventsEnabled);
 }
@@ -50,32 +55,23 @@ fn insert_collision_events(add: On<Add, CollisionDamageMarker>, mut commands: Co
 fn on_collision_event(
     collision: On<CollisionStart>,
     mut commands: Commands,
-    q_velocity: Query<(&LinearVelocity, Option<&Name>), With<RigidBody>>,
+    q_velocity: Query<&LinearVelocity, With<RigidBody>>,
 ) {
+    trace!("on_collision_event: collision {:?}", collision);
+
     let Some(body) = collision.body1 else {
-        debug!("No body1 found for collision event");
         return;
     };
-
     let Some(other) = collision.body2 else {
-        debug!("No body2 found for collision event");
         return;
     };
 
-    let Ok((velocity1, name1)) = q_velocity.get(body) else {
-        debug!("No velocity found for body1: {:?}", body);
+    let Ok(velocity1) = q_velocity.get(body) else {
         return;
     };
-    let Ok((velocity2, name2)) = q_velocity.get(other) else {
-        debug!("No velocity found for body2: {:?}", other);
+    let Ok(velocity2) = q_velocity.get(other) else {
         return;
     };
-    trace!(
-        "Collision detected between {:?} and {:?}",
-        name1.map(|n| n.as_str()).unwrap_or("Unnamed"),
-        name2.map(|n| n.as_str()).unwrap_or("Unnamed")
-    );
-
     let relative_velocity = **velocity1 - **velocity2;
 
     commands.trigger(CollisionDamageEvent {

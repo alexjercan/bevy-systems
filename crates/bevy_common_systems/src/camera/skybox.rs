@@ -31,6 +31,8 @@ pub struct SkyboxPlugin;
 
 impl Plugin for SkyboxPlugin {
     fn build(&self, app: &mut App) {
+        debug!("SkyboxPlugin: build");
+
         app.add_observer(setup_skybox_camera);
     }
 }
@@ -41,7 +43,10 @@ fn setup_skybox_camera(
     mut images: ResMut<Assets<Image>>,
     q_config: Query<&SkyboxConfig, With<Camera>>,
 ) {
-    let Ok(config) = q_config.get(insert.entity) else {
+    let entity = insert.entity;
+    trace!("setup_skybox_camera: entity {:?}", entity);
+
+    let Ok(config) = q_config.get(entity) else {
         warn!("SkyboxCubemap component must be added to a Camera entity");
         return;
     };

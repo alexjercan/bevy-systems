@@ -27,6 +27,8 @@ pub struct GameAssetsPlugin;
 
 impl Plugin for GameAssetsPlugin {
     fn build(&self, app: &mut App) {
+        debug!("GameAssetsPlugin: build");
+
         // Setup the asset loader to load assets during the loading state.
         app.init_state::<GameAssetsStates>();
         app.add_loading_state(

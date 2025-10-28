@@ -6,7 +6,6 @@ pub mod prelude {
     pub use super::SpaceshipCameraControlMode;
     pub use super::SpaceshipCameraControllerMarker;
     pub use super::SpaceshipCameraControllerPlugin;
-    pub use super::SpaceshipCameraControllerPluginSet;
     pub use super::SpaceshipCameraFreeLookInputMarker;
     pub use super::SpaceshipCameraInputMarker;
     pub use super::SpaceshipCameraNormalInputMarker;
@@ -14,13 +13,12 @@ pub mod prelude {
     pub use super::SpaceshipRotationInputActiveMarker;
 }
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SpaceshipCameraControllerPluginSet;
-
 pub struct SpaceshipCameraControllerPlugin;
 
 impl Plugin for SpaceshipCameraControllerPlugin {
     fn build(&self, app: &mut App) {
+        debug!("SpaceshipCameraControllerPlugin: build");
+
         app.init_resource::<SpaceshipCameraControlMode>();
 
         app.add_observer(insert_camera_controller);
@@ -30,11 +28,10 @@ impl Plugin for SpaceshipCameraControllerPlugin {
         app.add_systems(
             Update,
             (
-                update_chase_camera_input.before(ChaseCameraPluginSet),
+                update_chase_camera_input.before(ChaseCameraSystems::Sync),
                 sync_spaceship_control_mode,
             )
-                .in_set(SpaceshipCameraControllerPluginSet)
-                .chain(),
+                .in_set(SpaceshipSystems::Camera),
         );
     }
 }
@@ -80,14 +77,11 @@ fn insert_camera_controller(
     q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
 ) {
     let entity = add.entity;
-    debug!(
-        "SpaceshipCameraControllerMarker added to entity {:?}, inserting SpaceshipCameraNormalInputMarker to it.",
-        entity
-    );
+    trace!("insert_camera_controller: entity {:?}", entity);
 
     let Ok(camera) = q_camera.get(entity) else {
         warn!(
-            "Failed to get ChaseCamera for SpaceshipCameraControllerMarker entity {:?}",
+            "insert_camera_controller: entity {:?} not found in q_camera",
             add.entity
         );
         return;
@@ -109,15 +103,12 @@ fn insert_camera_freelook(
     q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
 ) {
     let entity = add.entity;
-    debug!(
-        "SpaceshipCameraControllerMarker added to entity {:?}, inserting SpaceshipCameraFreeLookInputMarker to it.",
-        entity
-    );
+    trace!("insert_camera_controller: entity {:?}", entity);
 
     let Ok(camera) = q_camera.get(entity) else {
         warn!(
-            "Failed to get ChaseCamera for SpaceshipCameraControllerMarker entity {:?}",
-            add.entity
+            "insert_camera_controller: entity {:?} not found in q_camera",
+            entity
         );
         return;
     };
@@ -137,15 +128,12 @@ fn insert_camera_turret(
     q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
 ) {
     let entity = add.entity;
-    debug!(
-        "SpaceshipCameraControllerMarker added to entity {:?}, inserting SpaceshipCameraTurretInputMarker to it.",
-        entity
-    );
+    trace!("insert_camera_turret: entity {:?}", entity);
 
     let Ok(camera) = q_camera.get(entity) else {
         warn!(
-            "Failed to get ChaseCamera for SpaceshipCameraControllerMarker entity {:?}",
-            add.entity
+            "insert_camera_turret: entity {:?} not found in q_camera",
+            entity
         );
         return;
     };

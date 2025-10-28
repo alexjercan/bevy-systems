@@ -7,13 +7,14 @@ use bevy::{
 };
 use bevy_common_systems::prelude::*;
 
+use crate::prelude::SpaceshipSystems;
+
 pub mod prelude {
     pub use super::velocity_hud;
     pub use super::VelocityHudConfig;
-    pub use super::VelocityHudPlugin;
-    pub use super::VelocityHudPluginSet;
-    pub use super::VelocityHudMarker;
     pub use super::VelocityHudIndicatorMarker;
+    pub use super::VelocityHudMarker;
+    pub use super::VelocityHudPlugin;
     pub use super::VelocityHudTargetEntity;
 }
 
@@ -57,14 +58,13 @@ pub fn velocity_hud(config: VelocityHudConfig) -> impl Bundle {
 #[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]
 pub struct VelocityHudTargetEntity(Option<Entity>);
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct VelocityHudPluginSet;
-
 #[derive(Default)]
 pub struct VelocityHudPlugin;
 
 impl Plugin for VelocityHudPlugin {
     fn build(&self, app: &mut App) {
+        debug!("VelocityHudPlugin: build");
+
         app.add_plugins(MaterialPlugin::<
             ExtendedMaterial<StandardMaterial, DirectionMagnitudeMaterial>,
         >::default());
@@ -74,31 +74,40 @@ impl Plugin for VelocityHudPlugin {
         app.add_systems(
             Update,
             (
-                update_velocity_hud_input.before(DirectionalSphereOrbitPluginSet),
-                sync_orbit_state.after(DirectionalSphereOrbitPluginSet),
+                update_velocity_hud_input.before(DirectionalSphereOrbitSystems::Sync),
+                sync_orbit_state.after(DirectionalSphereOrbitSystems::Sync),
                 direction_shader_update_system,
             )
-                .in_set(VelocityHudPluginSet)
-                .chain(),
+                .in_set(SpaceshipSystems::Hud),
         );
     }
 }
 
 fn update_velocity_hud_input(
     mut q_hud: Query<
-        (&mut DirectionalSphereOrbitInput, &VelocityHudTargetEntity),
+        (
+            Entity,
+            &mut DirectionalSphereOrbitInput,
+            &VelocityHudTargetEntity,
+        ),
         With<VelocityHudMarker>,
     >,
     q_target: Query<&LinearVelocity>,
 ) {
-    for (mut hud_input, target) in q_hud.iter_mut() {
+    for (entity, mut hud_input, target) in q_hud.iter_mut() {
         let Some(target) = **target else {
-            warn!("VelocityHudMarker has no target entity set");
+            warn!(
+                "update_velocity_hud_input: entity {:?} has no target entity set",
+                entity
+            );
             continue;
         };
 
         let Ok(velocity) = q_target.get(target) else {
-            warn!("Failed to get target entity's LinearVelocity for VelocityHudMarker");
+            warn!(
+                "update_velocity_hud_input: entity {:?} not found in q_target",
+                target
+            );
             continue;
         };
 
@@ -110,6 +119,7 @@ fn update_velocity_hud_input(
 fn sync_orbit_state(
     mut q_orbit: Query<
         (
+            Entity,
             &mut Transform,
             &DirectionalSphereOrbitOutput,
             &VelocityHudTargetEntity,
@@ -121,14 +131,20 @@ fn sync_orbit_state(
     >,
     q_target: Query<&Transform, Without<VelocityHudMarker>>,
 ) {
-    for (mut transform, output, target) in &mut q_orbit {
+    for (entity, mut transform, output, target) in &mut q_orbit {
         let Some(target) = **target else {
-            warn!("VelocityHudMarker has no target entity set");
+            warn!(
+                "sync_orbit_state: entity {:?} has no target entity set",
+                entity
+            );
             continue;
         };
 
         let Ok(target_transform) = q_target.get(target) else {
-            warn!("Failed to get target entity's Transform for VelocityHudMarker");
+            warn!(
+                "sync_orbit_state: entity {:?} not found in q_target",
+                target
+            );
             continue;
         };
 
@@ -150,23 +166,35 @@ fn direction_shader_update_system(
 ) {
     for (material, &ChildOf(parent)) in &q_render {
         let Ok((_, target)) = q_hud.get(parent) else {
-            warn!("VelocityHudMarker's parent is not HudMarker");
+            warn!(
+                "direction_shader_update_system: parent entity {:?} not found in q_hud",
+                parent
+            );
             continue;
         };
 
         let Some(target) = **target else {
-            warn!("VelocityHudMarker has no target entity set");
+            warn!(
+                "direction_shader_update_system: entity {:?} has no target entity set",
+                parent
+            );
             continue;
         };
 
         let Ok(velocity) = q_target.get(target) else {
-            warn!("Failed to get target entity's LinearVelocity for VelocityHudMarker");
+            warn!(
+                "direction_shader_update_system: entity {:?} not found in q_target",
+                target
+            );
             continue;
         };
         let magnitude = velocity.length() / 100.0;
 
         let Some(material) = materials.get_mut(&**material) else {
-            warn!("Failed to get material for VelocityHudMarker");
+            warn!(
+                "direction_shader_update_system: material for entity {:?} not found",
+                parent
+            );
             continue;
         };
 
@@ -183,7 +211,7 @@ fn insert_velocity_hud_indicator_system(
     >,
 ) {
     let entity = add.entity;
-    debug!("Inserting velocity HUD indicator for entity {:?}", entity);
+    trace!("insert_velocity_hud_indicator_system: entity {:?}", entity);
 
     commands.entity(entity).insert(children![(
         Name::new("VelocityHUD Indicator"),

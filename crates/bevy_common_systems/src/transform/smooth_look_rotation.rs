@@ -1,10 +1,11 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::{
-        SmoothLookRotation, SmoothLookRotationOutput, SmoothLookRotationPlugin,
-        SmoothLookRotationTarget, SmoothLookRotationPluginSet,
-    };
+    pub use super::SmoothLookRotation;
+    pub use super::SmoothLookRotationOutput;
+    pub use super::SmoothLookRotationPlugin;
+    pub use super::SmoothLookRotationSystems;
+    pub use super::SmoothLookRotationTarget;
 }
 
 /// Component that makes an entity smoothly rotate to look along a specified axis.
@@ -43,7 +44,9 @@ pub struct SmoothLookRotationTarget(pub f32);
 pub struct SmoothLookRotationOutput(pub f32);
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SmoothLookRotationPluginSet;
+pub enum SmoothLookRotationSystems {
+    Sync,
+}
 
 /// A plugin that will enable the SmoothLookRotation system.
 ///
@@ -54,10 +57,13 @@ pub struct SmoothLookRotationPlugin;
 
 impl Plugin for SmoothLookRotationPlugin {
     fn build(&self, app: &mut App) {
+        debug!("SmoothLookRotationPlugin: build");
+
         app.add_observer(initialize_smooth_look_system);
+
         app.add_systems(
             Update,
-            smooth_look_rotation_update_system.in_set(SmoothLookRotationPluginSet),
+            smooth_look_rotation_update_system.in_set(SmoothLookRotationSystems::Sync),
         );
     }
 }
@@ -68,9 +74,11 @@ fn initialize_smooth_look_system(
     mut commands: Commands,
 ) {
     let entity = insert.entity;
+    trace!("initialize_smooth_look_system: entity {:?}", entity);
+
     let Ok(look) = q_look.get(entity) else {
         warn!(
-            "initialize_smooth_look_system: entity {:?} is not setup correctly",
+            "initialize_smooth_look_system: entity {:?} not found in q_look",
             entity
         );
         return;

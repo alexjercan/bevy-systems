@@ -36,9 +36,6 @@ pub struct HullSectionMarker;
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 struct HullSectionRenderMesh(Option<Handle<Scene>>);
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct HullSectionPluginSet;
-
 /// A plugin that enables the HullSection component and its related systems.
 #[derive(Default)]
 pub struct HullSectionPlugin {
@@ -47,7 +44,7 @@ pub struct HullSectionPlugin {
 
 impl Plugin for HullSectionPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<HullSectionMarker>();
+        debug!("HullSectionPlugin: build");
 
         if self.render {
             app.add_observer(insert_hull_section_render);
@@ -63,10 +60,11 @@ fn insert_hull_section_render(
     q_hull: Query<&HullSectionRenderMesh, With<HullSectionMarker>>,
 ) {
     let entity = add.entity;
-    debug!("Inserting render for HullSection: {:?}", entity);
+    trace!("insert_hull_section_render: entity {:?}", entity);
+
     let Ok(render_mesh) = q_hull.get(entity) else {
         warn!(
-            "HullSection entity {:?} missing HullRenderMesh component",
+            "insert_hull_section_render: entity {:?} not found in q_hull",
             entity
         );
         return;

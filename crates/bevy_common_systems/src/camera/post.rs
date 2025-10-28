@@ -9,12 +9,17 @@ pub struct PostProcessingDefaultPlugin;
 
 impl Plugin for PostProcessingDefaultPlugin {
     fn build(&self, app: &mut App) {
+        debug!("PostProcessingDefaultPlugin: build");
+
         app.add_observer(setup_post_processing_camera);
     }
 }
 
 fn setup_post_processing_camera(insert: On<Insert, Camera3d>, mut commands: Commands) {
+    let entity = insert.entity;
+    trace!("setup_post_processing_camera: entity {:?}", entity);
+
     commands
-        .entity(insert.entity)
+        .entity(entity)
         .insert((Tonemapping::TonyMcMapface, Bloom::NATURAL));
 }

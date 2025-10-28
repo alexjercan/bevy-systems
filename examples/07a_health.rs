@@ -55,7 +55,7 @@ fn on_click_damage_health(
     if let Ok(health) = q_health.get(entity) {
         println!("Entity has health: {:?}", health);
 
-        commands.trigger(DamageApply {
+        commands.trigger(HealthApplyDamage {
             target: click.entity,
             source: None,
             amount: 10.0,

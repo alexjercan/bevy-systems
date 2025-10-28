@@ -3,7 +3,7 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-use crate::prelude::SpaceshipRootMarker;
+use crate::prelude::{SpaceshipRootMarker, SpaceshipSystems};
 
 pub mod prelude {
     pub use super::controller_section;
@@ -76,10 +76,6 @@ pub struct ControllerSectionStableTorquePdController {
     pub max_torque: f32,
 }
 
-/// A system set that will contain all the systems related to the controller section plugin.
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ControllerSectionPluginSet;
-
 /// A plugin that will enable the ControllerSection.
 #[derive(Default)]
 pub struct ControllerSectionPlugin {
@@ -89,11 +85,11 @@ pub struct ControllerSectionPlugin {
 impl Plugin for ControllerSectionPlugin {
     fn build(&self, app: &mut App) {
         // NOTE: How can we check that the TorquePdControllerPlugin is added?
-        app.register_type::<ControllerSectionMarker>();
+        debug!("ControllerSectionPlugin: build");
 
         app.add_systems(
             FixedUpdate,
-            update_controller_root_torque.in_set(ControllerSectionPluginSet),
+            update_controller_root_torque.in_set(SpaceshipSystems::Sections),
         );
 
         if self.render {
@@ -115,7 +111,10 @@ fn update_controller_root_torque(
 ) {
     for (controller, controller_input, &ChildOf(root)) in &q_controller {
         let Ok((angular_inertia, rotation, mut forces)) = q_root.get_mut(root) else {
-            warn!("ControllerSection's root entity does not have a SpaceshipRootMaker component");
+            warn!(
+                "update_controller_root_torque: root entity {:?} not found in q_root",
+                root
+            );
             continue;
         };
 
@@ -144,11 +143,11 @@ fn insert_controller_section_render(
     q_controller: Query<&ControllerSectionRenderMesh, With<ControllerSectionMarker>>,
 ) {
     let entity = add.entity;
-    debug!("Inserting render for ControllerSection: {:?}", entity);
+    trace!("insert_controller_section_render: entity {:?}", entity);
 
     let Ok(render_mesh) = q_controller.get(entity) else {
         warn!(
-            "ControllerSection entity {:?} missing ControllerSectionRenderMesh component",
+            "insert_controller_section_render: entity {:?} not found in q_controller",
             entity
         );
         return;
@@ -192,7 +191,6 @@ fn compute_pd_torque(
     // PD gains
     let kp = (6.0 * frequency).powi(2) * 0.25;
     let kd = 4.5 * frequency * damping_ratio;
-    trace!("PD gains: kp = {:.3}, kd = {:.3}", kp, kd);
 
     let mut delta = to_rotation * from_rotation.conjugate();
     if delta.w < 0.0 {
@@ -208,23 +206,13 @@ fn compute_pd_torque(
     // Normalize axis (avoid NaNs if angle is zero)
     axis = axis.normalize_or_zero();
 
-    trace!(
-        "Rotation error: angle_rad = {:.6} rad (~{:.2}°), axis = {:?}",
-        angle,
-        angle.to_degrees(),
-        axis
-    );
-
     // PD control (raw torque)
     let raw = axis * (kp * angle) - angular_velocity * kd;
-    trace!("Raw torque (before inertia scaling) = {:?}", raw);
 
     let rot_inertia_to_world = inertia_local_frame * from_rotation;
     let torque_local = rot_inertia_to_world.inverse() * raw;
     let torque_scaled = torque_local * inertia_principal;
     let final_torque = rot_inertia_to_world * torque_scaled;
-
-    trace!("Torque after scaling by inertia = {:?}", final_torque);
 
     // Optionally clamp final torque magnitude
     let torque_to_apply = {
@@ -234,8 +222,6 @@ fn compute_pd_torque(
             final_torque
         }
     };
-
-    trace!("Torque to apply (clamped) = {:?}", torque_to_apply);
 
     torque_to_apply
 }

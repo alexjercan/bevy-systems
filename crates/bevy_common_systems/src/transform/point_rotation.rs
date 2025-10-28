@@ -1,10 +1,11 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::{
-        PointRotation, PointRotationInput, PointRotationOutput, PointRotationPlugin,
-        PointRotationPluginSet,
-    };
+    pub use super::PointRotation;
+    pub use super::PointRotationInput;
+    pub use super::PointRotationOutput;
+    pub use super::PointRotationPlugin;
+    pub use super::PointRotationSystems;
 }
 
 /// Component that marks an entity as a point that can be rotated.
@@ -33,7 +34,9 @@ pub struct PointRotationInput(pub Vec2);
 pub struct PointRotationOutput(pub Quat);
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct PointRotationPluginSet;
+pub enum PointRotationSystems {
+    Sync,
+}
 
 /// A plugin that will enable the PointRotation system.
 ///
@@ -44,10 +47,13 @@ pub struct PointRotationPlugin;
 
 impl Plugin for PointRotationPlugin {
     fn build(&self, app: &mut App) {
+        debug!("PointRotationPlugin: build");
+
         app.add_observer(initialize_point_rotation_system);
+
         app.add_systems(
             Update,
-            point_rotation_update_system.in_set(PointRotationPluginSet),
+            point_rotation_update_system.in_set(PointRotationSystems::Sync),
         );
     }
 }
@@ -58,8 +64,13 @@ fn initialize_point_rotation_system(
     q_point: Query<&PointRotation, With<PointRotation>>,
 ) {
     let entity = insert.entity;
+    trace!("initialize_point_rotation_system: entity {:?}", entity);
+
     let Ok(point) = q_point.get(entity) else {
-        warn!("initialize_point_rotation_system: entity does not have PointRotation component");
+        warn!(
+            "initialize_point_rotation_system: entity {:?} not found in q_point",
+            entity
+        );
         return;
     };
 
