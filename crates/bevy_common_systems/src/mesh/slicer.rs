@@ -1,3 +1,8 @@
+//! Mesh slicer utility for the Bevy Engine.
+//!
+//! TODO: Make sure the meshes generated here are working as expected with Bevy. (e.g if the
+//! generated mesh is empty or too small it might cause issues)
+
 use bevy::{
     asset::RenderAssetUsages,
     mesh::{Indices, PrimitiveTopology, VertexAttributeValues},

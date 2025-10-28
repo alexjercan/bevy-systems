@@ -1,3 +1,5 @@
+//! UI related modules
+
 pub mod status;
 
 pub mod prelude {

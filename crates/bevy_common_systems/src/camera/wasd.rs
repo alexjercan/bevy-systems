@@ -65,6 +65,10 @@ impl Plugin for WASDCameraPlugin {
         debug!("WASDCameraPlugin: build");
 
         app.add_observer(initialize_wasd_camera);
+
+        // NOTE: I am using PostUpdate here to ensure that the camera updates after the input was
+        // set by the user or other systems in the Update stage. Then the new transform will be
+        // available for the next frame.
         app.add_systems(
             PostUpdate,
             (update_target, update_state, sync_transform)

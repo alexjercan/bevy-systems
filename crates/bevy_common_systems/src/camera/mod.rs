@@ -1,3 +1,5 @@
+//! Camera related modules
+
 mod chase;
 mod post;
 mod skybox;

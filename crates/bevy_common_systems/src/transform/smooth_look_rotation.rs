@@ -1,3 +1,14 @@
+//! A Bevy plugin that provides smooth look rotation functionality for entities.
+//!
+//! SmoothLookRotation allows an entity to smoothly rotate to face a target angle around a
+//! specified axis. This is useful for creating smooth camera or object rotations
+//! based on user input or other dynamic targets.
+//!
+//! For example, you can set the axis to Vec3::Y to rotate around the Y-axis (yaw). Set a speed
+//! value of how fast the entity should rotate towards the target angle. Then you can use the
+//! [`SmoothLookRotationTarget`] component to specify the desired target angle in radians. And then
+//! get the current output angle from the [`SmoothLookRotationOutput`] component.
+
 use bevy::prelude::*;
 
 pub mod prelude {
@@ -61,6 +72,8 @@ impl Plugin for SmoothLookRotationPlugin {
 
         app.add_observer(initialize_smooth_look_system);
 
+        // NOTE: I am using PostUpdate here to ensure that this runs after any input or other
+        // systems that might modify the target angle.
         app.add_systems(
             PostUpdate,
             smooth_look_rotation_update_system.in_set(SmoothLookRotationSystems::Sync),

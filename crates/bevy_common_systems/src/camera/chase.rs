@@ -65,6 +65,9 @@ impl Plugin for ChaseCameraPlugin {
 
         app.add_observer(initialize_chase_camera);
 
+        // NOTE: I am using PostUpdate here to ensure that the camera updates after the input was
+        // set by the user or other systems in the Update stage. Then the new transform will be
+        // available in the next frame's Update stage.
         app.add_systems(
             PostUpdate,
             (

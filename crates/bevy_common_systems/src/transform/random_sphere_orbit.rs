@@ -1,4 +1,7 @@
-// TODO: Refactor to not apply the Transform directly, but rather have an output component
+//! Module implementing random spherical orbit behavior for entities in Bevy.
+//!
+//! The `RandomSphereOrbit` component allows an entity to orbit around a point on the surface of a
+//! sphere, randomly picking new target angles to move toward over time.
 
 use crate::meth::prelude::*;
 use bevy::prelude::*;

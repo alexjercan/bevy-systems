@@ -1,3 +1,8 @@
+//! Module for computing and storing world transforms in a transform chain.
+//!
+//! NOTE: This is a temporary fix until Bevy's GlobalTransform works as expected with avian3d.
+//! TODO: Figure out how to make GlobalTransform work properly and deprecate this module.
+
 use bevy::prelude::*;
 
 pub mod prelude {
@@ -67,6 +72,8 @@ impl Plugin for TransformChainWorldPlugin {
     fn build(&self, app: &mut App) {
         debug!("TransformChainWorldPlugin: build");
 
+        // TODO: I am using Update here because transforms are broken if I don't use Update. Need
+        // to investigate why stuff doesn't work prorperly with avian3d physics...
         app.add_systems(
             Update,
             cache_spawner_world.in_set(TransformChainWorldSystems::Sync),

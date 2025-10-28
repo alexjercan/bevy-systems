@@ -1,3 +1,5 @@
+//! A Plugin that sets up post processing with some default settings.
+
 use bevy::{core_pipeline::tonemapping::Tonemapping, post_process::bloom::Bloom, prelude::*};
 
 pub mod prelude {

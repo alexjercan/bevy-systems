@@ -1,3 +1,9 @@
+//! A Bevy plugin that enables point rotation based on input deltas.
+//!
+//! PointRotation allows an entity to be rotated based on input deltas, typically from mouse
+//! movement. The rotation is applied around the entity's local axes, allowing for intuitive
+//! control of the entity's orientation.
+
 use bevy::prelude::*;
 
 pub mod prelude {

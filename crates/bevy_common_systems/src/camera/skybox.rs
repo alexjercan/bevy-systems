@@ -1,3 +1,10 @@
+//! A Plugin that adds a skybox to a Bevy application.
+//!
+//! The skybox should be an image in a cubemap format. Basically you want to have 6 square images
+//! stacked vertically in a single image file. This plugin will reinterpret the image as a cubemap
+//! and set it up to be used as a skybox for the camera entity that has the `SkyboxConfig`
+//! component.
+
 use bevy::{
     core_pipeline::Skybox,
     prelude::*,

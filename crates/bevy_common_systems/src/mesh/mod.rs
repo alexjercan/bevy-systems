@@ -1,3 +1,5 @@
+//! Mesh utilities for Bevy games.
+
 mod slicer;
 
 pub mod prelude {

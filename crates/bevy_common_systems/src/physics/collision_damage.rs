@@ -1,4 +1,5 @@
 //! A Bevy plugin that applies damage to entities upon collision.
+//!
 //! TODO: Rename this from collision_damage to collision_impact or something like that
 
 use avian3d::prelude::*;

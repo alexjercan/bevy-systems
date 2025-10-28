@@ -1,4 +1,7 @@
 //! This module contains all the sections of a spaceship.
+//!
+//! TODO: I don't really like the use of generic stuff... rethink the spawner and projectile
+//! architecture.
 
 use bevy::prelude::*;
 

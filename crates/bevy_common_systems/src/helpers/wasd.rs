@@ -1,4 +1,10 @@
 //! WASD camera controller using bevy_enhanced_input for input handling.
+//!
+//! This should be used together with the [`WASDCamera`] component from the `bevy_common_systems`
+//! crate. It sets up input bindings for WASD movement, mouse look, and vertical movement
+//! (space and shift keys).
+//!
+//! TODO: Maybe add support for configurable keybindings in the future.
 
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;

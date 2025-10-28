@@ -1,3 +1,10 @@
+//! Sphere Orbit Component and Systems
+//!
+//! This module provides a `SphereOrbit` component that allows an entity to orbit around a point on
+//! the surface of a sphere. The input angles (theta and phi) can be controlled via the
+//! `SphereOrbitInput` component, and the resulting position is outputted in the `SphereOrbitOutput`
+//! component.
+
 use crate::meth::prelude::*;
 use bevy::prelude::*;
 

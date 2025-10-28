@@ -1,3 +1,12 @@
+//! Directional Sphere Orbit Component and Systems
+//!
+//! This module provides a component and associated systems to enable entities to orbit
+//! around a point on the surface of a sphere based on a directional input. We pass in the input
+//! direction vector, and the system will compute the corresponding position on the sphere's
+//! surface, that the vector intersects.
+//!
+//! The orbiting entity can smoothly transition to new directions based on the input.
+
 use crate::meth::prelude::*;
 use bevy::prelude::*;
 
@@ -23,9 +32,13 @@ pub struct DirectionalSphereOrbit {
     pub smoothing: f32,
 }
 
+/// The output position of the orbiting entity on the sphere surface.
 #[derive(Component, Clone, Debug, Default, Deref, DerefMut, Reflect)]
 pub struct DirectionalSphereOrbitOutput(pub Vec3);
 
+/// The input direction for the orbiting entity on the sphere surface.
+///
+/// TODO: Make this a [`Dir3`].
 #[derive(Component, Default, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
 pub struct DirectionalSphereOrbitInput(pub Vec3);
 
