@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use std::fmt::Debug;
 
+use crate::prelude::TransformChainWorld;
+
 pub mod prelude {
     pub use super::projectile_spawner;
     pub use super::ProjectileSpawnerConfig;
@@ -61,24 +63,20 @@ where
 
 /// Event to request spawning a projectile from a spawner entity.
 #[derive(Event, Debug, Clone)]
-pub struct SpawnProjectile {
+pub struct SpawnProjectile<T> {
     /// The spawner entity to spawn the projectile from.
     pub entity: Entity,
     /// Inherited Velocity to add to the spawned projectile.
     pub initial_velocity: Vec3,
-    /// Spawn position.
-    pub spawn_position: Vec3,
-    /// Spawn rotation.
-    pub spawn_rotation: Quat,
+    pub _marker: std::marker::PhantomData<T>,
 }
 
-impl Default for SpawnProjectile {
+impl<T> Default for SpawnProjectile<T> {
     fn default() -> Self {
         Self {
             entity: Entity::PLACEHOLDER,
             initial_velocity: Vec3::ZERO,
-            spawn_position: Vec3::ZERO,
-            spawn_rotation: Quat::IDENTITY,
+            _marker: std::marker::PhantomData,
         }
     }
 }
@@ -155,10 +153,14 @@ fn on_insert_projectile_spawner<T>(
 }
 
 fn on_spawn_projectile<T>(
-    spawn: On<SpawnProjectile>,
+    spawn: On<SpawnProjectile<T>>,
     mut commands: Commands,
     mut q_spawners: Query<
         (
+            // NOTE: Here I would like to use GlobalTransform, but for some reason, avian3d does
+            // not work properly with it...
+            // TODO: Use GlobalTransform when I figure out how to fix the issue with avian3d
+            &TransformChainWorld,
             &mut ProjectileSpawnerFireState,
             &ProjectileSpawnerProjectile<T>,
         ),
@@ -170,7 +172,7 @@ fn on_spawn_projectile<T>(
     let entity = spawn.entity;
     trace!("on_spawn_projectile: entity {:?}", entity);
 
-    let Ok((mut fire_state, projectile)) = q_spawners.get_mut(entity) else {
+    let Ok((spawner_transform, mut fire_state, projectile)) = q_spawners.get_mut(entity) else {
         warn!(
             "on_spawn_projectile: entity {:?} not found in q_spawners",
             entity
@@ -187,8 +189,8 @@ fn on_spawn_projectile<T>(
     );
 
     let projectile_transform = Transform {
-        translation: spawn.spawn_position,
-        rotation: spawn.spawn_rotation,
+        translation: spawner_transform.translation(),
+        rotation: spawner_transform.rotation(),
         ..default()
     };
 

@@ -533,16 +533,15 @@ fn on_shoot_spawn_projectile(
     let muzzle_exit_velocity = muzzle_transform.forward() * config.muzzle_speed;
     let linear_velocity = muzzle_exit_velocity + **lin_vel;
 
-    commands.trigger(SpawnProjectile {
+    commands.trigger(SpawnProjectile::<BulletProjectileConfig> {
         entity: **muzzle,
         initial_velocity: linear_velocity,
-        spawn_position: muzzle_transform.translation(),
-        spawn_rotation: muzzle_transform.rotation(),
+        ..default()
     });
 }
 
 fn on_spawn_projectile_effect(
-    spawn: On<SpawnProjectile>,
+    spawn: On<SpawnProjectile<BulletProjectileConfig>>,
     q_muzzle: Query<
         (&TransformChainWorld, &TurretSectionPartOf),
         With<TurretSectionBarrelMuzzleMarker>,
