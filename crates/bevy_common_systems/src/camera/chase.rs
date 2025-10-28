@@ -114,6 +114,7 @@ fn chase_camera_update_state_system(
     >,
 ) {
     let dt = time.delta_secs();
+
     for (chase, input, mut state) in q_camera.iter_mut() {
         let target_pos = input.anchor_pos;
         let desired_pos = target_pos

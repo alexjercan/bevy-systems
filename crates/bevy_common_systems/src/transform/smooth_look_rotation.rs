@@ -112,6 +112,7 @@ fn smooth_look_rotation_update_system(
     )>,
 ) {
     let dt = time.delta_secs();
+
     for (look, target, mut state) in &mut q_look {
         let angle_diff = **target - **state;
         let angle_diff = normalize_angle(angle_diff);

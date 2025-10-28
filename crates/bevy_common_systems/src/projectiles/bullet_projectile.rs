@@ -159,9 +159,10 @@ fn update_ray_projectiles(
     >,
     time: Res<Time>,
 ) {
+    let dt = time.delta_secs();
+
     for (velocity, mut transform) in &mut q_projectiles {
-        let distance = **velocity * time.delta_secs();
-        transform.translation += distance;
+        transform.translation += **velocity * dt;
     }
 }
 
