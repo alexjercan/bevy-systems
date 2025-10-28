@@ -206,9 +206,9 @@ mod turret {
         q_muzzle: Query<&TransformChainWorld, With<TurretSectionBarrelMuzzleMarker>>,
         mut gizmos: Gizmos,
     ) {
-        for barrel_transform in &q_muzzle {
-            let barrel_pos = barrel_transform.translation;
-            let barrel_dir = barrel_transform.rotation * Vec3::NEG_Z;
+        for muzzle_transform in &q_muzzle {
+            let barrel_pos = muzzle_transform.translation();
+            let barrel_dir = muzzle_transform.forward();
 
             let line_length = DEBUG_LINE_LENGTH;
             let line_end = barrel_pos + barrel_dir * line_length;

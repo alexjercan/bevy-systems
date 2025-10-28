@@ -236,7 +236,7 @@ fn insert_turret_section(
             }),
             TurretSectionBarrelMuzzleEffect(config.muzzle_effect.clone()),
             Transform::from_translation(config.muzzle_offset),
-            TransformChainWorldMarker,
+            TransformChainWorld::default(),
             Visibility::Inherited,
         ))
         .id();
@@ -247,9 +247,9 @@ fn insert_turret_section(
             TurretSectionRotatorBarrelMarker,
             TurretSectionPartOf(turret),
             TurretSectionMuzzleEntity(muzzle),
-            Transform::from_translation(config.barrel_offset),
             TurretSectionBarrelRenderMesh(config.render_mesh_barrel),
-            TransformChainWorldMarker,
+            Transform::from_translation(config.barrel_offset),
+            TransformChainWorld::default(),
             Visibility::Inherited,
         ))
         .add_child(muzzle)
@@ -282,7 +282,7 @@ fn insert_turret_section(
                 max: config.max_pitch,
             },
             Transform::from_translation(config.pitch_offset),
-            TransformChainWorldMarker,
+            TransformChainWorld::default(),
             Visibility::Inherited,
         ))
         .add_child(rotator_pitch)
@@ -314,7 +314,7 @@ fn insert_turret_section(
                 ..default()
             },
             Transform::from_translation(config.yaw_offset),
-            TransformChainWorldMarker,
+            TransformChainWorld::default(),
             Visibility::Inherited,
         ))
         .add_child(rotator_yaw)
@@ -355,7 +355,7 @@ fn update_turret_target_yaw_system(
     for (mut target, yaw_chain, TurretSectionPartOf(turret), TurretSectionMuzzleEntity(muzzle)) in
         &mut q_rotator_yaw_base
     {
-        let Ok(muzzle_chain) = q_muzzle.get(*muzzle) else {
+        let Ok(muzzle_transform) = q_muzzle.get(*muzzle) else {
             warn!(
                 "update_turret_target_yaw_system: entity {:?} not found in q_muzzle",
                 *muzzle
@@ -375,11 +375,11 @@ fn update_turret_target_yaw_system(
             continue;
         };
 
-        let world_to_yaw_base = yaw_chain.matrix.inverse();
+        let world_to_yaw_base = yaw_chain.to_matrix().inverse();
 
         let target_pos = target_input;
-        let barrel_pos = muzzle_chain.translation;
-        let barrel_dir = muzzle_chain.rotation * Vec3::NEG_Z;
+        let barrel_pos = muzzle_transform.translation();
+        let barrel_dir = muzzle_transform.forward().into();
         if target_pos == barrel_pos {
             continue;
         }
@@ -416,7 +416,7 @@ fn update_turret_target_pitch_system(
     for (mut target, pitch_chain, TurretSectionPartOf(turret), TurretSectionMuzzleEntity(muzzle)) in
         &mut q_rotator_pitch_base
     {
-        let Ok(muzzle_chain) = q_muzzle.get(*muzzle) else {
+        let Ok(muzzle_transform) = q_muzzle.get(*muzzle) else {
             warn!(
                 "update_turret_target_pitch_system: entity {:?} not found in q_muzzle",
                 *muzzle
@@ -436,11 +436,11 @@ fn update_turret_target_pitch_system(
             continue;
         };
 
-        let world_to_pitch_base = pitch_chain.matrix.inverse();
+        let world_to_pitch_base = pitch_chain.to_matrix().inverse();
 
         let target_pos = target_input;
-        let barrel_pos = muzzle_chain.translation;
-        let barrel_dir = muzzle_chain.rotation * Vec3::NEG_Z;
+        let barrel_pos = muzzle_transform.translation();
+        let barrel_dir = muzzle_transform.forward().into();
         if target_pos == barrel_pos {
             continue;
         }
@@ -524,12 +524,7 @@ fn on_shoot_spawn_projectile(
         return;
     };
 
-    let Ok(TransformChainWorld {
-        rotation,
-        translation,
-        ..
-    }) = q_muzzle.get(**muzzle)
-    else {
+    let Ok(muzzle_transform) = q_muzzle.get(**muzzle) else {
         warn!(
             "on_shoot_spawn_projectile: entity {:?} not found in q_muzzle",
             **muzzle
@@ -537,14 +532,14 @@ fn on_shoot_spawn_projectile(
         return;
     };
 
-    let muzzle_exit_velocity = rotation * (Vec3::NEG_Z * config.muzzle_speed);
+    let muzzle_exit_velocity = muzzle_transform.forward() * config.muzzle_speed;
     let linear_velocity = muzzle_exit_velocity + **lin_vel;
 
     commands.trigger(SpawnProjectile {
         entity: **muzzle,
         initial_velocity: linear_velocity,
-        spawn_position: *translation,
-        spawn_rotation: *rotation,
+        spawn_position: muzzle_transform.translation(),
+        spawn_rotation: muzzle_transform.rotation(),
     });
 }
 
@@ -597,7 +592,7 @@ fn on_spawn_projectile_effect(
         return;
     };
 
-    let normal = muzzle_transform.rotation * Vec3::NEG_Z;
+    let normal = muzzle_transform.forward();
 
     let p: f32 = rand::random();
 

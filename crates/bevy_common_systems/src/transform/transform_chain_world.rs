@@ -2,22 +2,57 @@ use bevy::prelude::*;
 
 pub mod prelude {
     pub use super::TransformChainWorld;
-    pub use super::TransformChainWorldMarker;
     pub use super::TransformChainWorldPlugin;
     pub use super::TransformChainWorldSystems;
 }
 
-/// Marker component for entities that should have their world transforms computed via going up the
-/// hierarchy chain.
-#[derive(Component, Clone, Copy, Debug)]
-pub struct TransformChainWorldMarker;
-
 #[derive(Component, Clone, Copy, Debug)]
 pub struct TransformChainWorld {
-    pub scale: Vec3,
-    pub rotation: Quat,
-    pub translation: Vec3,
-    pub matrix: Mat4,
+    scale: Vec3,
+    rotation: Quat,
+    translation: Vec3,
+    matrix: Mat4,
+}
+
+impl Default for TransformChainWorld {
+    fn default() -> Self {
+        Self {
+            scale: Vec3::ONE,
+            rotation: Quat::IDENTITY,
+            translation: Vec3::ZERO,
+            matrix: Mat4::IDENTITY,
+        }
+    }
+}
+
+/// NOTE: Added some methods that are also on GlobalTransform to make it easier to replace once the
+/// GlobalTransform works as expected with avian3d...
+impl TransformChainWorld {
+    #[inline]
+    pub fn translation(&self) -> Vec3 {
+        self.translation
+    }
+
+    #[inline]
+    pub fn rotation(&self) -> Quat {
+        self.rotation
+    }
+
+    #[inline]
+    pub fn to_matrix(&self) -> Mat4 {
+        self.matrix
+    }
+
+    #[inline]
+    pub fn local_z(&self) -> Dir3 {
+        // Quat * unit vector is length 1
+        Dir3::new_unchecked(self.rotation * Vec3::Z)
+    }
+
+    #[inline]
+    pub fn forward(&self) -> Dir3 {
+        -self.local_z()
+    }
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -25,14 +60,12 @@ pub enum TransformChainWorldSystems {
     Sync,
 }
 
-/// Plugin to compute world transforms for entities with TransformChainWorldMarker.
+/// Plugin to compute world transforms for entities with TransformChainWorld.
 pub struct TransformChainWorldPlugin;
 
 impl Plugin for TransformChainWorldPlugin {
     fn build(&self, app: &mut App) {
         debug!("TransformChainWorldPlugin: build");
-
-        app.add_observer(initialize_cache_spawner_world);
 
         app.add_systems(
             Update,
@@ -41,24 +74,9 @@ impl Plugin for TransformChainWorldPlugin {
     }
 }
 
-fn initialize_cache_spawner_world(
-    insert: On<Insert, TransformChainWorldMarker>,
-    mut commands: Commands,
-) {
-    let entity = insert.entity;
-    trace!("initialize_cache_spawner_world: entity {:?}", entity);
-
-    commands.entity(entity).insert(TransformChainWorld {
-        scale: Vec3::ONE,
-        rotation: Quat::IDENTITY,
-        translation: Vec3::ZERO,
-        matrix: Mat4::IDENTITY,
-    });
-}
-
 fn cache_spawner_world(
     q_transform: Query<(&Transform, Option<&ChildOf>)>,
-    mut q_chain: Query<(Entity, &mut TransformChainWorld), With<TransformChainWorldMarker>>,
+    mut q_chain: Query<(Entity, &mut TransformChainWorld)>,
 ) {
     for (entity, mut chain) in &mut q_chain {
         let mut mats = Vec::<Mat4>::new();
