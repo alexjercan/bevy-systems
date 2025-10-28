@@ -14,7 +14,9 @@ impl Plugin for SimulationPlugin {
     fn build(&self, app: &mut App) {
         // TODO: Might want to use observers more for spawning things to avoid ordering issues
         app.add_observer(setup_hud_velocity);
+        app.add_observer(remove_hud_velocity);
         app.add_observer(setup_hud_health);
+        app.add_observer(remove_hud_health);
 
         app.add_systems(
             OnEnter(super::GameStates::Simulation),
@@ -85,6 +87,26 @@ fn setup_hud_velocity(
     ));
 }
 
+fn remove_hud_velocity(
+    remove: On<Remove, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    q_hud: Query<(Entity, &VelocityHudTargetEntity), With<VelocityHudMarker>>,
+) {
+    let entity = remove.entity;
+    debug!(
+        "PlayerSpaceshipMarker removed to entity {:?}, removing velocity HUD.",
+        entity
+    );
+
+    for (hud_entity, target) in &q_hud {
+        if let Some(target_entity) = **target {
+            if target_entity == entity {
+                commands.entity(hud_entity).despawn();
+            }
+        }
+    }
+}
+
 fn setup_hud_health(
     add: On<Add, PlayerSpaceshipMarker>,
     mut commands: Commands,
@@ -110,6 +132,26 @@ fn setup_hud_health(
             target: Some(spaceship),
         }),
     ));
+}
+
+fn remove_hud_health(
+    remove: On<Remove, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    q_hud: Query<(Entity, &HealthHudTargetEntity), With<HealthHudMarker>>,
+) {
+    let entity = remove.entity;
+    debug!(
+        "PlayerSpaceshipMarker removed to entity {:?}, removing health HUD.",
+        entity
+    );
+
+    for (hud_entity, target) in &q_hud {
+        if let Some(target_entity) = **target {
+            if target_entity == entity {
+                commands.entity(hud_entity).despawn();
+            }
+        }
+    }
 }
 
 fn setup_camera_controller(mut commands: Commands, game_assets: Res<GameAssets>) {
