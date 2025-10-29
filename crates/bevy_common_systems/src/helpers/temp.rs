@@ -76,7 +76,7 @@ fn update_temp_entities(
 
         if temp_state.is_finished() {
             commands.entity(entity).despawn();
-            debug!("update_temp_entities: despawn entity {:?}", entity);
+            trace!("update_temp_entities: despawn entity {:?}", entity);
         }
     }
 }

@@ -3,9 +3,7 @@
 use bevy::prelude::*;
 
 pub mod inspector;
-pub mod physics;
-pub mod spawner;
-pub mod turret;
+pub mod sections;
 pub mod wireframe;
 
 pub mod prelude {
@@ -31,15 +29,17 @@ impl Plugin for DebugPlugin {
         app.insert_resource(DebugEnabled(true));
 
         app.add_plugins(inspector::InpsectorDebugPlugin);
-        app.add_plugins(spawner::SpawnerDebugPlugin);
         app.add_plugins(wireframe::WireframeDebugPlugin);
-        app.add_plugins(turret::TurretSectionDebugPlugin);
-        app.add_plugins(physics::PhysicsDebugPlugin);
+        app.add_plugins(sections::SectionsDebugPlugin);
 
         app.add_systems(Update, toggle_debug_mode);
 
         app.configure_sets(
             Update,
+            DebugSystems.run_if(resource_equals(DebugEnabled(true))),
+        );
+        app.configure_sets(
+            PostUpdate,
             DebugSystems.run_if(resource_equals(DebugEnabled(true))),
         );
     }

@@ -574,11 +574,8 @@ fn on_click_spaceship_section(
                         muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
                         fire_rate: 100.0,
                         muzzle_speed: 100.0,
-                        projectile: BulletProjectileConfig {
-                            lifetime: 5.0,
-                            mass: 0.1,
-                            render_mesh: None,
-                        },
+                        projectile_lifetime: 5.0,
+                        projectile_mass: 0.1,
                         ..default()
                     }),
                     Transform {

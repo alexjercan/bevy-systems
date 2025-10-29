@@ -4006,6 +4006,7 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_mod_debugdump",
+ "itertools 0.14.0",
  "nova_gameplay",
 ]
 

@@ -81,7 +81,9 @@ impl AppBuilder {
         self.app
             .add_plugins(bevy_enhanced_input::EnhancedInputPlugin);
         self.app.add_plugins(GameAssetsPlugin);
-        self.app.add_plugins(CorePlugin { render: self.render });
+        self.app.add_plugins(CorePlugin {
+            render: self.render,
+        });
 
         // Add default game plugins if none were provided
         if self.use_default_plugins {
@@ -136,7 +138,10 @@ impl Plugin for CorePlugin {
         // We need to enable the physics plugins to have access to RigidBody and other components.
         // We will also disable gravity for this example, since we are in space, duh.
         app.add_plugins(
-            PhysicsPlugins::default().set(PhysicsInterpolationPlugin::interpolate_all()),
+            PhysicsPlugins::default()
+                .build(),
+                // .set(PhysicsInterpolationPlugin::interpolate_all()),
+                // .disable::<IslandSleepingPlugin>(),
         );
         app.add_plugins(PhysicsPickingPlugin);
         app.insert_resource(Gravity::ZERO);
@@ -164,11 +169,8 @@ impl Plugin for CorePlugin {
         app.add_plugins(bevy_common_systems::prelude::DirectionalSphereOrbitPlugin);
         // Other helper plugins
         app.add_plugins(bevy_common_systems::prelude::TempEntityPlugin);
-        app.add_plugins(bevy_common_systems::prelude::TransformChainWorldPlugin);
         // Core Mechanics
-        app.add_plugins(bevy_common_systems::prelude::ProjectilePlugin {
-            render: self.render,
-        });
+        app.add_plugins(bevy_common_systems::prelude::BulletProjectilePlugin);
         app.add_plugins(bevy_common_systems::prelude::CollisionDamagePlugin);
         app.add_plugins(bevy_common_systems::prelude::HealthPlugin);
 

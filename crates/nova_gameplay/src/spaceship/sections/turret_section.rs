@@ -53,8 +53,12 @@ pub struct TurretSectionConfig {
     pub fire_rate: f32,
     /// The muzzle speed of the turret in units per second.
     pub muzzle_speed: f32,
-    /// The projectile configuration for the bullets fired by the turret.
-    pub projectile: BulletProjectileConfig,
+    /// The projectile lifetime
+    pub projectile_lifetime: f32,
+    /// The projectile mass
+    pub projectile_mass: f32,
+    /// The projectile mesh,
+    pub projectile_render_mesh: Option<Handle<Scene>>,
     /// The muzzle particle effect when shooting.
     pub muzzle_effect: Option<Handle<EffectAsset>>,
 }
@@ -77,11 +81,9 @@ impl Default for TurretSectionConfig {
             muzzle_offset: Vec3::new(0.0, 0.0, -0.5),
             fire_rate: 100.0,
             muzzle_speed: 100.0,
-            projectile: BulletProjectileConfig {
-                lifetime: 5.0,
-                mass: 0.1,
-                render_mesh: None,
-            },
+            projectile_lifetime: 5.0,
+            projectile_mass: 0.1,
+            projectile_render_mesh: None,
             muzzle_effect: None,
         }
     }
@@ -123,6 +125,9 @@ pub struct TurretSectionTargetInput(pub Option<Vec3>);
 struct TurretSectionPartOf(pub Entity);
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+struct BulletProjectileRenderMesh(Option<Handle<Scene>>);
+
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 struct TurretSectionBaseRenderMesh(Option<Handle<Scene>>);
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
@@ -136,6 +141,12 @@ struct TurretSectionBarrelRenderMesh(Option<Handle<Scene>>);
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 struct TurretSectionConfigHelper(TurretSectionConfig);
+
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+pub struct TurretSectionBarrelFireState(pub Timer);
+
+#[derive(Component, Clone, Debug, Reflect)]
+struct TurretBulletProjectileMarker;
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 struct TurretSectionBarrelMuzzleEffect(Option<Handle<EffectAsset>>);
@@ -157,6 +168,9 @@ struct TurretSectionRotatorPitchMarker;
 
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 struct TurretSectionRotatorBarrelMarker;
+
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+struct TurretSectionBarrelMuzzleEffectMarker;
 
 /// The entity that represents the muzzle of the turret.
 #[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
@@ -180,28 +194,36 @@ impl Plugin for TurretSectionPlugin {
             app.add_observer(insert_turret_yaw_rotator_render);
             app.add_observer(insert_turret_pitch_rotator_render);
             app.add_observer(insert_turret_barrel_render);
+            app.add_observer(insert_projectile_render);
 
             // FIXME: For now we disable particle effects on wasm because it's not working
             #[cfg(not(target_family = "wasm"))]
             app.add_observer(insert_turret_barrel_muzzle_effect);
+
+            // FIXME: For now we disable particle effects on wasm because it's not working
+            #[cfg(not(target_family = "wasm"))]
+            app.add_observer(on_projectile_marker_effect);
         }
 
         app.add_observer(on_shoot_spawn_projectile);
-        app.add_observer(on_spawn_projectile_effect);
 
         app.add_systems(
             Update,
             (
-                (
-                    update_turret_target_yaw_system,
-                    update_turret_target_pitch_system,
-                )
-                    .after(TransformChainWorldSystems::Sync),
-                (
-                    sync_turret_rotator_yaw_system,
-                    sync_turret_rotator_pitch_system,
-                ),
+                update_barrel_fire_state,
+                sync_turret_rotator_yaw_system,
+                sync_turret_rotator_pitch_system,
             )
+                .in_set(SpaceshipSystems::Sections),
+        );
+
+        app.add_systems(
+            PostUpdate,
+            (
+                update_turret_target_yaw_system,
+                update_turret_target_pitch_system,
+            )
+                .after(TransformSystems::Propagate)
                 .in_set(SpaceshipSystems::Sections),
         );
     }
@@ -224,19 +246,18 @@ fn insert_turret_section(
     };
     let config = (**config).clone();
 
+    let interval = 1.0 / config.fire_rate;
+    let mut timer = Timer::from_seconds(interval, TimerMode::Once);
+    timer.finish(); // Ready to fire immediately
+
     let muzzle = commands
         .spawn((
             Name::new("Turret Barrel Muzzle"),
             TurretSectionBarrelMuzzleMarker,
             TurretSectionPartOf(turret),
-            projectile_spawner(ProjectileSpawnerConfig {
-                fire_rate: config.fire_rate,
-                projectile: config.projectile,
-                ..default()
-            }),
+            TurretSectionBarrelFireState(timer),
             TurretSectionBarrelMuzzleEffect(config.muzzle_effect.clone()),
             Transform::from_translation(config.muzzle_offset),
-            TransformChainWorld::default(),
             Visibility::Inherited,
         ))
         .id();
@@ -249,7 +270,6 @@ fn insert_turret_section(
             TurretSectionMuzzleEntity(muzzle),
             TurretSectionBarrelRenderMesh(config.render_mesh_barrel),
             Transform::from_translation(config.barrel_offset),
-            TransformChainWorld::default(),
             Visibility::Inherited,
         ))
         .add_child(muzzle)
@@ -282,7 +302,6 @@ fn insert_turret_section(
                 max: config.max_pitch,
             },
             Transform::from_translation(config.pitch_offset),
-            TransformChainWorld::default(),
             Visibility::Inherited,
         ))
         .add_child(rotator_pitch)
@@ -314,7 +333,6 @@ fn insert_turret_section(
                 ..default()
             },
             Transform::from_translation(config.yaw_offset),
-            TransformChainWorld::default(),
             Visibility::Inherited,
         ))
         .add_child(rotator_yaw)
@@ -339,18 +357,27 @@ fn insert_turret_section(
         .add_child(rotator_base);
 }
 
+fn update_barrel_fire_state(
+    mut q_barrel: Query<&mut TurretSectionBarrelFireState, With<TurretSectionBarrelMuzzleMarker>>,
+    time: Res<Time>,
+) {
+    for mut fire_state in &mut q_barrel {
+        fire_state.tick(time.delta());
+    }
+}
+
 fn update_turret_target_yaw_system(
     q_turret: Query<&TurretSectionTargetInput, With<TurretSectionMarker>>,
     mut q_rotator_yaw_base: Query<
         (
             &mut SmoothLookRotationTarget,
-            &TransformChainWorld,
+            &GlobalTransform,
             &TurretSectionPartOf,
             &TurretSectionMuzzleEntity,
         ),
         With<TurretSectionRotatorYawBaseMarker>,
     >,
-    q_muzzle: Query<&TransformChainWorld, With<TurretSectionBarrelMuzzleMarker>>,
+    q_muzzle: Query<&GlobalTransform, With<TurretSectionBarrelMuzzleMarker>>,
 ) {
     for (mut target, yaw_chain, TurretSectionPartOf(turret), TurretSectionMuzzleEntity(muzzle)) in
         &mut q_rotator_yaw_base
@@ -405,13 +432,13 @@ fn update_turret_target_pitch_system(
     mut q_rotator_pitch_base: Query<
         (
             &mut SmoothLookRotationTarget,
-            &TransformChainWorld,
+            &GlobalTransform,
             &TurretSectionPartOf,
             &TurretSectionMuzzleEntity,
         ),
         With<TurretSectionRotatorPitchBaseMarker>,
     >,
-    q_muzzle: Query<&TransformChainWorld, With<TurretSectionBarrelMuzzleMarker>>,
+    q_muzzle: Query<&GlobalTransform, With<TurretSectionBarrelMuzzleMarker>>,
 ) {
     for (mut target, pitch_chain, TurretSectionPartOf(turret), TurretSectionMuzzleEntity(muzzle)) in
         &mut q_rotator_pitch_base
@@ -505,7 +532,13 @@ fn on_shoot_spawn_projectile(
         ),
         With<TurretSectionMarker>,
     >,
-    q_muzzle: Query<&TransformChainWorld, With<ProjectileSpawnerOfMarker<BulletProjectileConfig>>>,
+    mut q_muzzle: Query<
+        &mut TurretSectionBarrelFireState,
+        With<TurretSectionBarrelMuzzleMarker>,
+    >,
+    // NOTE: We are using TransformHelper here because we need to compute the global transform;
+    // And it should be fine, since it will not be called frequently.
+    transform_helper: TransformHelper,
 ) {
     let turret = shoot.entity;
     let Ok((muzzle, ChildOf(spaceship), config)) = q_turret.get(turret) else {
@@ -524,7 +557,7 @@ fn on_shoot_spawn_projectile(
         return;
     };
 
-    let Ok(muzzle_transform) = q_muzzle.get(**muzzle) else {
+    let Ok(mut fire_state) = q_muzzle.get_mut(**muzzle) else {
         warn!(
             "on_shoot_spawn_projectile: entity {:?} not found in q_muzzle",
             **muzzle
@@ -532,61 +565,86 @@ fn on_shoot_spawn_projectile(
         return;
     };
 
+    if !fire_state.is_finished() {
+        return;
+    }
+
+    let Ok(muzzle_transform) = transform_helper.compute_global_transform(**muzzle) else {
+        warn!(
+            "on_shoot_spawn_projectile: entity {:?} global transform not found",
+            **muzzle
+        );
+        return;
+    };
+
     let muzzle_exit_velocity = muzzle_transform.forward() * config.muzzle_speed;
     let linear_velocity = muzzle_exit_velocity + **lin_vel;
+    let projectile_transform = Transform {
+        translation: muzzle_transform.translation(),
+        rotation: muzzle_transform.rotation(),
+        ..Default::default()
+    };
 
-    commands.trigger(SpawnProjectile::<BulletProjectileConfig> {
-        entity: **muzzle,
-        initial_velocity: linear_velocity,
-        ..default()
-    });
+    commands.spawn((
+        Name::new("Projectile"),
+        TurretBulletProjectileMarker,
+        TurretSectionPartOf(turret),
+        TurretSectionMuzzleEntity(**muzzle),
+        projectile_transform,
+        bullet_projectile(BulletProjectileConfig {
+            lifetime: config.projectile_lifetime,
+            mass: config.projectile_mass,
+            velocity: linear_velocity,
+        }),
+        BulletProjectileRenderMesh(config.projectile_render_mesh.clone()),
+        Visibility::Visible,
+    ));
+
+    // Reset the fire state timer
+    fire_state.reset();
 }
 
-fn on_spawn_projectile_effect(
-    spawn: On<SpawnProjectile<BulletProjectileConfig>>,
-    q_muzzle: Query<
-        (&TransformChainWorld, &TurretSectionPartOf),
-        With<TurretSectionBarrelMuzzleMarker>,
-    >,
+fn on_projectile_marker_effect(
+    add: On<Add, TurretBulletProjectileMarker>,
+    q_projectile: Query<&TurretSectionMuzzleEntity, With<TurretBulletProjectileMarker>>,
     mut q_effect: Query<
         (&mut EffectProperties, &mut EffectSpawner, &ChildOf),
-        Without<TurretSectionBarrelMuzzleMarker>,
+        (
+            With<TurretSectionBarrelMuzzleEffectMarker>,
+            Without<TurretSectionBarrelMuzzleMarker>,
+        ),
     >,
-    q_turret: Query<&ChildOf, With<TurretSectionMarker>>,
-    q_spaceship: Query<(&LinearVelocity, &AngularVelocity), With<SpaceshipRootMarker>>,
+    // NOTE: We are using TransformHelper here because we need to compute the global transform;
+    // And it should be fine, since it will not be called frequently.
+    transform_helper: TransformHelper,
 ) {
-    let entity = spawn.entity;
-    let Ok((muzzle_transform, TurretSectionPartOf(turret))) = q_muzzle.get(entity) else {
+    let projectile = add.entity;
+    trace!("on_projectile_marker: entity {:?}", projectile);
+
+    let Ok(muzzle) = q_projectile.get(projectile) else {
         warn!(
-            "on_spawn_projectile_effect: entity {:?} not found in q_muzzle",
-            entity
+            "on_projectile_marker: entity {:?} not found in q_projectile",
+            projectile
         );
         return;
     };
 
-    let Ok(ChildOf(spaceship)) = q_turret.get(*turret) else {
+    let Ok(muzzle_transform) = transform_helper.compute_global_transform(**muzzle) else {
         warn!(
-            "on_spawn_projectile_effect: turret entity {:?} not found in q_turret",
-            *turret
+            "on_projectile_marker_effect: entity {:?} global transform not found",
+            **muzzle
         );
         return;
     };
 
-    let Ok((lin_vel, _ang_vel)) = q_spaceship.get(*spaceship) else {
-        warn!(
-            "on_spawn_projectile_effect: entity {:?} not found in q_spaceship",
-            *spaceship
-        );
-        return;
-    };
-
+    // Spawn the effect muzzle
     let Some((mut properties, mut effect_spawner, _)) = q_effect
         .iter_mut()
-        .find(|(_, _, &ChildOf(parent))| parent == entity)
+        .find(|(_, _, &ChildOf(parent))| parent == **muzzle)
     else {
         warn!(
-            "on_spawn_projectile_effect: entity {:?} not found in q_effect",
-            entity
+            "on_shoot_spawn_projectile: effect for muzzle {:?} not found",
+            **muzzle
         );
         return;
     };
@@ -621,11 +679,46 @@ fn on_spawn_projectile_effect(
     let normal = normal.normalize();
     properties.set("normal", normal.into());
 
-    let base_velocity = **lin_vel;
+    let base_velocity = Vec3::ZERO;
     properties.set("base_velocity", base_velocity.into());
 
     // Spawn the particles
     effect_spawner.reset();
+}
+
+fn insert_projectile_render(
+    add: On<Add, BulletProjectileMarker>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    q_render_mesh: Query<&BulletProjectileRenderMesh>,
+) {
+    let entity = add.entity;
+    trace!("insert_projectile_render: entity {:?}", entity);
+
+    let Ok(render_mesh) = q_render_mesh.get(entity) else {
+        warn!(
+            "insert_projectile_render: entity {:?} not found in q_render_mesh",
+            entity
+        );
+        return;
+    };
+
+    match &**render_mesh {
+        Some(scene_handle) => {
+            commands.entity(entity).insert((children![(
+                Name::new("Bullet Projectile Render"),
+                SceneRoot(scene_handle.clone()),
+            ),],));
+        }
+        None => {
+            commands.entity(entity).insert((children![(
+                Name::new("Bullet Projectile Render"),
+                Mesh3d(meshes.add(Cuboid::new(0.05, 0.05, 0.3))),
+                MeshMaterial3d(materials.add(Color::srgb(1.0, 0.9, 0.2))),
+            ),],));
+        }
+    }
 }
 
 fn insert_turret_section_render(
@@ -911,6 +1004,7 @@ fn insert_turret_barrel_muzzle_effect(
         Some(effect) => {
             commands.entity(entity).insert((children![(
                 Name::new("Muzzle Effect"),
+                TurretSectionBarrelMuzzleEffectMarker,
                 ParticleEffect::new(effect.clone()),
                 EffectProperties::default(),
             ),],));
@@ -987,6 +1081,7 @@ fn insert_turret_barrel_muzzle_effect(
 
             commands.entity(entity).insert((children![(
                 Name::new("Muzzle Effect"),
+                TurretSectionBarrelMuzzleEffectMarker,
                 ParticleEffect::new(effect),
                 EffectProperties::default(),
             ),],));

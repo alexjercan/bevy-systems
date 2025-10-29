@@ -12,8 +12,10 @@ pub mod prelude {
     pub use super::BulletProjectileConfig;
     pub use super::BulletProjectileHit;
     pub use super::BulletProjectileMarker;
+    pub use super::BulletProjectileMass;
     pub use super::BulletProjectilePlugin;
     pub use super::BulletProjectileSystems;
+    pub use super::BulletProjectileVelocity;
 }
 
 /// Configuration for a bullet projectile.
@@ -23,8 +25,8 @@ pub struct BulletProjectileConfig {
     pub lifetime: f32,
     /// The mass of the bullet projectile.
     pub mass: f32,
-    /// Optional render mesh for the projectile.
-    pub render_mesh: Option<Handle<Scene>>,
+    /// The linear velocity of the bullet projectile.
+    pub velocity: Vec3,
 }
 
 impl Default for BulletProjectileConfig {
@@ -32,7 +34,7 @@ impl Default for BulletProjectileConfig {
         Self {
             lifetime: 5.0,
             mass: 0.1,
-            render_mesh: None,
+            velocity: Vec3::ZERO,
         }
     }
 }
@@ -45,9 +47,9 @@ pub struct BulletProjectileMarker;
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct BulletProjectileMass(pub f32);
 
-/// Render mesh for the bullet projectile.
+/// Velocity of the bullet projectile.
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
-pub struct BulletProjectileRenderMesh(pub Option<Handle<Scene>>);
+pub struct BulletProjectileVelocity(pub Vec3);
 
 /// Previous position of the bullet projectile for sweep collision detection.
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
@@ -59,15 +61,9 @@ pub fn bullet_projectile(config: BulletProjectileConfig) -> impl Bundle {
         BulletProjectileMarker,
         TempEntity(config.lifetime),
         BulletProjectileMass(config.mass),
-        BulletProjectileRenderMesh(config.render_mesh),
+        BulletProjectileVelocity(config.velocity),
         BulletProjectilePrev(None),
     )
-}
-
-impl super::ProjectileBundle for BulletProjectileConfig {
-    fn projectile_bundle(&self) -> impl Bundle {
-        bullet_projectile(self.clone())
-    }
 }
 
 /// Message sent when a bullet projectile hits an entity.
@@ -93,69 +89,23 @@ pub enum BulletProjectileSystems {
 
 /// A plugin that enables the BulletProjectile component and its related systems.
 #[derive(Default)]
-pub struct BulletProjectilePlugin {
-    pub render: bool,
-}
+pub struct BulletProjectilePlugin;
 
 impl Plugin for BulletProjectilePlugin {
     fn build(&self, app: &mut App) {
         debug!("BulletProjectilePlugin: build");
 
         app.add_systems(
-            Update,
-            update_ray_projectiles.in_set(BulletProjectileSystems::Sync),
-        );
-
-        app.add_systems(
             FixedUpdate,
-            update_sweep_collisions.in_set(BulletProjectileSystems::Sync),
+            (update_ray_projectiles, update_sweep_collisions).in_set(BulletProjectileSystems::Sync),
         );
-
-        if self.render {
-            app.add_observer(insert_projectile_render);
-        }
-    }
-}
-
-fn insert_projectile_render(
-    add: On<Add, BulletProjectileMarker>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    q_render_mesh: Query<&BulletProjectileRenderMesh>,
-) {
-    let entity = add.entity;
-    trace!("insert_projectile_render: entity {:?}", entity);
-
-    let Ok(render_mesh) = q_render_mesh.get(entity) else {
-        warn!(
-            "insert_projectile_render: entity {:?} not found in q_render_mesh",
-            entity
-        );
-        return;
-    };
-
-    match &**render_mesh {
-        Some(scene_handle) => {
-            commands.entity(entity).insert((children![(
-                Name::new("Bullet Projectile Render"),
-                SceneRoot(scene_handle.clone()),
-            ),],));
-        }
-        None => {
-            commands.entity(entity).insert((children![(
-                Name::new("Bullet Projectile Render"),
-                Mesh3d(meshes.add(Cuboid::new(0.05, 0.05, 0.3))),
-                MeshMaterial3d(materials.add(Color::srgb(1.0, 0.9, 0.2))),
-            ),],));
-        }
     }
 }
 
 fn update_ray_projectiles(
     mut q_projectiles: Query<
-        (&super::ProjectileVelocity, &mut Transform),
-        With<super::ProjectileMarker>,
+        (&BulletProjectileVelocity, &mut Transform),
+        With<BulletProjectileMarker>,
     >,
     time: Res<Time>,
 ) {
@@ -172,17 +122,17 @@ fn update_sweep_collisions(
     mut q_projectiles: Query<
         (
             Entity,
-            &mut Transform,
-            &mut BulletProjectilePrev,
-            &super::ProjectileVelocity,
+            &Transform,
+            &BulletProjectileVelocity,
             &BulletProjectileMass,
+            &mut BulletProjectilePrev,
         ),
-        With<super::ProjectileMarker>,
+        With<BulletProjectileMarker>,
     >,
 ) {
     let filter = SpatialQueryFilter::default();
 
-    for (entity, transform, mut prev, velocity, mass) in &mut q_projectiles {
+    for (entity, transform, velocity, mass, mut prev) in &mut q_projectiles {
         if prev.is_none() {
             **prev = Some(transform.translation);
             continue;

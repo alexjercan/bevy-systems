@@ -1,3 +1,4 @@
+use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_inspector_egui::{
     bevy_egui,
@@ -27,6 +28,19 @@ impl Plugin for InpsectorDebugPlugin {
         // TODO: Ideally we would have an extra camera for the inspector only, but for now we
         // will just use the primary camera.
         app.add_observer(on_add_camera);
+
+        app.add_plugins((
+            avian3d::prelude::PhysicsDebugPlugin::default(),
+            // Add the `PhysicsDiagnosticsPlugin` to write physics diagnostics
+            // to the `DiagnosticsStore` resource in `bevy_diagnostic`.
+            // Requires the `bevy_diagnostic` feature.
+            PhysicsDiagnosticsPlugin,
+            // Add the `PhysicsDiagnosticsUiPlugin` to display physics diagnostics
+            // in a debug UI. Requires the `diagnostic_ui` feature.
+            PhysicsDiagnosticsUiPlugin,
+        ));
+
+        app.add_systems(Update, (update_physics_gizmos, update_physics_ui));
     }
 }
 
@@ -60,4 +74,22 @@ fn on_add_camera(add: On<Add, Camera>, mut commands: Commands) {
     debug!("on_add_camera: entity {:?}", entity);
 
     commands.entity(entity).insert(PrimaryEguiContext);
+}
+
+fn update_physics_gizmos(debug: Res<super::DebugEnabled>, mut store: ResMut<GizmoConfigStore>) {
+    if debug.is_changed() {
+        store
+            .config_mut::<avian3d::prelude::PhysicsGizmos>()
+            .0
+            .enabled = **debug;
+    }
+}
+
+fn update_physics_ui(
+    debug: Res<super::DebugEnabled>,
+    mut settings: ResMut<PhysicsDiagnosticsUiSettings>,
+) {
+    if debug.is_changed() {
+        settings.enabled = **debug;
+    }
 }
