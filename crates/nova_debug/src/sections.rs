@@ -66,10 +66,10 @@ fn draw_turret_bullet_spawner(
 
 fn draw_turret_bullet_projectile(
     mut gizmos: Gizmos,
-    q_bullet: Query<(&Transform, &BulletProjectileVelocity), With<BulletProjectileMarker>>,
+    q_bullet: Query<(&Position, &LinearVelocity), With<BulletProjectileMarker>>,
 ) {
-    for (transform, velocity) in &q_bullet {
-        let origin = transform.translation;
+    for (position, velocity) in &q_bullet {
+        let origin = **position;
         let dir = velocity.normalize_or_zero();
         let color = tailwind::BLUE_500;
 

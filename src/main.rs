@@ -89,7 +89,7 @@ pub fn setup_simple_scene(
                 Mesh3d(meshes.add(Sphere::new(radius))),
                 MeshMaterial3d(materials.add(color)),
                 Collider::sphere(radius),
-                RigidBody::Static,
+                RigidBody::Dynamic,
                 Health::new(100.0),
             ))
             .id();

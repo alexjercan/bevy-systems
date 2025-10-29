@@ -574,11 +574,16 @@ fn on_shoot_spawn_projectile(
         return;
     };
 
-    let muzzle_exit_velocity = muzzle_transform.forward() * config.muzzle_speed;
+    let muzzle_direction = muzzle_transform.forward();
+    let projectile_position = muzzle_transform.translation();
+    let projectile_rotation = muzzle_transform.rotation();
+
+    let muzzle_exit_velocity = muzzle_direction * config.muzzle_speed;
     let linear_velocity = muzzle_exit_velocity + **lin_vel;
+
     let projectile_transform = Transform {
-        translation: muzzle_transform.translation(),
-        rotation: muzzle_transform.rotation(),
+        translation: projectile_position + muzzle_exit_velocity * 0.01,
+        rotation: projectile_rotation,
         ..Default::default()
     };
 

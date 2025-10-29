@@ -63,7 +63,8 @@ fn on_damage(
     trace!("on_damage: target {:?}, damage {:?}", target, damage.amount);
 
     let Ok((entity, mut health)) = q_health.get_mut(target) else {
-        debug!("on_damage: entity {:?} not found in q_health", target);
+        // NOTE: tried to apply damage to an entity without Health component
+        warn!("on_damage: entity {:?} not found in q_health", target);
         return;
     };
 
