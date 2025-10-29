@@ -2,7 +2,7 @@
 name = "nova_gameplay"
 version = "0.1.0"
 edition = "2021"
-debug = "Gameplay systems and logic for the Nova Protocol game"
+description = "Gameplay systems and logic for the Nova Protocol game"
 
 [dependencies]
 avian3d = { workspace = true }

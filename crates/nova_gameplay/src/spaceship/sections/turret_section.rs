@@ -566,7 +566,10 @@ fn sync_turret_rotator_pitch_system(
 fn on_shoot_spawn_projectile(
     shoot: On<TurretShoot>,
     mut commands: Commands,
-    q_spaceship: Query<(&LinearVelocity, &AngularVelocity), With<SpaceshipRootMarker>>,
+    q_spaceship: Query<
+        (&LinearVelocity, &AngularVelocity, &ComputedCenterOfMass),
+        With<SpaceshipRootMarker>,
+    >,
     q_turret: Query<
         (
             &TurretSectionMuzzleEntity,
@@ -589,7 +592,7 @@ fn on_shoot_spawn_projectile(
         return;
     };
 
-    let Ok((lin_vel, _ang_vel)) = q_spaceship.get(*spaceship) else {
+    let Ok((lin_vel, ang_vel, center)) = q_spaceship.get(*spaceship) else {
         warn!(
             "on_shoot_spawn_projectile: entity {:?} not found in q_spaceship",
             spaceship
@@ -620,9 +623,13 @@ fn on_shoot_spawn_projectile(
     let muzzle_direction = muzzle_transform.forward();
     let projectile_position = muzzle_transform.translation();
     let projectile_rotation = muzzle_transform.rotation();
+    let radius_vector = projectile_position - **center;
+    let _inertia_vel = ang_vel.cross(radius_vector) + **lin_vel;
+    // FIXME: Currently we are only using the linear velocity as inertia
+    let inertia_vel = **lin_vel;
 
     let muzzle_exit_velocity = muzzle_direction * config.muzzle_speed;
-    let linear_velocity = muzzle_exit_velocity + **lin_vel;
+    let linear_velocity = muzzle_exit_velocity + inertia_vel;
 
     let projectile_transform = Transform {
         translation: projectile_position + muzzle_exit_velocity * 0.01,
