@@ -8,18 +8,34 @@ use rand::prelude::*;
 #[command(name = "nova_protocol")]
 #[command(version = "0.1.0")]
 #[command(about = "Simple spaceship editor scene where you can build custom ships", long_about = None)]
-struct Cli;
+struct Cli {
+    #[cfg(feature = "debug")]
+    #[arg(long)]
+    debugdump: bool,
+    #[cfg(feature = "debug")]
+    #[arg(long)]
+    norender: bool,
+}
 
 fn main() {
-    let _ = Cli::parse();
-    let mut app = AppBuilder::new().with_rendering(cfg!(not(feature = "norender"))).build();
+    #[allow(unused_variables)]
+    let args = Cli::parse();
+
+    let builder = AppBuilder::new();
+
+    #[cfg(feature = "debug")]
+    let builder = builder.with_rendering(!args.norender);
+
+    let mut app = builder.build();
 
     app.add_systems(OnEnter(GameStates::Simulation), setup_simple_scene);
 
-    #[cfg(feature = "debugdump")]
-    debugdump(&mut app);
+    #[cfg(feature = "debug")]
+    if args.debugdump {
+        debugdump(&mut app);
+        std::process::exit(0);
+    }
 
-    #[cfg(not(feature = "debugdump"))]
     app.run();
 }
 

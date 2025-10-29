@@ -16,9 +16,7 @@ impl Plugin for SectionsDebugPlugin {
                 draw_turret_bullet_spawner,
                 draw_turret_bullet_projectile,
                 draw_thruster,
-
-                // TODO: Add some really good feature flags for debugging...
-                // log_position,
+                log_position,
             )
                 .after(TransformSystems::Propagate)
                 .in_set(super::DebugSystems),
@@ -117,7 +115,7 @@ fn log_position(
             continue;
         };
 
-        println!(
+        trace!(
             "Spaceship: {} | Position: {:?} | Local Transform: {:?} | Global Transform: {:?}",
             spaceship_name.as_str(),
             **spaceship_position,
@@ -127,7 +125,7 @@ fn log_position(
         for (section_name, section_position, section_transform, section_global_transform, _) in
             chunk
         {
-            println!(
+            trace!(
                 "  Section: {} | Position: {:?} | Local Transform: {:?} | Global Transform: {:?}",
                 section_name.as_str(),
                 **section_position,

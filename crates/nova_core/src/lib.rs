@@ -138,10 +138,9 @@ impl Plugin for CorePlugin {
         // We need to enable the physics plugins to have access to RigidBody and other components.
         // We will also disable gravity for this example, since we are in space, duh.
         app.add_plugins(
-            PhysicsPlugins::default()
-                .build(),
-                // .set(PhysicsInterpolationPlugin::interpolate_all()),
-                // .disable::<IslandSleepingPlugin>(),
+            PhysicsPlugins::default().build(),
+            // .set(PhysicsInterpolationPlugin::interpolate_all()),
+            // .disable::<IslandSleepingPlugin>(),
         );
         app.add_plugins(PhysicsPickingPlugin);
         app.insert_resource(Gravity::ZERO);

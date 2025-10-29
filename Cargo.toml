@@ -61,8 +61,6 @@ embed-resource = "1"
 [features]
 debug = ["nova_core/debug"]
 dev = ["bevy/dynamic_linking", "debug"]
-debugdump = ["dev" ]
-norender = ["dev"]
 
 [workspace.lints.rust]
 # dead_code = "allow"

@@ -532,10 +532,7 @@ fn on_shoot_spawn_projectile(
         ),
         With<TurretSectionMarker>,
     >,
-    mut q_muzzle: Query<
-        &mut TurretSectionBarrelFireState,
-        With<TurretSectionBarrelMuzzleMarker>,
-    >,
+    mut q_muzzle: Query<&mut TurretSectionBarrelFireState, With<TurretSectionBarrelMuzzleMarker>>,
     // NOTE: We are using TransformHelper here because we need to compute the global transform;
     // And it should be fine, since it will not be called frequently.
     transform_helper: TransformHelper,
