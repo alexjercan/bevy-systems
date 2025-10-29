@@ -2,9 +2,13 @@
 //! behavior.
 
 // TODO: Cleanup the magic numbers into constants
+// TODO: Refactor this plugin when I have time
 
 use avian3d::prelude::*;
-use bevy::prelude::*;
+use bevy::{
+    ecs::system::{lifetimeless::Read, SystemParam},
+    prelude::*,
+};
 
 use crate::spaceship::prelude::*;
 use bevy_common_systems::prelude::*;
@@ -12,6 +16,8 @@ use bevy_hanabi::prelude::*;
 
 pub mod prelude {
     pub use super::turret_section;
+    pub use super::TurretBulletProjectileMarker;
+    pub use super::TurretProjectileHooks;
     pub use super::TurretSectionBarrelMuzzleMarker;
     pub use super::TurretSectionConfig;
     pub use super::TurretSectionMarker;
@@ -115,6 +121,10 @@ pub struct TurretSectionMarker;
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 pub struct TurretSectionBarrelMuzzleMarker;
 
+/// Marker for turret bullet projectiles.
+#[derive(Component, Clone, Debug, Reflect)]
+pub struct TurretBulletProjectileMarker;
+
 /// The target input for the turret section. This is a world-space position that the turret will
 /// aim at. If None, the turret will not rotate.
 #[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
@@ -145,9 +155,6 @@ struct TurretSectionConfigHelper(TurretSectionConfig);
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct TurretSectionBarrelFireState(pub Timer);
 
-#[derive(Component, Clone, Debug, Reflect)]
-struct TurretBulletProjectileMarker;
-
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 struct TurretSectionBarrelMuzzleEffect(Option<Handle<EffectAsset>>);
 
@@ -175,6 +182,10 @@ struct TurretSectionBarrelMuzzleEffectMarker;
 /// The entity that represents the muzzle of the turret.
 #[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
 struct TurretSectionMuzzleEntity(pub Entity);
+
+/// The spaceship entity that owns the projectile.
+#[derive(Component, Clone, Debug, Reflect)]
+struct TurretBulletProjectileOwner(pub Entity);
 
 /// A plugin that enables the TurretSection component and its related systems.
 #[derive(Default)]
@@ -226,6 +237,38 @@ impl Plugin for TurretSectionPlugin {
                 .after(TransformSystems::Propagate)
                 .in_set(SpaceshipSystems::Sections),
         );
+    }
+}
+
+// Define a custom `SystemParam` for our collision hooks.
+// It can have read-only access to queries, resources, and other system parameters.
+#[derive(SystemParam)]
+pub struct TurretProjectileHooks<'w, 's> {
+    projectile_query: Query<'w, 's, (Read<TurretBulletProjectileOwner>,)>,
+    colider_of_query: Query<'w, 's, (Read<ColliderOf>,)>,
+}
+
+impl CollisionHooks for TurretProjectileHooks<'_, '_> {
+    fn filter_pairs(&self, collider1: Entity, collider2: Entity, _commands: &mut Commands) -> bool {
+        // Don't allow collision between a projectile and its owner
+
+        if let Ok((&TurretBulletProjectileOwner(owner),)) = self.projectile_query.get(collider1) {
+            if let Ok((&ColliderOf { body },)) = self.colider_of_query.get(collider2) {
+                if owner == body {
+                    return false;
+                }
+            }
+        }
+
+        if let Ok((&TurretBulletProjectileOwner(owner),)) = self.projectile_query.get(collider2) {
+            if let Ok((&ColliderOf { body },)) = self.colider_of_query.get(collider1) {
+                if owner == body {
+                    return false;
+                }
+            }
+        }
+
+        true
     }
 }
 
@@ -590,15 +633,17 @@ fn on_shoot_spawn_projectile(
     commands.spawn((
         Name::new("Projectile"),
         TurretBulletProjectileMarker,
+        TurretBulletProjectileOwner(*spaceship),
+        projectile_transform,
+        RigidBody::Dynamic,
+        LinearVelocity(linear_velocity),
+        Collider::sphere(0.05),
+        ActiveCollisionHooks::FILTER_PAIRS,
+        Mass(config.projectile_mass),
         TurretSectionPartOf(turret),
         TurretSectionMuzzleEntity(**muzzle),
-        projectile_transform,
-        bullet_projectile(BulletProjectileConfig {
-            lifetime: config.projectile_lifetime,
-            mass: config.projectile_mass,
-            velocity: linear_velocity,
-        }),
         BulletProjectileRenderMesh(config.projectile_render_mesh.clone()),
+        TempEntity(config.projectile_lifetime),
         Visibility::Visible,
     ));
 
@@ -689,7 +734,7 @@ fn on_projectile_marker_effect(
 }
 
 fn insert_projectile_render(
-    add: On<Add, BulletProjectileMarker>,
+    add: On<Add, TurretBulletProjectileMarker>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,

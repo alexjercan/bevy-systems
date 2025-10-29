@@ -25,10 +25,11 @@ impl Plugin for DamagePlugin {
     }
 }
 
-fn on_rigidbody_spawn(add: On<Add, ColliderOf>, mut commands: Commands,
+fn on_rigidbody_spawn(
+    add: On<Add, ColliderOf>,
+    mut commands: Commands,
     q_collider: Query<&ColliderOf>,
     q_health: Query<(), (With<Health>, With<RigidBody>)>,
-
 ) {
     let entity = add.entity;
     trace!("on_rigidbody_spawn: entity {:?}", entity);

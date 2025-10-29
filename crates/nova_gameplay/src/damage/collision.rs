@@ -30,11 +30,6 @@ fn on_collision_hit_to_damage(
     let mass = q_mass.get(hit.other).map(|m| m.value()).unwrap_or(1.0);
     let amount = amount * mass;
 
-    println!(
-        "on_collision_hit_to_damage: entity {:?} took damage {:.2}",
-        hit.entity, amount
-    );
-
     commands.trigger(HealthApplyDamage {
         target: hit.entity,
         source: Some(hit.other),

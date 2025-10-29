@@ -1,5 +1,8 @@
 use avian3d::prelude::*;
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    window::{CursorGrabMode, CursorOptions, PrimaryWindow},
+};
 use clap::Parser;
 use nova_protocol::prelude::*;
 use rand::prelude::*;
@@ -29,6 +32,10 @@ fn main() {
     let mut app = builder.build();
 
     app.add_systems(OnEnter(GameStates::Simulation), setup_simple_scene);
+    if cfg!(not(feature = "debug")) {
+        // TODO: implement this in a proper way for debug mode
+        app.add_systems(OnEnter(GameStates::Simulation), setup_grab_cursor);
+    }
 
     #[cfg(feature = "debug")]
     if args.debugdump {
@@ -39,11 +46,11 @@ fn main() {
     app.run();
 }
 
-// fn setup_grab_cursor(primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>) {
-//     let mut primary_cursor_options = primary_cursor_options.into_inner();
-//     primary_cursor_options.grab_mode = CursorGrabMode::Locked;
-//     primary_cursor_options.visible = false;
-// }
+fn setup_grab_cursor(primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>) {
+    let mut primary_cursor_options = primary_cursor_options.into_inner();
+    primary_cursor_options.grab_mode = CursorGrabMode::Locked;
+    primary_cursor_options.visible = false;
+}
 
 pub fn setup_simple_scene(
     mut commands: Commands,

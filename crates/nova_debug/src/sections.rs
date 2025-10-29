@@ -66,7 +66,7 @@ fn draw_turret_bullet_spawner(
 
 fn draw_turret_bullet_projectile(
     mut gizmos: Gizmos,
-    q_bullet: Query<(&Position, &LinearVelocity), With<BulletProjectileMarker>>,
+    q_bullet: Query<(&Position, &LinearVelocity), With<TurretBulletProjectileMarker>>,
 ) {
     for (position, velocity) in &q_bullet {
         let origin = **position;

@@ -137,11 +137,7 @@ impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
         // We need to enable the physics plugins to have access to RigidBody and other components.
         // We will also disable gravity for this example, since we are in space, duh.
-        app.add_plugins(
-            PhysicsPlugins::default().build(),
-            // .set(PhysicsInterpolationPlugin::interpolate_all()),
-            // .disable::<IslandSleepingPlugin>(),
-        );
+        app.add_plugins(PhysicsPlugins::default().with_collision_hooks::<TurretProjectileHooks>());
         app.add_plugins(PhysicsPickingPlugin);
         app.insert_resource(Gravity::ZERO);
 
@@ -169,7 +165,6 @@ impl Plugin for CorePlugin {
         // Other helper plugins
         app.add_plugins(bevy_common_systems::prelude::TempEntityPlugin);
         // Core Mechanics
-        app.add_plugins(bevy_common_systems::prelude::BulletProjectilePlugin);
         app.add_plugins(bevy_common_systems::prelude::CollisionDamagePlugin);
         app.add_plugins(bevy_common_systems::prelude::HealthPlugin);
 
