@@ -95,17 +95,17 @@ impl AppBuilder {
         self.app.add_plugins(DebugPlugin);
 
         // When we enter the Loaded state, switch to Playing state
+        // Setup the status UI when entering the Playing state
         // TODO: Here we will add a MainMenu state before Playing
         self.app.add_systems(
             OnEnter(GameAssetsStates::Loaded),
-            |mut state: ResMut<NextState<GameStates>>| {
-                state.set(GameStates::Simulation);
-            },
+            (
+                |mut state: ResMut<NextState<GameStates>>| {
+                    state.set(GameStates::Simulation);
+                },
+                setup_status_ui,
+            ),
         );
-
-        // Setup the status UI when entering the Playing state
-        self.app
-            .add_systems(OnEnter(GameStates::Simulation), setup_status_ui);
 
         self.app
     }
@@ -232,29 +232,22 @@ fn assets_plugin() -> AssetPlugin {
 }
 
 fn setup_status_ui(mut commands: Commands, game_assets: Res<GameAssets>) {
-    commands.spawn((
-        DespawnOnExit(GameStates::Simulation),
-        status_bar(StatusBarRootConfig::default()),
-    ));
+    commands.spawn((status_bar(StatusBarRootConfig::default()),));
 
-    commands.spawn((
-        DespawnOnExit(GameStates::Simulation),
-        status_bar_item(StatusBarItemConfig {
-            icon: Some(game_assets.fps_icon.clone()),
-            value_fn: status_fps_value_fn(),
-            color_fn: status_fps_color_fn(),
-            prefix: "".to_string(),
-            suffix: "fps".to_string(),
-        }),
-    ));
-    commands.spawn((
-        DespawnOnExit(GameStates::Simulation),
-        status_bar_item(StatusBarItemConfig {
-            icon: None,
-            value_fn: status_version_value_fn(env!("CARGO_PKG_VERSION").to_string()),
-            color_fn: status_version_color_fn(),
-            prefix: "v".to_string(),
-            suffix: "".to_string(),
-        }),
-    ));
+    commands.spawn((status_bar_item(StatusBarItemConfig {
+        icon: Some(game_assets.fps_icon.clone()),
+        value_fn: status_fps_value_fn(),
+        color_fn: status_fps_color_fn(),
+        prefix: "".to_string(),
+        suffix: "fps".to_string(),
+    }),));
+    commands.spawn((status_bar_item(StatusBarItemConfig {
+        icon: None,
+        value_fn: status_version_value_fn(
+            std::env::var("APP_VERSION").unwrap_or_else(|_| "unknown".to_string()),
+        ),
+        color_fn: status_version_color_fn(),
+        prefix: "v".to_string(),
+        suffix: "".to_string(),
+    }),));
 }

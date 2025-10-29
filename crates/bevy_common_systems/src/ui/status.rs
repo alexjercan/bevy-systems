@@ -291,7 +291,7 @@ pub fn status_fps_color_fn() -> impl Fn(Box<&dyn Any>) -> Option<Color> + Send +
 }
 
 pub fn status_version_value_fn(
-    version: String,
+    version: impl Display + Clone + Send + Sync + 'static,
 ) -> impl Fn(&World) -> Option<Arc<dyn StatusValue>> + Send + Sync + 'static {
     move |_world: &World| Some(Arc::new(version.clone()) as Arc<dyn StatusValue>)
 }
