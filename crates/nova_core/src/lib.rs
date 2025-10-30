@@ -167,6 +167,8 @@ impl Plugin for CorePlugin {
         // Core Mechanics
         app.add_plugins(bevy_common_systems::prelude::CollisionDamagePlugin);
         app.add_plugins(bevy_common_systems::prelude::HealthPlugin);
+        // Modding Support
+        app.add_plugins(bevy_common_systems::prelude::GameEventsPlugin);
 
         // UI Plugins
         app.add_plugins(nova_gameplay::bevy_common_systems::prelude::StatusBarPlugin);

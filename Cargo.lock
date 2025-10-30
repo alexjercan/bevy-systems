@@ -756,8 +756,19 @@ version = "0.0.1"
 dependencies = [
  "avian3d",
  "bevy",
+ "bevy_common_systems_macros",
  "bevy_enhanced_input",
+ "inventory",
  "rand",
+]
+
+[[package]]
+name = "bevy_common_systems_macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

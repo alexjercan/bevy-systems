@@ -92,3 +92,4 @@ bevy_anti_alias = { version = "0.17.0-rc.2" }
 bevy_hanabi = { version = "0.17.0", default-features = false, features = ["2d", "3d"] }
 bevy_mod_debugdump = { version = "0.14" }
 itertools = { version = "0.14.0" }
+inventory = { version = "0.3.21" }
