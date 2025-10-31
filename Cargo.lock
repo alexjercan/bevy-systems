@@ -3961,9 +3961,13 @@ dependencies = [
 name = "nova-protocol"
 version = "0.1.0"
 dependencies = [
+ "avian3d",
+ "bevy",
  "clap",
  "embed-resource",
  "nova_core",
+ "rand",
+ "serde",
 ]
 
 [[package]]
