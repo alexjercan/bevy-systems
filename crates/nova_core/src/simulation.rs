@@ -1,11 +1,11 @@
 //! The simulation plugin. This plugin should contain all the gameplay related logic.
 
-use rand::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 use nova_assets::prelude::*;
 use nova_gameplay::prelude::*;
+use rand::prelude::*;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SimulationSystems;
@@ -22,7 +22,11 @@ impl Plugin for SimulationPlugin {
 
         app.add_systems(
             OnEnter(super::GameStates::Simulation),
-            (setup_simple_scene, setup_camera_controller, setup_player_input),
+            (
+                setup_simple_scene,
+                setup_camera_controller,
+                setup_player_input,
+            ),
         );
 
         // Setup the input system to get input from the mouse and keyboard.
