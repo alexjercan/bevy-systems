@@ -1,7 +1,25 @@
-use bevy::prelude::*;
-use super::kind::EventKind;
 use super::handler::EventHandler;
+use super::kind::EventKind;
 use super::registry::RegisteredEventKind;
+use bevy::prelude::*;
+
+#[derive(Debug, Clone, Default)]
+pub struct GameEventInfo {
+    pub data: Option<serde_json::Value>,
+}
+
+impl GameEventInfo {
+    pub fn from_data<T: serde::Serialize>(data: T) -> Self {
+        let json_value = serde_json::to_value(data).ok();
+        Self { data: json_value }
+    }
+}
+
+impl<T: serde::Serialize> From<T> for GameEventInfo {
+    fn from(value: T) -> Self {
+        GameEventInfo::from_data(value)
+    }
+}
 
 #[derive(Event, Debug, Clone)]
 pub struct GameEvent<E: EventKind> {
@@ -36,15 +54,20 @@ pub fn on_game_event<E>(
     q_handler: Query<&EventHandler<E>>,
 ) where
     E: EventKind,
+    E::Info: Into<GameEventInfo>,
 {
     let event = event.event();
-    debug!("on_game_event: event {:?}, info {:?}", E::name(), event.info);
+    trace!(
+        "on_game_event: event {:?}, info {:?}",
+        E::name(),
+        event.info
+    );
 
     for handler in &q_handler {
-        if handler.filter(&event.info) {
+        if handler.filter(&event.info.clone().into()) {
             for action in &handler.actions {
-                debug!("on_game_event: executing action {:?}", action.name());
-                action.action(&mut commands);
+                trace!("on_game_event: executing action {:?}", action.name());
+                action.action(&mut commands, &event.info.clone().into());
             }
         }
     }

@@ -1,13 +1,15 @@
 use super::action::EventAction;
 use super::filter::EventFilter;
+use super::game_event::GameEventInfo;
 use super::kind::EventKind;
 use bevy::prelude::*;
 use std::sync::Arc;
 
 #[derive(Component, Debug, Clone)]
 pub struct EventHandler<E: EventKind> {
-    pub(super) filters: Vec<Arc<dyn EventFilter<Info = E::Info>>>,
+    pub(super) filters: Vec<Arc<dyn EventFilter>>,
     pub(super) actions: Vec<Arc<dyn EventAction>>,
+    _marker: std::marker::PhantomData<E>,
 }
 
 impl<E: EventKind> EventHandler<E> {
@@ -15,15 +17,16 @@ impl<E: EventKind> EventHandler<E> {
         Self {
             filters: Vec::new(),
             actions: Vec::new(),
+            _marker: std::marker::PhantomData,
         }
     }
 
-    pub fn with_filter<F: EventFilter<Info = E::Info> + 'static>(mut self, f: F) -> Self {
+    pub fn with_filter<F: EventFilter + 'static>(mut self, f: F) -> Self {
         self.filters.push(Arc::new(f));
         self
     }
 
-    pub fn add_filter<F: EventFilter<Info = E::Info> + 'static>(&mut self, f: F) {
+    pub fn add_filter<F: EventFilter + 'static>(&mut self, f: F) {
         self.filters.push(Arc::new(f));
     }
 
@@ -36,7 +39,7 @@ impl<E: EventKind> EventHandler<E> {
         self.actions.push(Arc::new(a));
     }
 
-    pub fn filter(&self, info: &E::Info) -> bool {
+    pub fn filter(&self, info: &GameEventInfo) -> bool {
         self.filters.iter().all(|f| f.filter(info))
     }
 }
