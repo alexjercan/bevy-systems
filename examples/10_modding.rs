@@ -62,7 +62,7 @@ impl EventFilter for MyCustomFilter {
             return false;
         };
 
-        return (value as f32) >= self.min_value;
+        (value as f32) >= self.min_value
     }
 }
 

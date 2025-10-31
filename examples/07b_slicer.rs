@@ -38,7 +38,7 @@ fn on_click_damage_health(
 
     let entity = click.entity;
 
-    if let Ok(_) = q_health.get(entity) {
+    if q_health.get(entity).is_ok() {
         commands.trigger(HealthApplyDamage {
             target: click.entity,
             source: None,

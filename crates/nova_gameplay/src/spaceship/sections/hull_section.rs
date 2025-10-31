@@ -10,16 +10,10 @@ pub mod prelude {
 }
 
 /// Configuration for a hull section.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct HullSectionConfig {
     /// The render mesh of the hull section, defaults to a cuboid of size 1x1x1.
     pub render_mesh: Option<Handle<Scene>>,
-}
-
-impl Default for HullSectionConfig {
-    fn default() -> Self {
-        Self { render_mesh: None }
-    }
 }
 
 /// Helper function to create a hull section entity bundle.

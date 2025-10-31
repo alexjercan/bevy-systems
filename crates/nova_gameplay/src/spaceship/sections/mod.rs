@@ -29,19 +29,15 @@ impl Plugin for SpaceshipSectionPlugin {
         app.add_plugins((
             hull_section::HullSectionPlugin {
                 render: self.render,
-                ..default()
             },
             thruster_section::ThrusterSectionPlugin {
                 render: self.render,
-                ..default()
             },
             turret_section::TurretSectionPlugin {
                 render: self.render,
-                ..default()
             },
             controller_section::ControllerSectionPlugin {
                 render: self.render,
-                ..default()
             },
         ));
     }

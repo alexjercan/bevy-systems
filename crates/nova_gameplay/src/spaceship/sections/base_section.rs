@@ -33,6 +33,7 @@ pub enum SectionKind {
 #[derive(Clone, Debug)]
 pub struct SectionConfig {
     pub base: BaseSectionConfig,
+    // TODO: I will probably want to box this later to reduce the size of the struct.
     pub kind: SectionKind,
 }
 

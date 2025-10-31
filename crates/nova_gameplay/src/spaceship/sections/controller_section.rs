@@ -215,15 +215,11 @@ fn compute_pd_torque(
     let final_torque = rot_inertia_to_world * torque_scaled;
 
     // Optionally clamp final torque magnitude
-    let torque_to_apply = {
-        if final_torque.length_squared() > max_torque * max_torque {
-            final_torque.normalize() * max_torque
-        } else {
-            final_torque
-        }
-    };
-
-    torque_to_apply
+    if final_torque.length_squared() > max_torque * max_torque {
+        final_torque.normalize() * max_torque
+    } else {
+        final_torque
+    }
 }
 
 #[cfg(test)]

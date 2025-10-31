@@ -986,7 +986,6 @@ fn insert_turret_barrel_render(
                 Name::new("Render Turret Barrel"),
                 SceneRoot(scene.clone()),
             ),],));
-            return;
         }
         None => {
             let body_mat = materials.add(Color::srgb(0.2, 0.2, 0.5));

@@ -14,15 +14,9 @@ pub mod prelude {
 #[derive(Component, Debug, Clone, Reflect)]
 pub struct HealthHudMarker;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct HealthHudConfig {
     pub target: Option<Entity>,
-}
-
-impl Default for HealthHudConfig {
-    fn default() -> Self {
-        Self { target: None }
-    }
 }
 
 pub fn health_hud(config: HealthHudConfig) -> impl Bundle {
@@ -62,12 +56,12 @@ fn update_text_hud(
 ) {
     for (mut hud_input, target) in &mut q_hud {
         let Some(target) = **target else {
-            **hud_input = format!("Health: 0%");
+            **hud_input = "Health: 0%".to_string();
             continue;
         };
 
         let Ok(health) = q_target.get(target) else {
-            **hud_input = format!("Health: 0%");
+            **hud_input = "Health: 0%".to_string();
             continue;
         };
 
