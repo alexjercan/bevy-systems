@@ -6,7 +6,7 @@ use bevy::{
     app::Plugins,
     log::{Level, LogPlugin},
     prelude::*,
-    window::PresentMode,
+    window::{CursorGrabMode, CursorOptions, PresentMode, PrimaryWindow},
 };
 
 use nova_assets::prelude::*;
@@ -106,6 +106,18 @@ impl AppBuilder {
                 setup_status_ui,
             ),
         );
+
+        if cfg!(not(feature = "debug")) {
+            // TODO: implement this in a proper way for debug mode
+            self.app.add_systems(
+                OnEnter(GameStates::Simulation),
+                |primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>| {
+                    let mut primary_cursor_options = primary_cursor_options.into_inner();
+                    primary_cursor_options.grab_mode = CursorGrabMode::Locked;
+                    primary_cursor_options.visible = false;
+                },
+            );
+        }
 
         self.app
     }

@@ -5,11 +5,11 @@ edition = "2021"
 description = "Debugging utilities for the Nova Protocol game"
 
 [dependencies]
-avian3d = { workspace = true, features = ["diagnostic_ui"] }
-bevy = { workspace = true }
-bevy-inspector-egui = { workspace = true }
-bevy_mod_debugdump = { workspace = true }
-itertools = { workspace = true }
+avian3d = { version = "0.4", features = ["diagnostic_ui"] }
+bevy = { version = "0.17.2" }
+itertools = { version = "0.14.0" }
+bevy-inspector-egui = { version = "0.34" }
+bevy_mod_debugdump = { version = "0.14" }
 nova_gameplay = { path = "../nova_gameplay" }
 
 [lints]

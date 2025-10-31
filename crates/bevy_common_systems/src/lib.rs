@@ -11,6 +11,7 @@ pub mod modding;
 pub mod physics;
 pub mod transform;
 pub mod ui;
+pub use bevy_common_systems_macros;
 
 pub mod prelude {
     pub use crate::camera::prelude::*;
