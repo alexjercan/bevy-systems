@@ -7,11 +7,10 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::PointRotation;
-    pub use super::PointRotationInput;
-    pub use super::PointRotationOutput;
-    pub use super::PointRotationPlugin;
-    pub use super::PointRotationSystems;
+    pub use super::{
+        PointRotation, PointRotationInput, PointRotationOutput, PointRotationPlugin,
+        PointRotationSystems,
+    };
 }
 
 /// Component that marks an entity as a point that can be rotated.

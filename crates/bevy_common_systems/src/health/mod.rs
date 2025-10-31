@@ -3,11 +3,9 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::DestroyedMarker;
-    pub use super::Health;
-    pub use super::HealthApplyDamage;
-    pub use super::HealthPlugin;
-    pub use super::HealthPluginSystems;
+    pub use super::{
+        DestroyedMarker, Health, HealthApplyDamage, HealthPlugin, HealthPluginSystems,
+    };
 }
 
 /// Component representing the health of an entity.

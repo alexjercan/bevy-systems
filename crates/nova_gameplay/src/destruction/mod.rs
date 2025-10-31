@@ -4,10 +4,7 @@ pub mod despawn;
 pub mod explode;
 
 pub mod prelude {
-    pub use super::despawn::prelude::*;
-    pub use super::explode::prelude::*;
-
-    pub use super::DestructionHealthPlugin;
+    pub use super::{despawn::prelude::*, explode::prelude::*, DestructionHealthPlugin};
 }
 
 use bevy::prelude::*;
@@ -41,9 +38,7 @@ fn on_health_spawn(
             "on_health_spawn: adding DespawnOnDestroy to entity {:?}",
             entity
         );
-        commands
-            .entity(entity)
-            .insert(despawn::DespawnOnDestroy);
+        commands.entity(entity).insert(despawn::DespawnOnDestroy);
         return;
     };
 }

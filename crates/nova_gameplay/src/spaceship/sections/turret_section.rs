@@ -9,21 +9,17 @@ use bevy::{
     ecs::system::{lifetimeless::Read, SystemParam},
     prelude::*,
 };
-
-use crate::spaceship::prelude::*;
 use bevy_common_systems::prelude::*;
 use bevy_hanabi::prelude::*;
 
+use crate::spaceship::prelude::*;
+
 pub mod prelude {
-    pub use super::turret_section;
-    pub use super::TurretBulletProjectileMarker;
-    pub use super::TurretProjectileHooks;
-    pub use super::TurretSectionBarrelMuzzleMarker;
-    pub use super::TurretSectionConfig;
-    pub use super::TurretSectionMarker;
-    pub use super::TurretSectionPlugin;
-    pub use super::TurretSectionTargetInput;
-    pub use super::TurretShoot;
+    pub use super::{
+        turret_section, TurretBulletProjectileMarker, TurretProjectileHooks,
+        TurretSectionBarrelMuzzleMarker, TurretSectionConfig, TurretSectionMarker,
+        TurretSectionPlugin, TurretSectionTargetInput, TurretShoot,
+    };
 }
 
 /// Configuration for a turret section of a spaceship.

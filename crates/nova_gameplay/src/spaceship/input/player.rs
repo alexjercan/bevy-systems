@@ -1,11 +1,10 @@
-use crate::spaceship::prelude::*;
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
+use crate::spaceship::prelude::*;
+
 pub mod prelude {
-    pub use super::PlayerSpaceshipMarker;
-    pub use super::SpaceshipPlayerInputPlugin;
-    pub use super::SpaceshipThrusterInputKey;
+    pub use super::{PlayerSpaceshipMarker, SpaceshipPlayerInputPlugin, SpaceshipThrusterInputKey};
 }
 
 pub struct SpaceshipPlayerInputPlugin;

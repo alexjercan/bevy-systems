@@ -2,8 +2,7 @@ use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
 pub mod prelude {
-    pub use super::DespawnOnDestroy;
-    pub use super::DespawnOnDestroyPlugin;
+    pub use super::{DespawnOnDestroy, DespawnOnDestroyPlugin};
 }
 
 #[derive(Component, Default, Clone, Debug, Reflect)]

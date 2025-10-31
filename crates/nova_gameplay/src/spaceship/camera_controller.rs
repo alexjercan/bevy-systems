@@ -1,16 +1,15 @@
-use crate::spaceship::prelude::*;
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
+use crate::spaceship::prelude::*;
+
 pub mod prelude {
-    pub use super::SpaceshipCameraControlMode;
-    pub use super::SpaceshipCameraControllerMarker;
-    pub use super::SpaceshipCameraControllerPlugin;
-    pub use super::SpaceshipCameraFreeLookInputMarker;
-    pub use super::SpaceshipCameraInputMarker;
-    pub use super::SpaceshipCameraNormalInputMarker;
-    pub use super::SpaceshipCameraTurretInputMarker;
-    pub use super::SpaceshipRotationInputActiveMarker;
+    pub use super::{
+        SpaceshipCameraControlMode, SpaceshipCameraControllerMarker,
+        SpaceshipCameraControllerPlugin, SpaceshipCameraFreeLookInputMarker,
+        SpaceshipCameraInputMarker, SpaceshipCameraNormalInputMarker,
+        SpaceshipCameraTurretInputMarker, SpaceshipRotationInputActiveMarker,
+    };
 }
 
 pub struct SpaceshipCameraControllerPlugin;

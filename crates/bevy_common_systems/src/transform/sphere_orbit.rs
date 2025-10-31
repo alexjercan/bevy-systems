@@ -5,15 +5,14 @@
 //! `SphereOrbitInput` component, and the resulting position is outputted in the `SphereOrbitOutput`
 //! component.
 
-use crate::meth::prelude::*;
 use bevy::prelude::*;
 
+use crate::meth::prelude::*;
+
 pub mod prelude {
-    pub use super::SphereOrbit;
-    pub use super::SphereOrbitInput;
-    pub use super::SphereOrbitOutput;
-    pub use super::SphereOrbitPlugin;
-    pub use super::SphereOrbitSystems;
+    pub use super::{
+        SphereOrbit, SphereOrbitInput, SphereOrbitOutput, SphereOrbitPlugin, SphereOrbitSystems,
+    };
 }
 
 /// Component to define a spherical orbit around a center point.

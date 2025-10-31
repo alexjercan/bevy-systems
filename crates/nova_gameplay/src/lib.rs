@@ -8,10 +8,8 @@ pub mod spaceship;
 pub use bevy_common_systems;
 
 pub mod prelude {
-    pub use super::damage::prelude::*;
-    pub use super::destruction::prelude::*;
-    pub use super::spaceship::prelude::*;
-
     // Re-export bevy_common_systems prelude
     pub use bevy_common_systems::prelude::*;
+
+    pub use super::{damage::prelude::*, destruction::prelude::*, spaceship::prelude::*};
 }

@@ -14,16 +14,11 @@ pub mod ui;
 pub use bevy_common_systems_macros;
 
 pub mod prelude {
-    pub use crate::camera::prelude::*;
-    pub use crate::health::prelude::*;
-    pub use crate::helpers::prelude::*;
-    pub use crate::mesh::prelude::*;
-    pub use crate::meth::prelude::*;
-    pub use crate::modding::prelude::*;
-    pub use crate::physics::prelude::*;
-    pub use crate::transform::prelude::*;
-    pub use crate::ui::prelude::*;
-
-    pub use crate::modding;
     pub use bevy_common_systems_macros::*;
+
+    pub use crate::{
+        camera::prelude::*, health::prelude::*, helpers::prelude::*, mesh::prelude::*,
+        meth::prelude::*, modding, modding::prelude::*, physics::prelude::*, transform::prelude::*,
+        ui::prelude::*,
+    };
 }

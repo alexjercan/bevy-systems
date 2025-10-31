@@ -12,8 +12,7 @@ use bevy::{
 };
 
 pub mod prelude {
-    pub use super::SkyboxConfig;
-    pub use super::SkyboxPlugin;
+    pub use super::{SkyboxConfig, SkyboxPlugin};
 }
 
 /// Component that should be added on the camera you want to have the Skybox

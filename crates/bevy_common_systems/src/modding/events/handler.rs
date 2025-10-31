@@ -1,9 +1,8 @@
-use super::action::EventAction;
-use super::filter::EventFilter;
-use super::game_event::GameEventInfo;
-use super::kind::EventKind;
-use bevy::prelude::*;
 use std::sync::Arc;
+
+use bevy::prelude::*;
+
+use super::{action::EventAction, filter::EventFilter, game_event::GameEventInfo, kind::EventKind};
 
 #[derive(Component, Debug, Clone)]
 pub struct EventHandler<E: EventKind> {

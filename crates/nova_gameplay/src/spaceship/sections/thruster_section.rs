@@ -11,12 +11,10 @@ use bevy::{
 use crate::prelude::{SpaceshipRootMarker, SpaceshipSystems};
 
 pub mod prelude {
-    pub use super::thruster_section;
-    pub use super::ThrusterSectionConfig;
-    pub use super::ThrusterSectionInput;
-    pub use super::ThrusterSectionMagnitude;
-    pub use super::ThrusterSectionMarker;
-    pub use super::ThrusterSectionPlugin;
+    pub use super::{
+        thruster_section, ThrusterSectionConfig, ThrusterSectionInput, ThrusterSectionMagnitude,
+        ThrusterSectionMarker, ThrusterSectionPlugin,
+    };
 }
 
 const THRUSTER_SECTION_DEFAULT_MAGNITUDE: f32 = 1.0;

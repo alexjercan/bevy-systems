@@ -4,10 +4,7 @@ pub mod health;
 pub mod velocity;
 
 pub mod prelude {
-    pub use super::health::prelude::*;
-    pub use super::velocity::prelude::*;
-
-    pub use super::SpacehipHudPlugin;
+    pub use super::{health::prelude::*, velocity::prelude::*, SpacehipHudPlugin};
 }
 
 #[derive(Default)]

@@ -6,9 +6,11 @@ pub mod kind;
 pub mod registry;
 
 pub mod prelude {
-    pub use super::action::EventAction;
-    pub use super::filter::EventFilter;
-    pub use super::game_event::{CommandsGameEventExt, GameEvent, GameEventInfo, GameEventsPlugin};
-    pub use super::handler::EventHandler;
-    pub use super::kind::EventKind;
+    pub use super::{
+        action::EventAction,
+        filter::EventFilter,
+        game_event::{CommandsGameEventExt, GameEvent, GameEventInfo, GameEventsPlugin},
+        handler::EventHandler,
+        kind::EventKind,
+    };
 }

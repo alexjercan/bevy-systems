@@ -3,9 +3,7 @@
 pub mod collision;
 
 pub mod prelude {
-    pub use super::collision::prelude::*;
-
-    pub use super::DamagePlugin;
+    pub use super::{collision::prelude::*, DamagePlugin};
 }
 
 use avian3d::prelude::*;

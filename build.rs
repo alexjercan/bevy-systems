@@ -1,6 +1,5 @@
 extern crate embed_resource;
-use std::env;
-use std::process::Command;
+use std::{env, process::Command};
 
 fn main() {
     let target = env::var("TARGET").unwrap();

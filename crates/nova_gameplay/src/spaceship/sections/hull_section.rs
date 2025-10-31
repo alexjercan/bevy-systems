@@ -3,10 +3,7 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::hull_section;
-    pub use super::HullSectionConfig;
-    pub use super::HullSectionMarker;
-    pub use super::HullSectionPlugin;
+    pub use super::{hull_section, HullSectionConfig, HullSectionMarker, HullSectionPlugin};
 }
 
 /// Configuration for a hull section.

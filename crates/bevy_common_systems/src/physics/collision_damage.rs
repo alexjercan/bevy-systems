@@ -6,10 +6,9 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::CollisionDamageEvent;
-    pub use super::CollisionDamageMarker;
-    pub use super::CollisionDamagePlugin;
-    pub use super::CollisionDamageSystems;
+    pub use super::{
+        CollisionDamageEvent, CollisionDamageMarker, CollisionDamagePlugin, CollisionDamageSystems,
+    };
 }
 
 #[derive(Component, Clone, Debug, Reflect)]

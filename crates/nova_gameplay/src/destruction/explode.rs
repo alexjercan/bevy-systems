@@ -1,14 +1,13 @@
+use std::collections::VecDeque;
+
 /// A Bevy plugin that makes entities explode into pieces when they are destroyed.
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 use rand::Rng;
-use std::collections::VecDeque;
 
 pub mod prelude {
-    pub use super::ExplodeOnDestroy;
-    pub use super::ExplodeOnDestroyPlugin;
-    pub use super::FragmentMeshMarker;
+    pub use super::{ExplodeOnDestroy, ExplodeOnDestroyPlugin, FragmentMeshMarker};
 }
 
 const MAX_ITERATIONS: usize = 10;

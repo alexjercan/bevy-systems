@@ -7,8 +7,7 @@ pub mod sections;
 pub mod wireframe;
 
 pub mod prelude {
-    pub use super::debugdump;
-    pub use super::DebugPlugin;
+    pub use super::{debugdump, DebugPlugin};
 }
 
 /// The keycode to toggle debug mode.

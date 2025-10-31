@@ -4,11 +4,9 @@ use bevy_common_systems::prelude::*;
 use crate::prelude::SpaceshipSystems;
 
 pub mod prelude {
-    pub use super::health_hud;
-    pub use super::HealthHudConfig;
-    pub use super::HealthHudMarker;
-    pub use super::HealthHudPlugin;
-    pub use super::HealthHudTargetEntity;
+    pub use super::{
+        health_hud, HealthHudConfig, HealthHudMarker, HealthHudPlugin, HealthHudTargetEntity,
+    };
 }
 
 #[derive(Component, Debug, Clone, Reflect)]

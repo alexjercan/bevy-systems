@@ -5,9 +5,9 @@ mod smooth_look_rotation;
 mod sphere_orbit;
 
 pub mod prelude {
-    pub use super::directional_sphere_orbit::prelude::*;
-    pub use super::point_rotation::prelude::*;
-    pub use super::random_sphere_orbit::prelude::*;
-    pub use super::smooth_look_rotation::prelude::*;
-    pub use super::sphere_orbit::prelude::*;
+    pub use super::{
+        directional_sphere_orbit::prelude::*, point_rotation::prelude::*,
+        random_sphere_orbit::prelude::*, smooth_look_rotation::prelude::*,
+        sphere_orbit::prelude::*,
+    };
 }

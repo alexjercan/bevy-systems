@@ -1,33 +1,29 @@
 //! TODO: Add description in this crate
 
 use avian3d::prelude::*;
-
 use bevy::{
     app::Plugins,
     log::{Level, LogPlugin},
     prelude::*,
     window::{CursorGrabMode, CursorOptions, PresentMode, PrimaryWindow},
 };
-
 use nova_assets::prelude::*;
-use nova_gameplay::{bevy_common_systems, prelude::*};
-
 #[cfg(feature = "debug")]
 use nova_debug::DebugPlugin;
+use nova_gameplay::{bevy_common_systems, prelude::*};
 
 pub mod editor;
 pub mod simulation;
 pub use nova_gameplay;
 
 pub mod prelude {
-    pub use super::{AppBuilder, GameStates};
-
     // NOTE: These are temporary, until I finis the refactor to move everything to new_gui_app
     pub use nova_assets::prelude::*;
-    pub use nova_gameplay::prelude::*;
-
     #[cfg(feature = "debug")]
     pub use nova_debug::prelude::*;
+    pub use nova_gameplay::prelude::*;
+
+    pub use super::{AppBuilder, GameStates};
 }
 
 /// Game states for the application.

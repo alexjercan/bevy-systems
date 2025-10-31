@@ -10,12 +10,10 @@ use bevy_common_systems::prelude::*;
 use crate::prelude::SpaceshipSystems;
 
 pub mod prelude {
-    pub use super::velocity_hud;
-    pub use super::VelocityHudConfig;
-    pub use super::VelocityHudIndicatorMarker;
-    pub use super::VelocityHudMarker;
-    pub use super::VelocityHudPlugin;
-    pub use super::VelocityHudTargetEntity;
+    pub use super::{
+        velocity_hud, VelocityHudConfig, VelocityHudIndicatorMarker, VelocityHudMarker,
+        VelocityHudPlugin, VelocityHudTargetEntity,
+    };
 }
 
 #[derive(Component, Debug, Clone, Reflect)]

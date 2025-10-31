@@ -6,12 +6,11 @@ use bevy::prelude::*;
 use crate::prelude::{SpaceshipRootMarker, SpaceshipSystems};
 
 pub mod prelude {
-    pub use super::controller_section;
-    pub use super::ControllerSectionConfig;
-    pub use super::ControllerSectionMarker;
-    pub use super::ControllerSectionPlugin;
-    pub use super::ControllerSectionRotationInput;
-    pub use super::ControllerSectionStableTorquePdController;
+    pub use super::{
+        controller_section, ControllerSectionConfig, ControllerSectionMarker,
+        ControllerSectionPlugin, ControllerSectionRotationInput,
+        ControllerSectionStableTorquePdController,
+    };
 }
 
 /// Configuration for a controller section.

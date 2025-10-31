@@ -1,7 +1,6 @@
-use super::handler::EventHandler;
-use super::kind::EventKind;
-use super::registry::RegisteredEventKind;
 use bevy::prelude::*;
+
+use super::{handler::EventHandler, kind::EventKind, registry::RegisteredEventKind};
 
 #[derive(Debug, Clone, Default)]
 pub struct GameEventInfo {

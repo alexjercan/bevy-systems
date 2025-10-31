@@ -3,15 +3,16 @@
 //! The `RandomSphereOrbit` component allows an entity to orbit around a point on the surface of a
 //! sphere, randomly picking new target angles to move toward over time.
 
-use crate::meth::prelude::*;
 use bevy::prelude::*;
 use rand::prelude::*;
 
+use crate::meth::prelude::*;
+
 pub mod prelude {
-    pub use super::RandomSphereOrbit;
-    pub use super::RandomSphereOrbitOutput;
-    pub use super::SphereRandomOrbitPlugin;
-    pub use super::SphereRandomOrbitSystems;
+    pub use super::{
+        RandomSphereOrbit, RandomSphereOrbitOutput, SphereRandomOrbitPlugin,
+        SphereRandomOrbitSystems,
+    };
 }
 
 /// Component to define a spherical orbit around a center point.

@@ -1,15 +1,14 @@
-use super::prelude::*;
-use avian3d::prelude::*;
-use bevy::prelude::*;
 use std::fmt::Debug;
 
+use avian3d::prelude::*;
+use bevy::prelude::*;
+
+use super::prelude::*;
+
 pub mod prelude {
-    pub use super::base_section;
-    pub use super::BaseSectionConfig;
-    pub use super::GameSections;
-    pub use super::SectionConfig;
-    pub use super::SectionKind;
-    pub use super::SectionMarker;
+    pub use super::{
+        base_section, BaseSectionConfig, GameSections, SectionConfig, SectionKind, SectionMarker,
+    };
 }
 
 #[derive(Component, Clone, Debug, Reflect)]

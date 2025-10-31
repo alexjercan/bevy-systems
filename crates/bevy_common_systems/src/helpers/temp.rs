@@ -3,9 +3,7 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::TempEntity;
-    pub use super::TempEntityPlugin;
-    pub use super::TempEntitySystems;
+    pub use super::{TempEntity, TempEntityPlugin, TempEntitySystems};
 }
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]

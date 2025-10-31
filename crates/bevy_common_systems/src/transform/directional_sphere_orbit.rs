@@ -7,15 +7,15 @@
 //!
 //! The orbiting entity can smoothly transition to new directions based on the input.
 
-use crate::meth::prelude::*;
 use bevy::prelude::*;
 
+use crate::meth::prelude::*;
+
 pub mod prelude {
-    pub use super::DirectionalSphereOrbit;
-    pub use super::DirectionalSphereOrbitInput;
-    pub use super::DirectionalSphereOrbitOutput;
-    pub use super::DirectionalSphereOrbitPlugin;
-    pub use super::DirectionalSphereOrbitSystems;
+    pub use super::{
+        DirectionalSphereOrbit, DirectionalSphereOrbitInput, DirectionalSphereOrbitOutput,
+        DirectionalSphereOrbitPlugin, DirectionalSphereOrbitSystems,
+    };
 }
 
 /// Component to define a spherical orbit around a center point.
