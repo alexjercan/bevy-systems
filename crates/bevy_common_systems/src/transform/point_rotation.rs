@@ -91,7 +91,7 @@ fn point_rotation_update_system(
 ) {
     for (input, mut out) in &mut q_point {
         let mut state = PointRotationState::from(**out);
-        state = compute_point_rotation(&state, &input);
+        state = compute_point_rotation(&state, input);
         **out = point_rotation_quat(state);
     }
 }

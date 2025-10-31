@@ -12,6 +12,12 @@ pub struct EventHandler<E: EventKind> {
     _marker: std::marker::PhantomData<E>,
 }
 
+impl<E: EventKind> Default for EventHandler<E> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<E: EventKind> EventHandler<E> {
     pub fn new() -> Self {
         Self {

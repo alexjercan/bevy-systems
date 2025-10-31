@@ -243,7 +243,7 @@ fn insert_status_bar_item(
                     Name::new("StatusBarItemValue"),
                     StatusBarItemValue(None),
                     value_fn.clone(),
-                    Text::new(format!("N/A")),
+                    Text::new("N/A".to_string()),
                     TextFont {
                         font_size: 14.0,
                         ..default()

@@ -116,7 +116,7 @@ fn random_sphere_choose_next(
         let dtheta = (next.theta - state.theta).abs();
         let dphi = (next.phi - state.phi).abs();
 
-        let threshold = std::f32::EPSILON;
+        let threshold = f32::EPSILON;
         if dtheta < threshold && dphi < threshold {
             let new_theta = rng.random_range(0.0..(std::f32::consts::TAU));
 

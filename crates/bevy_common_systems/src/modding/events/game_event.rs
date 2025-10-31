@@ -26,6 +26,12 @@ pub struct GameEvent<E: EventKind> {
     pub(super) info: E::Info,
 }
 
+impl<E: EventKind> Default for GameEvent<E> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<E: EventKind> GameEvent<E> {
     pub fn new() -> Self {
         Self {

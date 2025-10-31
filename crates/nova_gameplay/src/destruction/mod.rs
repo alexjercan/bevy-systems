@@ -43,7 +43,7 @@ fn on_health_spawn(
         );
         commands
             .entity(entity)
-            .insert(despawn::DespawnOnDestroy::default());
+            .insert(despawn::DespawnOnDestroy);
         return;
     };
 }
