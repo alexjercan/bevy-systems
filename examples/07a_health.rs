@@ -95,7 +95,9 @@ fn setup_health_entity(
         ))
         .id();
 
-    commands.entity(mesh_entity).insert(ExplodableMesh(vec![mesh_entity]));
+    commands
+        .entity(mesh_entity)
+        .insert(ExplodableMesh(vec![mesh_entity]));
 
     commands.spawn((
         Name::new("OnDestroyedEvent Handler"),
@@ -103,7 +105,7 @@ fn setup_health_entity(
             .with_filter(EntityFilter::default().with_entity(mesh_entity))
             .with_action(InsertComponentAction(ExplodeMesh {
                 fragment_count: 4,
-                force_multiplier_range: (5.0, 15.0)
+                force_multiplier_range: (5.0, 15.0),
             }))
             .with_action(EntityDespawnAction),
     ));

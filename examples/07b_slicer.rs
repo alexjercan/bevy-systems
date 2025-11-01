@@ -20,7 +20,12 @@ fn main() {
 fn custom_plugin(app: &mut App) {
     app.add_systems(
         OnEnter(GameStates::Simulation),
-        (setup_health_entity, setup_camera, setup_simple_scene, setup_event_handlers),
+        (
+            setup_health_entity,
+            setup_camera,
+            setup_simple_scene,
+            setup_event_handlers,
+        ),
     );
 
     app.add_observer(on_click_damage_health);
@@ -52,12 +57,21 @@ fn on_fragment_added(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mesh_entity = commands.entity(add.entity).insert((
-        MeshMaterial3d(materials.add(Color::srgb(rand::random(), rand::random(), rand::random()))),
-        Health::new(10.0),
-    )).id();
+    let mesh_entity = commands
+        .entity(add.entity)
+        .insert((
+            MeshMaterial3d(materials.add(Color::srgb(
+                rand::random(),
+                rand::random(),
+                rand::random(),
+            ))),
+            Health::new(10.0),
+        ))
+        .id();
 
-    commands.entity(mesh_entity).insert(ExplodableMesh(vec![mesh_entity]));
+    commands
+        .entity(mesh_entity)
+        .insert(ExplodableMesh(vec![mesh_entity]));
 }
 
 fn setup_health_entity(
@@ -77,7 +91,9 @@ fn setup_health_entity(
         ))
         .id();
 
-    commands.entity(mesh_entity).insert(ExplodableMesh(vec![mesh_entity]));
+    commands
+        .entity(mesh_entity)
+        .insert(ExplodableMesh(vec![mesh_entity]));
 }
 
 fn setup_event_handlers(mut commands: Commands) {
@@ -88,7 +104,7 @@ fn setup_event_handlers(mut commands: Commands) {
             .with_action(InsertComponentAction(CollisionLayers::NONE))
             .with_action(InsertComponentAction(ExplodeMesh {
                 fragment_count: 2,
-                force_multiplier_range: (1.0, 2.0)
+                force_multiplier_range: (1.0, 2.0),
             }))
             .with_action(EntityDespawnAction),
     ));
