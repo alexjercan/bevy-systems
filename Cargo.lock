@@ -3986,6 +3986,7 @@ dependencies = [
  "bevy",
  "bevy_enhanced_input",
  "bevy_hanabi",
+ "itertools 0.14.0",
  "nova_assets",
  "nova_debug",
  "nova_gameplay",
@@ -4013,6 +4014,7 @@ dependencies = [
  "bevy_common_systems",
  "bevy_hanabi",
  "rand",
+ "serde",
 ]
 
 [[package]]

@@ -3,7 +3,7 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-use crate::prelude::{SpaceshipRootMarker, SpaceshipSystems};
+use crate::prelude::{SpaceshipRootMarker, SpaceshipSystems, SectionRenderOf};
 
 pub mod prelude {
     pub use super::{
@@ -156,6 +156,7 @@ fn insert_controller_section_render(
         Some(scene) => {
             commands.entity(entity).insert((children![(
                 Name::new("Controller Section Body"),
+                SectionRenderOf(entity),
                 SceneRoot(scene.clone()),
             ),],));
         }
@@ -163,11 +164,13 @@ fn insert_controller_section_render(
             commands.entity(entity).insert((children![
                 (
                     Name::new("Controller Section Body (A)"),
+                    SectionRenderOf(entity),
                     Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
                     MeshMaterial3d(materials.add(Color::srgb(0.2, 0.7, 0.9))),
                 ),
                 (
                     Name::new("Controller Section Window (B)"),
+                    SectionRenderOf(entity),
                     Mesh3d(meshes.add(Cylinder::new(0.2, 0.1))),
                     MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 1.0))),
                     Transform::from_xyz(0.0, 0.5, 0.0),

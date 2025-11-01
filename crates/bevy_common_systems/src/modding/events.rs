@@ -6,14 +6,14 @@ use bevy::prelude::*;
 
 pub mod prelude {
     pub use super::{
-        EventAction, EventFilter, EventHandler, EventKind, GameEvent, GameEventInfo,
-        GameEventsPlugin, EventWorld, CommandsGameEventExt,
+        CommandsGameEventExt, EventAction, EventFilter, EventHandler, EventKind, EventWorld,
+        GameEvent, GameEventInfo, GameEventsPlugin,
     };
 }
 
-pub trait EventWorld: Resource + std::fmt::Debug + Send + Sync {
-    fn update_state_system(world: &mut World);
-    fn update_world_system(world: &mut World);
+pub trait EventWorld: Resource + Send + Sync {
+    fn world_to_state_system(world: &mut World);
+    fn state_to_world_system(world: &mut World);
 }
 
 pub trait EventKind: Clone + Send + Sync + 'static {
@@ -38,7 +38,7 @@ pub trait EventFilter<W: EventWorld>: std::fmt::Debug + Send + Sync {
     }
 }
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Clone, Reflect)]
 pub struct EventHandler<W: EventWorld> {
     pub(super) name: &'static str,
     pub(super) filters: Vec<Arc<dyn EventFilter<W>>>,
@@ -120,8 +120,11 @@ impl<'w, 's> CommandsGameEventExt for Commands<'w, 's> {
     }
 }
 
-#[derive(Resource, Debug, Clone, Default, Deref, DerefMut)]
-pub struct GameEventQueue(VecDeque<GameEvent>);
+#[derive(Resource, Debug, Clone, Default)]
+pub struct GameEventQueue<W> {
+    pub events: VecDeque<GameEvent>,
+    _marker: std::marker::PhantomData<W>,
+}
 
 pub struct GameEventsPlugin<W> {
     _marker: std::marker::PhantomData<W>,
@@ -137,26 +140,37 @@ impl<W> Default for GameEventsPlugin<W> {
 
 impl<W> Plugin for GameEventsPlugin<W>
 where
-    W: EventWorld + Default + Clone,
+    W: EventWorld + Default,
 {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.init_resource::<GameEventQueue>();
-        app.add_observer(on_game_event);
+        app.init_resource::<GameEventQueue<W>>();
+        app.add_observer(on_game_event::<W>);
 
         app.init_resource::<W>();
         app.add_systems(
             PostUpdate,
             (
-                W::update_state_system,
+                W::world_to_state_system,
                 queue_system::<W>,
-                W::update_world_system,
+                W::state_to_world_system,
             )
-                .chain(),
+                .chain()
+                .run_if(not(is_queue_empty::<W>)),
         );
     }
 }
 
-fn on_game_event(event: On<GameEvent>, mut queue: ResMut<GameEventQueue>) {
+fn is_queue_empty<W>(queue: Res<GameEventQueue<W>>) -> bool
+where
+    W: Send + Sync + 'static,
+{
+    queue.events.is_empty()
+}
+
+fn on_game_event<W>(event: On<GameEvent>, mut queue: ResMut<GameEventQueue<W>>)
+where
+    W: Send + Sync + 'static,
+{
     let event = event.event();
     trace!(
         "on_game_event: event {:?}, info {:?}",
@@ -164,15 +178,15 @@ fn on_game_event(event: On<GameEvent>, mut queue: ResMut<GameEventQueue>) {
         event.info
     );
 
-    queue.push_back(event.clone());
+    queue.events.push_back(event.clone());
 }
 
 fn queue_system<W: EventWorld>(
-    mut queue: ResMut<GameEventQueue>,
+    mut queue: ResMut<GameEventQueue<W>>,
     mut world: ResMut<W>,
     q_handler: Query<&EventHandler<W>>,
 ) {
-    while let Some(event) = queue.pop_front() {
+    while let Some(event) = queue.events.pop_front() {
         trace!(
             "queue_system: processing event {:?}, info {:?}",
             event.name,
@@ -182,10 +196,7 @@ fn queue_system<W: EventWorld>(
         for handler in &q_handler {
             // TODO: Optimize by indexing handlers by event name
             if handler.name == event.name && handler.filter(&world, &event.info) {
-                trace!(
-                    "queue_system: handler {:?}",
-                    handler
-                );
+                trace!("queue_system: handler {:?} passed filters", handler.name);
 
                 for action in &handler.actions {
                     trace!("queue_system: executing action {:?}", action.name());

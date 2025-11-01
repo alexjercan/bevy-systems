@@ -776,12 +776,12 @@ fn insert_turret_section_render(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    q_base: Query<&TurretSectionBaseRenderMesh, With<TurretRotatorBaseMarker>>,
+    q_base: Query<(&TurretSectionPartOf, &TurretSectionBaseRenderMesh), With<TurretRotatorBaseMarker>>,
 ) {
     let entity = add.entity;
     trace!("insert_turret_section_render: entity {:?}", entity);
 
-    let Ok(render_mesh) = q_base.get(entity) else {
+    let Ok((turret, render_mesh)) = q_base.get(entity) else {
         warn!(
             "insert_turret_section_render: entity {:?} not found in q_base",
             entity
@@ -793,6 +793,7 @@ fn insert_turret_section_render(
         Some(scene) => {
             commands.entity(entity).insert((children![(
                 Name::new("Render Turret Base"),
+                SectionRenderOf(**turret),
                 SceneRoot(scene.clone()),
             ),],));
         }
@@ -800,6 +801,7 @@ fn insert_turret_section_render(
             commands.entity(entity).insert((children![(
                 Name::new("Render Turret Base"),
                 Transform::from_xyz(0.0, 0.05, 0.0),
+                SectionRenderOf(**turret),
                 Mesh3d(meshes.add(Cylinder::new(0.5, 0.1))),
                 MeshMaterial3d(materials.add(Color::srgb(0.25, 0.25, 0.25))),
             ),],));
@@ -812,12 +814,12 @@ fn insert_turret_yaw_rotator_render(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    q_yaw: Query<&TurretSectionYawRenderMesh, With<TurretSectionRotatorYawMarker>>,
+    q_yaw: Query<(&TurretSectionPartOf, &TurretSectionYawRenderMesh), With<TurretSectionRotatorYawMarker>>,
 ) {
     let entity = add.entity;
     trace!("insert_turret_yaw_rotator_render: entity {:?}", entity);
 
-    let Ok(render_mesh) = q_yaw.get(entity) else {
+    let Ok((turret, render_mesh)) = q_yaw.get(entity) else {
         warn!(
             "insert_turret_yaw_rotator_render: entity {:?} not found in q_yaw",
             entity
@@ -829,6 +831,7 @@ fn insert_turret_yaw_rotator_render(
         Some(scene) => {
             commands.entity(entity).insert((children![(
                 Name::new("Render Turret Yaw"),
+                SectionRenderOf(**turret),
                 SceneRoot(scene.clone()),
             ),],));
         }
@@ -854,6 +857,7 @@ fn insert_turret_yaw_rotator_render(
                     .with_children(|parent| {
                         parent.spawn((
                             Name::new("Yaw Base"),
+                            SectionRenderOf(**turret),
                             Mesh3d(base_cylinder.clone()),
                             MeshMaterial3d(base_mat.clone()),
                         ));
@@ -887,12 +891,12 @@ fn insert_turret_pitch_rotator_render(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    q_pitch: Query<&TurretSectionPitchRenderMesh, With<TurretSectionRotatorPitchMarker>>,
+    q_pitch: Query<(&TurretSectionPartOf, &TurretSectionPitchRenderMesh), With<TurretSectionRotatorPitchMarker>>,
 ) {
     let entity = add.entity;
     trace!("insert_turret_pitch_rotator_render: entity {:?}", entity);
 
-    let Ok(render_mesh) = q_pitch.get(entity) else {
+    let Ok((turret, render_mesh)) = q_pitch.get(entity) else {
         warn!(
             "insert_turret_pitch_rotator_render: entity {:?} not found in q_pitch",
             entity
@@ -904,6 +908,7 @@ fn insert_turret_pitch_rotator_render(
         Some(scene) => {
             commands.entity(entity).insert((children![(
                 Name::new("Render Turret Pitch"),
+                SectionRenderOf(**turret),
                 SceneRoot(scene.clone()),
             ),],));
         }
@@ -930,6 +935,7 @@ fn insert_turret_pitch_rotator_render(
                     .with_children(|parent| {
                         parent.spawn((
                             Name::new("Pitch Base"),
+                            SectionRenderOf(**turret),
                             Mesh3d(base_cylinder.clone()),
                             MeshMaterial3d(base_mat.clone()),
                         ));
@@ -963,12 +969,12 @@ fn insert_turret_barrel_render(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    q_barrel: Query<&TurretSectionBarrelRenderMesh, With<TurretSectionRotatorBarrelMarker>>,
+    q_barrel: Query<(&TurretSectionPartOf, &TurretSectionBarrelRenderMesh), With<TurretSectionRotatorBarrelMarker>>,
 ) {
     let entity = add.entity;
     trace!("insert_turret_barrel_render: entity {:?}", entity);
 
-    let Ok(render_mesh) = q_barrel.get(entity) else {
+    let Ok((turret, render_mesh)) = q_barrel.get(entity) else {
         warn!(
             "insert_turret_barrel_render: entity {:?} not found in q_barrel",
             entity
@@ -980,6 +986,7 @@ fn insert_turret_barrel_render(
         Some(scene) => {
             commands.entity(entity).insert((children![(
                 Name::new("Render Turret Barrel"),
+                SectionRenderOf(**turret),
                 SceneRoot(scene.clone()),
             ),],));
         }
@@ -1004,6 +1011,7 @@ fn insert_turret_barrel_render(
                             .spawn((
                                 Name::new("Turret Body"),
                                 Transform::from_xyz(0.0, 0.0, -0.05),
+                                SectionRenderOf(**turret),
                                 Mesh3d(body_mesh.clone()),
                                 MeshMaterial3d(body_mat.clone()),
                             ))

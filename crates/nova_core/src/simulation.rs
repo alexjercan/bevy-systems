@@ -1,8 +1,9 @@
 //! The simulation plugin. This plugin should contain all the gameplay related logic.
 
 use avian3d::prelude::*;
-use bevy::prelude::*;
+use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_enhanced_input::prelude::*;
+use itertools::Itertools;
 use nova_assets::prelude::*;
 use nova_gameplay::prelude::*;
 use rand::prelude::*;
@@ -26,6 +27,8 @@ impl Plugin for SimulationPlugin {
                 setup_simple_scene,
                 setup_camera_controller,
                 setup_player_input,
+                setup_spaceship_sections,
+                setup_event_handlers,
             ),
         );
 
@@ -186,7 +189,7 @@ fn setup_simple_scene(
         let planet = commands
             .spawn((
                 DespawnOnExit(super::GameStates::Simulation),
-                Name::new(format!("Planet {}", i)),
+                Name::new(format!("Asteroid {}", i)),
                 Transform::from_translation(pos),
                 GlobalTransform::default(),
                 Mesh3d(meshes.add(Sphere::new(radius))),
@@ -197,11 +200,7 @@ fn setup_simple_scene(
             ))
             .id();
 
-        commands.entity(planet).insert(ExplodeOnDestroy {
-            mesh_entity: Some(planet),
-            fragment_count: 8,
-            ..default()
-        });
+        commands.entity(planet).insert(ExplodableMesh(vec![planet]));
     }
 
     for i in 0..40 {
@@ -220,7 +219,7 @@ fn setup_simple_scene(
         let satellite = commands
             .spawn((
                 DespawnOnExit(super::GameStates::Simulation),
-                Name::new(format!("Satellite {}", i)),
+                Name::new(format!("Junk {}", i)),
                 Transform::from_translation(pos),
                 GlobalTransform::default(),
                 Mesh3d(meshes.add(Cuboid::new(size, size, size))),
@@ -232,12 +231,50 @@ fn setup_simple_scene(
             ))
             .id();
 
-        commands.entity(satellite).insert(ExplodeOnDestroy {
-            mesh_entity: Some(satellite),
-            fragment_count: 4,
-            ..default()
-        });
+        commands
+            .entity(satellite)
+            .insert(ExplodableMesh(vec![satellite]));
     }
+}
+
+fn setup_spaceship_sections(
+    mut commands: Commands,
+    q_sections: Query<&ChildOf, With<SectionMarker>>,
+    q_mesh: Query<(Entity, &SectionRenderOf), With<Mesh3d>>,
+) {
+    let mut map = HashMap::new();
+    for (section, group) in q_mesh
+        .iter()
+        .chunk_by(|(_, render_of)| *render_of)
+        .into_iter()
+    {
+        let Ok(ChildOf(spaceship)) = q_sections.get(section.0) else {
+            warn!(
+                "setup_spaceship_sections: section {:?} has no ChildOf component.",
+                section.0
+            );
+            continue;
+        };
+
+        map.entry(*spaceship)
+            .or_insert_with(Vec::new)
+            .extend(group.map(|(entity, _)| entity));
+    }
+
+    for (spaceship, sections) in map {
+        commands.entity(spaceship).insert(ExplodableMesh(sections));
+    }
+}
+
+fn setup_event_handlers(mut commands: Commands) {
+    commands.spawn((
+        DespawnOnExit(super::GameStates::Simulation),
+        Name::new("OnDestroyedEvent Handler"),
+        EventHandler::<NovaEventWorld>::new::<OnDestroyedEvent>()
+            .with_filter(EntityFilter::default())
+            .with_action(InsertComponentAction(ExplodeMesh::default()))
+            .with_action(InsertComponentAction(DespawnEntity)),
+    ));
 }
 
 fn setup_camera_controller(mut commands: Commands, game_assets: Res<GameAssets>) {

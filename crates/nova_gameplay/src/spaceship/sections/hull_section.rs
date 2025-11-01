@@ -2,6 +2,8 @@
 
 use bevy::prelude::*;
 
+use crate::prelude::SectionRenderOf;
+
 pub mod prelude {
     pub use super::{hull_section, HullSectionConfig, HullSectionMarker, HullSectionPlugin};
 }
@@ -65,12 +67,14 @@ fn insert_hull_section_render(
         Some(scene) => {
             commands.entity(entity).insert((children![(
                 Name::new("Hull Section Body"),
+                SectionRenderOf(entity),
                 SceneRoot(scene.clone()),
             ),],));
         }
         None => {
             commands.entity(entity).insert((children![(
                 Name::new("Hull Section Body"),
+                SectionRenderOf(entity),
                 Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
                 MeshMaterial3d(materials.add(Color::srgb(0.8, 0.8, 0.8))),
             ),],));

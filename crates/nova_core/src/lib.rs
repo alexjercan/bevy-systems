@@ -172,11 +172,11 @@ impl Plugin for CorePlugin {
         app.add_plugins(bevy_common_systems::prelude::DirectionalSphereOrbitPlugin);
         // Other helper plugins
         app.add_plugins(bevy_common_systems::prelude::TempEntityPlugin);
+        app.add_plugins(bevy_common_systems::prelude::DespawnEntityPlugin);
+        app.add_plugins(bevy_common_systems::prelude::ExplodeMeshPlugin);
         // Core Mechanics
         app.add_plugins(bevy_common_systems::prelude::CollisionDamagePlugin);
         app.add_plugins(bevy_common_systems::prelude::HealthPlugin);
-        // Modding Support
-        // app.add_plugins(bevy_common_systems::prelude::GameEventsPlugin);
 
         // UI Plugins
         app.add_plugins(nova_gameplay::bevy_common_systems::prelude::StatusBarPlugin);
@@ -186,7 +186,7 @@ impl Plugin for CorePlugin {
             render: self.render,
         });
         app.add_plugins(nova_gameplay::damage::DamagePlugin);
-        app.add_plugins(nova_gameplay::destruction::DestructionHealthPlugin);
+        app.add_plugins(nova_gameplay::events::NovaEventsPlugin);
 
         // Diagnostics
         if !app.is_plugin_added::<bevy::diagnostic::FrameTimeDiagnosticsPlugin>() {

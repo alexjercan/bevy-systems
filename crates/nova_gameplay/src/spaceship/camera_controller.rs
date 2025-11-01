@@ -170,6 +170,8 @@ fn update_chase_camera_input(
 fn sync_spaceship_control_mode(
     mut commands: Commands,
     mode: Res<SpaceshipCameraControlMode>,
+    // NOTE: Just to ensure the spaceship exists
+    _spaceship: Single<&Transform, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
     spaceship_input_rotation: Single<
         (Entity, &PointRotationOutput),
         With<SpaceshipCameraNormalInputMarker>,

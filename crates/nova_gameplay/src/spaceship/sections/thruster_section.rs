@@ -8,7 +8,7 @@ use bevy::{
     shader::ShaderRef,
 };
 
-use crate::prelude::{SpaceshipRootMarker, SpaceshipSystems};
+use crate::prelude::{SectionRenderOf, SpaceshipRootMarker, SpaceshipSystems};
 
 pub mod prelude {
     pub use super::{
@@ -185,6 +185,7 @@ fn insert_thruster_section_render(
         Some(scene) => {
             commands.entity(entity).insert((children![(
                 Name::new("Thruster Section Body"),
+                SectionRenderOf(entity),
                 SceneRoot(scene.clone()),
             ),],));
         }
@@ -192,6 +193,7 @@ fn insert_thruster_section_render(
             commands.entity(entity).insert((children![
                 (
                     Name::new("Thruster Section Body (A)"),
+                    SectionRenderOf(entity),
                     Mesh3d(meshes.add(Cylinder::new(0.4, 0.4))),
                     MeshMaterial3d(standard_materials.add(Color::srgb(0.8, 0.8, 0.8))),
                     Transform::from_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2))
@@ -199,11 +201,13 @@ fn insert_thruster_section_render(
                 ),
                 (
                     Name::new("Thruster Section Body (B)"),
+                    SectionRenderOf(entity),
                     Mesh3d(meshes.add(Cone::new(0.5, 0.5))),
                     MeshMaterial3d(standard_materials.add(Color::srgb(0.9, 0.3, 0.2))),
                     Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
                 ),
                 (
+                    // NOTE: This is not really part of the render mesh, but I just added it here
                     Name::new("Thruster Exhaust"),
                     ThrusterSectionExhaustShaderMarker,
                     Mesh3d(meshes.add(Cone::new(0.4, 0.1))),

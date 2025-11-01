@@ -38,13 +38,13 @@ pub struct CustomEventWorld {
 }
 
 impl EventWorld for CustomEventWorld {
-    fn update_state_system(world: &mut World) {
+    fn world_to_state_system(world: &mut World) {
         let counter = **world.resource::<SomeCounter>();
         let mut resource = world.resource_mut::<Self>();
         resource.counter = counter;
     }
 
-    fn update_world_system(world: &mut World) {
+    fn state_to_world_system(world: &mut World) {
         let new_counter = world.resource::<Self>().counter;
         let mut counter = world.resource_mut::<SomeCounter>();
         **counter = new_counter;
@@ -53,11 +53,11 @@ impl EventWorld for CustomEventWorld {
 
 #[derive(Debug, Clone, EventKind)]
 #[event_name("onupdate")]
-#[event_info(OnUpdateInfo)]
-pub struct OnUpdate;
+#[event_info(OnUpdateEventInfo)]
+pub struct OnUpdateEvent;
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-pub struct OnUpdateInfo {
+pub struct OnUpdateEventInfo {
     value: f32,
 }
 
@@ -94,14 +94,14 @@ impl EventFilter<CustomEventWorld> for MinValueFilter {
 fn setup_handler(mut commands: Commands) {
     commands.spawn((
         Name::new("OnUpdate Handler"),
-        EventHandler::<CustomEventWorld>::new::<OnUpdate>()
+        EventHandler::<CustomEventWorld>::new::<OnUpdateEvent>()
             .with_filter(MinValueFilter { min_value: 0.5 })
             .with_action(IncrementCounterAction),
     ));
 }
 
 fn update_system(mut commands: Commands) {
-    commands.fire::<OnUpdate>(OnUpdateInfo {
+    commands.fire::<OnUpdateEvent>(OnUpdateEventInfo {
         value: rand::random(),
     });
 }
