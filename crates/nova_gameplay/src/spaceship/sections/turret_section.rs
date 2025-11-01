@@ -776,7 +776,10 @@ fn insert_turret_section_render(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    q_base: Query<(&TurretSectionPartOf, &TurretSectionBaseRenderMesh), With<TurretRotatorBaseMarker>>,
+    q_base: Query<
+        (&TurretSectionPartOf, &TurretSectionBaseRenderMesh),
+        With<TurretRotatorBaseMarker>,
+    >,
 ) {
     let entity = add.entity;
     trace!("insert_turret_section_render: entity {:?}", entity);
@@ -814,7 +817,10 @@ fn insert_turret_yaw_rotator_render(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    q_yaw: Query<(&TurretSectionPartOf, &TurretSectionYawRenderMesh), With<TurretSectionRotatorYawMarker>>,
+    q_yaw: Query<
+        (&TurretSectionPartOf, &TurretSectionYawRenderMesh),
+        With<TurretSectionRotatorYawMarker>,
+    >,
 ) {
     let entity = add.entity;
     trace!("insert_turret_yaw_rotator_render: entity {:?}", entity);
@@ -891,7 +897,10 @@ fn insert_turret_pitch_rotator_render(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    q_pitch: Query<(&TurretSectionPartOf, &TurretSectionPitchRenderMesh), With<TurretSectionRotatorPitchMarker>>,
+    q_pitch: Query<
+        (&TurretSectionPartOf, &TurretSectionPitchRenderMesh),
+        With<TurretSectionRotatorPitchMarker>,
+    >,
 ) {
     let entity = add.entity;
     trace!("insert_turret_pitch_rotator_render: entity {:?}", entity);
@@ -969,7 +978,10 @@ fn insert_turret_barrel_render(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    q_barrel: Query<(&TurretSectionPartOf, &TurretSectionBarrelRenderMesh), With<TurretSectionRotatorBarrelMarker>>,
+    q_barrel: Query<
+        (&TurretSectionPartOf, &TurretSectionBarrelRenderMesh),
+        With<TurretSectionRotatorBarrelMarker>,
+    >,
 ) {
     let entity = add.entity;
     trace!("insert_turret_barrel_render: entity {:?}", entity);

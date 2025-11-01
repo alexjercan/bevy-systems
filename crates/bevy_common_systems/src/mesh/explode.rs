@@ -110,7 +110,7 @@ fn handle_explosion(
 
         for (mesh, normal) in fragments {
             let transform = transform.compute_transform();
-            let offset = normal * 0.1;
+            let offset = normal * 0.5;
             let transform = transform.with_translation(transform.translation + offset);
 
             commands.spawn((

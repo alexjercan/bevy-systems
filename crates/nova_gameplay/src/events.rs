@@ -1,7 +1,7 @@
 pub mod prelude {
     pub use super::{
-        EntityFilter, InsertComponentAction, NovaEventWorld, NovaEventsPlugin, OnDestroyedEvent,
-        OnDestroyedEventInfo,
+        EntityDespawnAction, EntityFilter, InsertComponentAction, NovaEventWorld, NovaEventsPlugin,
+        OnDestroyedEvent, OnDestroyedEventInfo, RemoveComponentAction,
     };
 }
 
@@ -72,11 +72,11 @@ impl Default for OnDestroyedEventInfo {
 }
 
 #[derive(Debug, Clone, Deref, DerefMut, Reflect)]
-pub struct InsertComponentAction<C: Component + std::fmt::Debug + Clone + Reflect>(pub C);
+pub struct InsertComponentAction<C: Component + std::fmt::Debug + Clone>(pub C);
 
 impl<C> EventAction<NovaEventWorld> for InsertComponentAction<C>
 where
-    C: Component + std::fmt::Debug + Clone + Reflect,
+    C: Component + std::fmt::Debug + Clone,
 {
     fn action(&self, world: &mut NovaEventWorld, info: &GameEventInfo) {
         let Some(data) = &info.data else {
@@ -98,13 +98,75 @@ where
     }
 }
 
+#[derive(Debug, Clone, Deref, DerefMut, Reflect)]
+pub struct RemoveComponentAction<C: Component + std::fmt::Debug + Clone> {
+    _phantom: std::marker::PhantomData<C>,
+}
+
+impl<C> Default for RemoveComponentAction<C>
+where
+    C: Component + std::fmt::Debug + Clone,
+{
+    fn default() -> Self {
+        Self {
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<C> EventAction<NovaEventWorld> for RemoveComponentAction<C>
+where
+    C: Component + std::fmt::Debug + Clone,
+{
+    fn action(&self, world: &mut NovaEventWorld, info: &GameEventInfo) {
+        let Some(data) = &info.data else {
+            warn!("InsertComponentAction: no data in event info");
+            return;
+        };
+
+        let Some(value) = data.get("entity").and_then(|v| v.as_u64()) else {
+            warn!("InsertComponentAction: no entity in event info data");
+            return;
+        };
+
+        let entity = Entity::from_bits(value);
+
+        world.push_command(move |commands| {
+            commands.entity(entity).remove::<C>();
+        });
+    }
+}
+
+#[derive(Debug, Clone, Reflect)]
+pub struct EntityDespawnAction;
+
+impl EventAction<NovaEventWorld> for EntityDespawnAction {
+    fn action(&self, world: &mut NovaEventWorld, info: &GameEventInfo) {
+        let Some(data) = &info.data else {
+            warn!("EntityDespawnAction: no data in event info");
+            return;
+        };
+
+        let Some(value) = data.get("entity").and_then(|v| v.as_u64()) else {
+            warn!("EntityDespawnAction: no entity in event info data");
+            return;
+        };
+
+        let entity = Entity::from_bits(value);
+
+        world.push_command(move |commands| {
+            commands.entity(entity).despawn();
+        });
+    }
+}
+
 #[derive(Debug, Clone, Default, Reflect)]
 pub struct EntityFilter {
     pub entity: Option<Entity>,
 }
 
 impl EntityFilter {
-    pub fn with_id(mut self, entity: Entity) -> Self {
+    pub fn with_entity(mut self, entity: Entity) -> Self {
         self.entity = Some(entity);
         self
     }

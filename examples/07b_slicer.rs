@@ -20,7 +20,7 @@ fn main() {
 fn custom_plugin(app: &mut App) {
     app.add_systems(
         OnEnter(GameStates::Simulation),
-        (setup_health_entity, setup_camera, setup_simple_scene),
+        (setup_health_entity, setup_camera, setup_simple_scene, setup_event_handlers),
     );
 
     app.add_observer(on_click_damage_health);
@@ -52,17 +52,12 @@ fn on_fragment_added(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    commands.entity(add.entity).insert((
+    let mesh_entity = commands.entity(add.entity).insert((
         MeshMaterial3d(materials.add(Color::srgb(rand::random(), rand::random(), rand::random()))),
         Health::new(10.0),
-        DespawnOnDestroy,
-        ExplodeOnDestroy {
-            mesh_entity: Some(add.entity),
-            fragment_count: 2,
-            force_multiplier_range: (1.0, 2.0),
-            ..default()
-        },
-    ));
+    )).id();
+
+    commands.entity(mesh_entity).insert(ExplodableMesh(vec![mesh_entity]));
 }
 
 fn setup_health_entity(
@@ -78,17 +73,25 @@ fn setup_health_entity(
             Mesh3d(meshes.add(Sphere::new(3.0))),
             MeshMaterial3d(materials.add(Color::srgb(0.8, 0.1, 0.1))),
             Health::new(10.0),
-            DespawnOnDestroy,
             Collider::sphere(3.0),
         ))
         .id();
 
-    commands.entity(mesh_entity).insert(ExplodeOnDestroy {
-        mesh_entity: Some(mesh_entity),
-        fragment_count: 2,
-        force_multiplier_range: (1.0, 2.0),
-        ..default()
-    });
+    commands.entity(mesh_entity).insert(ExplodableMesh(vec![mesh_entity]));
+}
+
+fn setup_event_handlers(mut commands: Commands) {
+    commands.spawn((
+        Name::new("OnDestroyedEvent Handler"),
+        EventHandler::<NovaEventWorld>::new::<OnDestroyedEvent>()
+            .with_filter(EntityFilter::default())
+            .with_action(InsertComponentAction(CollisionLayers::NONE))
+            .with_action(InsertComponentAction(ExplodeMesh {
+                fragment_count: 2,
+                force_multiplier_range: (1.0, 2.0)
+            }))
+            .with_action(EntityDespawnAction),
+    ));
 }
 
 fn setup_camera(mut commands: Commands, game_assets: Res<GameAssets>) {

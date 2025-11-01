@@ -29,6 +29,7 @@ impl Plugin for SimulationPlugin {
                 setup_player_input,
                 setup_spaceship_sections,
                 setup_event_handlers,
+                switch_scene_on_no_player.run_if(run_once),
             ),
         );
 
@@ -45,8 +46,7 @@ impl Plugin for SimulationPlugin {
         // TODO: Use the input system for this
         app.add_systems(
             Update,
-            (switch_scene_editor, switch_scene_on_no_player)
-                .run_if(in_state(super::GameStates::Simulation)),
+            switch_scene_editor.run_if(in_state(super::GameStates::Simulation)),
         );
 
         app.add_systems(

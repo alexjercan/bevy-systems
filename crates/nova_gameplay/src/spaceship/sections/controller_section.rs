@@ -3,7 +3,7 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-use crate::prelude::{SpaceshipRootMarker, SpaceshipSystems, SectionRenderOf};
+use crate::prelude::{SectionRenderOf, SpaceshipRootMarker, SpaceshipSystems};
 
 pub mod prelude {
     pub use super::{
