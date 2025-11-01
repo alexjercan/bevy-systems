@@ -1,38 +1,37 @@
-use std::sync::Arc;
+//! TODO: Document this module
+
+use std::{collections::VecDeque, sync::Arc};
 
 use bevy::prelude::*;
-pub use inventory;
 
 pub mod prelude {
     pub use super::{
-        CommandsGameEventExt, EventAction, EventFilter, EventHandler, EventKind, GameEvent,
-        GameEventInfo, GameEventsPlugin,
+        EventAction, EventFilter, EventHandler, EventKind, GameEvent, GameEventInfo,
+        GameEventsPlugin, EventWorld, CommandsGameEventExt,
     };
 }
 
-pub struct RegisteredEventKind {
-    pub name: &'static str,
-    pub register_fn: fn(&mut bevy::prelude::App),
+pub trait EventWorld: Resource + std::fmt::Debug + Send + Sync {
+    fn update_state_system(world: &mut World);
+    fn update_world_system(world: &mut World);
 }
 
-inventory::collect!(RegisteredEventKind);
-
-pub trait EventKind: Clone + std::fmt::Debug + Send + Sync + 'static {
-    type Info: Default + Clone + std::fmt::Debug + Send + Sync + 'static;
+pub trait EventKind: Clone + Send + Sync + 'static {
+    type Info: serde::Serialize + Default + Clone + std::fmt::Debug + Send + Sync + 'static;
 
     fn name() -> &'static str;
 }
 
-pub trait EventAction: std::fmt::Debug + Send + Sync {
-    fn action(&self, commands: &mut Commands, info: &GameEventInfo);
+pub trait EventAction<W: EventWorld>: std::fmt::Debug + Send + Sync {
+    fn action(&self, world: &mut W, info: &GameEventInfo);
 
     fn name(&self) -> &'static str {
         std::any::type_name::<Self>()
     }
 }
 
-pub trait EventFilter: std::fmt::Debug + Send + Sync {
-    fn filter(&self, info: &GameEventInfo) -> bool;
+pub trait EventFilter<W: EventWorld>: std::fmt::Debug + Send + Sync {
+    fn filter(&self, world: &W, info: &GameEventInfo) -> bool;
 
     fn name(&self) -> &'static str {
         std::any::type_name::<Self>()
@@ -40,47 +39,44 @@ pub trait EventFilter: std::fmt::Debug + Send + Sync {
 }
 
 #[derive(Component, Debug, Clone)]
-pub struct EventHandler<E: EventKind> {
-    pub(super) filters: Vec<Arc<dyn EventFilter>>,
-    pub(super) actions: Vec<Arc<dyn EventAction>>,
-    _marker: std::marker::PhantomData<E>,
+pub struct EventHandler<W: EventWorld> {
+    pub(super) name: &'static str,
+    pub(super) filters: Vec<Arc<dyn EventFilter<W>>>,
+    pub(super) actions: Vec<Arc<dyn EventAction<W>>>,
 }
 
-impl<E: EventKind> Default for EventHandler<E> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<E: EventKind> EventHandler<E> {
-    pub fn new() -> Self {
+impl<W> EventHandler<W>
+where
+    W: EventWorld,
+{
+    pub fn new<E: EventKind>() -> Self {
         Self {
+            name: E::name(),
             filters: Vec::new(),
             actions: Vec::new(),
-            _marker: std::marker::PhantomData,
         }
     }
 
-    pub fn with_filter<F: EventFilter + 'static>(mut self, f: F) -> Self {
+    pub fn with_filter<F: EventFilter<W> + 'static>(mut self, f: F) -> Self {
         self.filters.push(Arc::new(f));
         self
     }
 
-    pub fn add_filter<F: EventFilter + 'static>(&mut self, f: F) {
+    pub fn add_filter<F: EventFilter<W> + 'static>(&mut self, f: F) {
         self.filters.push(Arc::new(f));
     }
 
-    pub fn with_action<A: EventAction + 'static>(mut self, a: A) -> Self {
+    pub fn with_action<A: EventAction<W> + 'static>(mut self, a: A) -> Self {
         self.actions.push(Arc::new(a));
         self
     }
 
-    pub fn add_action<A: EventAction + 'static>(&mut self, a: A) {
+    pub fn add_action<A: EventAction<W> + 'static>(&mut self, a: A) {
         self.actions.push(Arc::new(a));
     }
 
-    pub fn filter(&self, info: &GameEventInfo) -> bool {
-        self.filters.iter().all(|f| f.filter(info))
+    pub fn filter(&self, world: &W, info: &GameEventInfo) -> bool {
+        self.filters.iter().all(|f| f.filter(world, info))
     }
 }
 
@@ -103,61 +99,14 @@ impl<T: serde::Serialize> From<T> for GameEventInfo {
 }
 
 #[derive(Event, Debug, Clone)]
-pub struct GameEvent<E: EventKind> {
-    pub(super) info: E::Info,
+pub struct GameEvent {
+    pub(super) name: &'static str,
+    pub(super) info: GameEventInfo,
 }
 
-impl<E: EventKind> Default for GameEvent<E> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<E: EventKind> GameEvent<E> {
-    pub fn new() -> Self {
-        Self {
-            info: E::Info::default(),
-        }
-    }
-
-    pub fn with_info(info: E::Info) -> Self {
-        Self { info }
-    }
-}
-
-pub fn on_game_event<E>(
-    event: On<GameEvent<E>>,
-    mut commands: Commands,
-    q_handler: Query<&EventHandler<E>>,
-) where
-    E: EventKind,
-    E::Info: Into<GameEventInfo>,
-{
-    let event = event.event();
-    trace!(
-        "on_game_event: event {:?}, info {:?}",
-        E::name(),
-        event.info
-    );
-
-    for handler in &q_handler {
-        if handler.filter(&event.info.clone().into()) {
-            for action in &handler.actions {
-                trace!("on_game_event: executing action {:?}", action.name());
-                action.action(&mut commands, &event.info.clone().into());
-            }
-        }
-    }
-}
-
-pub struct GameEventsPlugin;
-
-impl Plugin for GameEventsPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        for event_kind in inventory::iter::<RegisteredEventKind> {
-            debug!("GameEventsPlugin: register {}", event_kind.name);
-            (event_kind.register_fn)(app);
-        }
+impl GameEvent {
+    pub fn new(name: &'static str, info: GameEventInfo) -> Self {
+        Self { name, info }
     }
 }
 
@@ -167,6 +116,82 @@ pub trait CommandsGameEventExt {
 
 impl<'w, 's> CommandsGameEventExt for Commands<'w, 's> {
     fn fire<E: EventKind>(&mut self, info: E::Info) {
-        self.trigger(GameEvent::<E>::with_info(info));
+        self.trigger(GameEvent::new(E::name(), info.into()));
+    }
+}
+
+#[derive(Resource, Debug, Clone, Default, Deref, DerefMut)]
+pub struct GameEventQueue(VecDeque<GameEvent>);
+
+pub struct GameEventsPlugin<W> {
+    _marker: std::marker::PhantomData<W>,
+}
+
+impl<W> Default for GameEventsPlugin<W> {
+    fn default() -> Self {
+        Self {
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<W> Plugin for GameEventsPlugin<W>
+where
+    W: EventWorld + Default + Clone,
+{
+    fn build(&self, app: &mut bevy::prelude::App) {
+        app.init_resource::<GameEventQueue>();
+        app.add_observer(on_game_event);
+
+        app.init_resource::<W>();
+        app.add_systems(
+            PostUpdate,
+            (
+                W::update_state_system,
+                queue_system::<W>,
+                W::update_world_system,
+            )
+                .chain(),
+        );
+    }
+}
+
+fn on_game_event(event: On<GameEvent>, mut queue: ResMut<GameEventQueue>) {
+    let event = event.event();
+    trace!(
+        "on_game_event: event {:?}, info {:?}",
+        event.name,
+        event.info
+    );
+
+    queue.push_back(event.clone());
+}
+
+fn queue_system<W: EventWorld>(
+    mut queue: ResMut<GameEventQueue>,
+    mut world: ResMut<W>,
+    q_handler: Query<&EventHandler<W>>,
+) {
+    while let Some(event) = queue.pop_front() {
+        trace!(
+            "queue_system: processing event {:?}, info {:?}",
+            event.name,
+            event.info
+        );
+
+        for handler in &q_handler {
+            // TODO: Optimize by indexing handlers by event name
+            if handler.name == event.name && handler.filter(&world, &event.info) {
+                trace!(
+                    "queue_system: handler {:?}",
+                    handler
+                );
+
+                for action in &handler.actions {
+                    trace!("queue_system: executing action {:?}", action.name());
+                    action.action(&mut world, &event.info);
+                }
+            }
+        }
     }
 }

@@ -9,7 +9,6 @@ avian3d = { version = "0.4" }
 bevy = { version = "0.17.2" }
 bevy_enhanced_input = { version = "0.19.0" }
 rand = { version = "0.9.2" }
-inventory = { version = "0.3.21" }
 serde_json = { version = "1.0.145" }
 serde = { version = "1.0.228" }
 bevy_common_systems_macros = { path = "./bevy_common_systems_macros" }
