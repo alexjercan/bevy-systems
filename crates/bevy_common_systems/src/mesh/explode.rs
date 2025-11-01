@@ -29,7 +29,7 @@ pub struct ExplodeMesh {
 impl Default for ExplodeMesh {
     fn default() -> Self {
         Self {
-            fragment_count: 6,
+            fragment_count: 4,
             force_multiplier_range: (2.0, 5.0),
         }
     }

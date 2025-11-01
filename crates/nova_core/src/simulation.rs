@@ -1,5 +1,7 @@
 //! The simulation plugin. This plugin should contain all the gameplay related logic.
 
+use std::collections::VecDeque;
+
 use avian3d::prelude::*;
 use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_enhanced_input::prelude::*;
@@ -240,10 +242,13 @@ fn setup_simple_scene(
 fn setup_spaceship_sections(
     mut commands: Commands,
     q_sections: Query<&ChildOf, With<SectionMarker>>,
-    q_mesh: Query<(Entity, &SectionRenderOf), With<Mesh3d>>,
+    q_section_mesh: Query<(Entity, &SectionRenderOf), With<Mesh3d>>,
+    q_scene: Query<(Entity, &SectionRenderOf, &Children), With<SceneRoot>>,
+    q_children: Query<&Children>,
+    q_mesh: Query<Entity, With<Mesh3d>>,
 ) {
     let mut map = HashMap::new();
-    for (section, group) in q_mesh
+    for (section, group) in q_section_mesh
         .iter()
         .chunk_by(|(_, render_of)| *render_of)
         .into_iter()
@@ -259,6 +264,40 @@ fn setup_spaceship_sections(
         map.entry(*spaceship)
             .or_insert_with(Vec::new)
             .extend(group.map(|(entity, _)| entity));
+    }
+
+    for (section, group) in q_scene
+        .iter()
+        .chunk_by(|(_, render_of, _)| *render_of)
+        .into_iter()
+    {
+        let Ok(ChildOf(spaceship)) = q_sections.get(section.0) else {
+            warn!(
+                "setup_spaceship_sections: section {:?} has no ChildOf component.",
+                section.0
+            );
+            continue;
+        };
+
+        let mut meshes = Vec::new();
+        for (_, _, children) in group {
+            let mut queue: VecDeque<Entity> = children.iter().collect();
+            while let Some(child) = queue.pop_front() {
+                if let Ok(mesh_entity) = q_mesh.get(child) {
+                    meshes.push(mesh_entity);
+                }
+
+                if let Ok(child_children) = q_children.get(child) {
+                    for grandchild in child_children {
+                        queue.push_back(*grandchild);
+                    }
+                }
+            }
+        }
+
+        map.entry(*spaceship)
+            .or_insert_with(Vec::new)
+            .extend(meshes);
     }
 
     for (spaceship, sections) in map {
