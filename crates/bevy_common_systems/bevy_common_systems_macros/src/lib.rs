@@ -33,11 +33,11 @@ pub fn derive_event_kind(input: TokenStream) -> TokenStream {
             }
         }
 
-        modding::events::registry::inventory::submit! {
-            modding::events::registry::RegisteredEventKind {
+        modding::events::inventory::submit! {
+            modding::events::RegisteredEventKind {
                 name: #event_name,
                 register_fn: |app: &mut bevy::prelude::App| {
-                    app.add_observer(modding::events::game_event::on_game_event::<#name>);
+                    app.add_observer(modding::events::on_game_event::<#name>);
                 },
             }
         }
