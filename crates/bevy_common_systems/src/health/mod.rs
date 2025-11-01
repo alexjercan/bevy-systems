@@ -3,11 +3,9 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::DestroyedMarker;
-    pub use super::Health;
-    pub use super::HealthApplyDamage;
-    pub use super::HealthPlugin;
-    pub use super::HealthPluginSystems;
+    pub use super::{
+        DestroyedMarker, Health, HealthApplyDamage, HealthPlugin, HealthPluginSystems,
+    };
 }
 
 /// Component representing the health of an entity.
@@ -57,18 +55,24 @@ impl Plugin for HealthPlugin {
 fn on_damage(
     damage: On<HealthApplyDamage>,
     mut commands: Commands,
-    mut q_health: Query<(Entity, &mut Health), Without<DestroyedMarker>>,
+    mut q_health: Query<(Entity, &mut Health, Has<DestroyedMarker>)>,
 ) {
     let target = damage.target;
     trace!("on_damage: target {:?}, damage {:?}", target, damage.amount);
 
-    let Ok((entity, mut health)) = q_health.get_mut(target) else {
+    let Ok((entity, mut health, destroyed)) = q_health.get_mut(target) else {
         // NOTE: tried to apply damage to an entity without Health component
         warn!("on_damage: entity {:?} not found in q_health", target);
         return;
     };
 
+    if destroyed {
+        trace!("on_damage: entity {:?} is already destroyed", entity);
+        return;
+    }
+
     if health.current <= 0.0 {
+        trace!("on_damage: entity {:?} health is already zero", entity);
         return;
     }
 

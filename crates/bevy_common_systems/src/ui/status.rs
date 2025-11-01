@@ -7,19 +7,12 @@ use std::{any::Any, fmt::Display, sync::Arc};
 use bevy::{platform::collections::HashMap, prelude::*};
 
 pub mod prelude {
-    pub use super::status_bar;
-    pub use super::status_bar_item;
-    pub use super::status_fps_color_fn;
-    pub use super::status_fps_value_fn;
-    pub use super::status_version_color_fn;
-    pub use super::status_version_value_fn;
-    pub use super::StatusBarItemConfig;
-    pub use super::StatusBarItemMarker;
-    pub use super::StatusBarPlugin;
-    pub use super::StatusBarPluginSystems;
-    pub use super::StatusBarRootConfig;
-    pub use super::StatusBarRootMarker;
-    pub use super::StatusValue;
+    pub use super::{
+        status_bar, status_bar_item, status_fps_color_fn, status_fps_value_fn,
+        status_version_color_fn, status_version_value_fn, StatusBarItemConfig, StatusBarItemMarker,
+        StatusBarPlugin, StatusBarPluginSystems, StatusBarRootConfig, StatusBarRootMarker,
+        StatusValue,
+    };
 }
 
 /// The StatusBarRootMarker component is a marker component that indicates the root node of the status
@@ -243,7 +236,7 @@ fn insert_status_bar_item(
                     Name::new("StatusBarItemValue"),
                     StatusBarItemValue(None),
                     value_fn.clone(),
-                    Text::new(format!("N/A")),
+                    Text::new("N/A".to_string()),
                     TextFont {
                         font_size: 14.0,
                         ..default()

@@ -1,19 +1,22 @@
-use super::prelude::*;
-use avian3d::prelude::*;
-use bevy::prelude::*;
 use std::fmt::Debug;
 
+use avian3d::prelude::*;
+use bevy::prelude::*;
+
+use super::prelude::*;
+
 pub mod prelude {
-    pub use super::base_section;
-    pub use super::BaseSectionConfig;
-    pub use super::GameSections;
-    pub use super::SectionConfig;
-    pub use super::SectionKind;
-    pub use super::SectionMarker;
+    pub use super::{
+        base_section, BaseSectionConfig, GameSections, SectionConfig, SectionKind, SectionMarker,
+        SectionRenderOf,
+    };
 }
 
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct SectionMarker;
+
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect, PartialEq, Eq)]
+pub struct SectionRenderOf(pub Entity);
 
 #[derive(Component, Clone, Debug, Default, Reflect)]
 pub struct BaseSectionConfig {
@@ -33,6 +36,7 @@ pub enum SectionKind {
 #[derive(Clone, Debug)]
 pub struct SectionConfig {
     pub base: BaseSectionConfig,
+    // TODO: I will probably want to box this later to reduce the size of the struct.
     pub kind: SectionKind,
 }
 

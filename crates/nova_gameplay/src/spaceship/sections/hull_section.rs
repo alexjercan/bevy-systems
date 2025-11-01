@@ -2,24 +2,17 @@
 
 use bevy::prelude::*;
 
+use crate::prelude::SectionRenderOf;
+
 pub mod prelude {
-    pub use super::hull_section;
-    pub use super::HullSectionConfig;
-    pub use super::HullSectionMarker;
-    pub use super::HullSectionPlugin;
+    pub use super::{hull_section, HullSectionConfig, HullSectionMarker, HullSectionPlugin};
 }
 
 /// Configuration for a hull section.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct HullSectionConfig {
     /// The render mesh of the hull section, defaults to a cuboid of size 1x1x1.
     pub render_mesh: Option<Handle<Scene>>,
-}
-
-impl Default for HullSectionConfig {
-    fn default() -> Self {
-        Self { render_mesh: None }
-    }
 }
 
 /// Helper function to create a hull section entity bundle.
@@ -74,12 +67,14 @@ fn insert_hull_section_render(
         Some(scene) => {
             commands.entity(entity).insert((children![(
                 Name::new("Hull Section Body"),
+                SectionRenderOf(entity),
                 SceneRoot(scene.clone()),
             ),],));
         }
         None => {
             commands.entity(entity).insert((children![(
                 Name::new("Hull Section Body"),
+                SectionRenderOf(entity),
                 Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
                 MeshMaterial3d(materials.add(Color::srgb(0.8, 0.8, 0.8))),
             ),],));

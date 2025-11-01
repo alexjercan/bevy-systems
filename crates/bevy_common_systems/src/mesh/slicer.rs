@@ -197,30 +197,30 @@ pub fn mesh_slice(mesh: &Mesh, plane_normal: Vec3, plane_point: Vec3) -> Option<
     };
 
     let triangles = match mesh.indices().unwrap() {
-        Indices::U32(indices) => indices
-            .chunks(3)
-            .map(|c| {
-                Triangle(
-                    Vertex {
-                        position: positions[c[0] as usize],
-                        normal: normals[c[0] as usize],
-                        uv: uvs[c[0] as usize],
-                    },
-                    Vertex {
-                        position: positions[c[1] as usize],
-                        normal: normals[c[1] as usize],
-                        uv: uvs[c[1] as usize],
-                    },
-                    Vertex {
-                        position: positions[c[2] as usize],
-                        normal: normals[c[2] as usize],
-                        uv: uvs[c[2] as usize],
-                    },
-                )
-            })
-            .collect::<Vec<_>>(),
-        _ => panic!("Unsupported index format"),
-    };
+        Indices::U32(indices) => indices.iter().cloned().collect::<Vec<_>>(),
+        Indices::U16(indices) => indices.iter().map(|&i| i as u32).collect::<Vec<_>>(),
+    }
+    .chunks(3)
+    .map(|c| {
+        Triangle(
+            Vertex {
+                position: positions[c[0] as usize],
+                normal: normals[c[0] as usize],
+                uv: uvs[c[0] as usize],
+            },
+            Vertex {
+                position: positions[c[1] as usize],
+                normal: normals[c[1] as usize],
+                uv: uvs[c[1] as usize],
+            },
+            Vertex {
+                position: positions[c[2] as usize],
+                normal: normals[c[2] as usize],
+                uv: uvs[c[2] as usize],
+            },
+        )
+    })
+    .collect::<Vec<_>>();
 
     // Split triangles into positive / negative side
     let mut positive_mesh_builder = MeshBuilder {

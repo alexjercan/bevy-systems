@@ -12,11 +12,10 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::SmoothLookRotation;
-    pub use super::SmoothLookRotationOutput;
-    pub use super::SmoothLookRotationPlugin;
-    pub use super::SmoothLookRotationSystems;
-    pub use super::SmoothLookRotationTarget;
+    pub use super::{
+        SmoothLookRotation, SmoothLookRotationOutput, SmoothLookRotationPlugin,
+        SmoothLookRotationSystems, SmoothLookRotationTarget,
+    };
 }
 
 /// Component that makes an entity smoothly rotate to look along a specified axis.

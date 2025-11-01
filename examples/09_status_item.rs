@@ -1,5 +1,4 @@
-use std::process::Command;
-use std::sync::Arc;
+use std::{process::Command, sync::Arc};
 
 use bevy::prelude::*;
 use clap::Parser;

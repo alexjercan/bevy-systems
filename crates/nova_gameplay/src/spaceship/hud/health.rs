@@ -4,25 +4,17 @@ use bevy_common_systems::prelude::*;
 use crate::prelude::SpaceshipSystems;
 
 pub mod prelude {
-    pub use super::health_hud;
-    pub use super::HealthHudConfig;
-    pub use super::HealthHudMarker;
-    pub use super::HealthHudPlugin;
-    pub use super::HealthHudTargetEntity;
+    pub use super::{
+        health_hud, HealthHudConfig, HealthHudMarker, HealthHudPlugin, HealthHudTargetEntity,
+    };
 }
 
 #[derive(Component, Debug, Clone, Reflect)]
 pub struct HealthHudMarker;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct HealthHudConfig {
     pub target: Option<Entity>,
-}
-
-impl Default for HealthHudConfig {
-    fn default() -> Self {
-        Self { target: None }
-    }
 }
 
 pub fn health_hud(config: HealthHudConfig) -> impl Bundle {
@@ -62,12 +54,12 @@ fn update_text_hud(
 ) {
     for (mut hud_input, target) in &mut q_hud {
         let Some(target) = **target else {
-            **hud_input = format!("Health: 0%");
+            **hud_input = "Health: 0%".to_string();
             continue;
         };
 
         let Ok(health) = q_target.get(target) else {
-            **hud_input = format!("Health: 0%");
+            **hud_input = "Health: 0%".to_string();
             continue;
         };
 

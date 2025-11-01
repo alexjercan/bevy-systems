@@ -1,33 +1,29 @@
 //! TODO: Add description in this crate
 
 use avian3d::prelude::*;
-
 use bevy::{
     app::Plugins,
     log::{Level, LogPlugin},
     prelude::*,
-    window::PresentMode,
+    window::{CursorGrabMode, CursorOptions, PresentMode, PrimaryWindow},
 };
-
 use nova_assets::prelude::*;
-use nova_gameplay::{bevy_common_systems, prelude::*};
-
 #[cfg(feature = "debug")]
 use nova_debug::DebugPlugin;
+use nova_gameplay::{bevy_common_systems, prelude::*};
 
 pub mod editor;
 pub mod simulation;
 pub use nova_gameplay;
 
 pub mod prelude {
-    pub use super::{AppBuilder, GameStates};
-
     // NOTE: These are temporary, until I finis the refactor to move everything to new_gui_app
     pub use nova_assets::prelude::*;
-    pub use nova_gameplay::prelude::*;
-
     #[cfg(feature = "debug")]
     pub use nova_debug::prelude::*;
+    pub use nova_gameplay::prelude::*;
+
+    pub use super::{AppBuilder, GameStates};
 }
 
 /// Game states for the application.
@@ -107,6 +103,18 @@ impl AppBuilder {
             ),
         );
 
+        if cfg!(not(feature = "debug")) {
+            // TODO: implement this in a proper way for debug mode
+            self.app.add_systems(
+                OnEnter(GameStates::Simulation),
+                |primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>| {
+                    let mut primary_cursor_options = primary_cursor_options.into_inner();
+                    primary_cursor_options.grab_mode = CursorGrabMode::Locked;
+                    primary_cursor_options.visible = false;
+                },
+            );
+        }
+
         self.app
     }
 }
@@ -164,6 +172,8 @@ impl Plugin for CorePlugin {
         app.add_plugins(bevy_common_systems::prelude::DirectionalSphereOrbitPlugin);
         // Other helper plugins
         app.add_plugins(bevy_common_systems::prelude::TempEntityPlugin);
+        app.add_plugins(bevy_common_systems::prelude::DespawnEntityPlugin);
+        app.add_plugins(bevy_common_systems::prelude::ExplodeMeshPlugin);
         // Core Mechanics
         app.add_plugins(bevy_common_systems::prelude::CollisionDamagePlugin);
         app.add_plugins(bevy_common_systems::prelude::HealthPlugin);
@@ -176,7 +186,7 @@ impl Plugin for CorePlugin {
             render: self.render,
         });
         app.add_plugins(nova_gameplay::damage::DamagePlugin);
-        app.add_plugins(nova_gameplay::destruction::DestructionHealthPlugin);
+        app.add_plugins(nova_gameplay::events::NovaEventsPlugin);
 
         // Diagnostics
         if !app.is_plugin_added::<bevy::diagnostic::FrameTimeDiagnosticsPlugin>() {

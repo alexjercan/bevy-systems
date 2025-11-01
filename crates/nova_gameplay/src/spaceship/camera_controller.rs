@@ -1,16 +1,15 @@
-use crate::spaceship::prelude::*;
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
+use crate::spaceship::prelude::*;
+
 pub mod prelude {
-    pub use super::SpaceshipCameraControlMode;
-    pub use super::SpaceshipCameraControllerMarker;
-    pub use super::SpaceshipCameraControllerPlugin;
-    pub use super::SpaceshipCameraFreeLookInputMarker;
-    pub use super::SpaceshipCameraInputMarker;
-    pub use super::SpaceshipCameraNormalInputMarker;
-    pub use super::SpaceshipCameraTurretInputMarker;
-    pub use super::SpaceshipRotationInputActiveMarker;
+    pub use super::{
+        SpaceshipCameraControlMode, SpaceshipCameraControllerMarker,
+        SpaceshipCameraControllerPlugin, SpaceshipCameraFreeLookInputMarker,
+        SpaceshipCameraInputMarker, SpaceshipCameraNormalInputMarker,
+        SpaceshipCameraTurretInputMarker, SpaceshipRotationInputActiveMarker,
+    };
 }
 
 pub struct SpaceshipCameraControllerPlugin;
@@ -171,6 +170,8 @@ fn update_chase_camera_input(
 fn sync_spaceship_control_mode(
     mut commands: Commands,
     mode: Res<SpaceshipCameraControlMode>,
+    // NOTE: Just to ensure the spaceship exists
+    _spaceship: Single<&Transform, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
     spaceship_input_rotation: Single<
         (Entity, &PointRotationOutput),
         With<SpaceshipCameraNormalInputMarker>,

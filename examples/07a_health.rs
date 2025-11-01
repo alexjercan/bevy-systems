@@ -91,16 +91,24 @@ fn setup_health_entity(
             Mesh3d(meshes.add(Sphere::new(3.0))),
             MeshMaterial3d(materials.add(Color::srgb(0.8, 0.1, 0.1))),
             Health::new(100.0),
-            DespawnOnDestroy,
             Collider::sphere(3.0),
         ))
         .id();
 
-    commands.entity(mesh_entity).insert(ExplodeOnDestroy {
-        mesh_entity: Some(mesh_entity),
-        fragment_count: 4,
-        ..default()
-    });
+    commands
+        .entity(mesh_entity)
+        .insert(ExplodableMesh(vec![mesh_entity]));
+
+    commands.spawn((
+        Name::new("OnDestroyedEvent Handler"),
+        EventHandler::<NovaEventWorld>::new::<OnDestroyedEvent>()
+            .with_filter(EntityFilter::default().with_entity(mesh_entity))
+            .with_action(InsertComponentAction(ExplodeMesh {
+                fragment_count: 4,
+                force_multiplier_range: (5.0, 15.0),
+            }))
+            .with_action(EntityDespawnAction),
+    ));
 }
 
 fn setup_camera(mut commands: Commands, game_assets: Res<GameAssets>) {

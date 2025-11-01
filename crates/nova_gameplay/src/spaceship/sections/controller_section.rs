@@ -3,15 +3,14 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-use crate::prelude::{SpaceshipRootMarker, SpaceshipSystems};
+use crate::prelude::{SectionRenderOf, SpaceshipRootMarker, SpaceshipSystems};
 
 pub mod prelude {
-    pub use super::controller_section;
-    pub use super::ControllerSectionConfig;
-    pub use super::ControllerSectionMarker;
-    pub use super::ControllerSectionPlugin;
-    pub use super::ControllerSectionRotationInput;
-    pub use super::ControllerSectionStableTorquePdController;
+    pub use super::{
+        controller_section, ControllerSectionConfig, ControllerSectionMarker,
+        ControllerSectionPlugin, ControllerSectionRotationInput,
+        ControllerSectionStableTorquePdController,
+    };
 }
 
 /// Configuration for a controller section.
@@ -157,6 +156,7 @@ fn insert_controller_section_render(
         Some(scene) => {
             commands.entity(entity).insert((children![(
                 Name::new("Controller Section Body"),
+                SectionRenderOf(entity),
                 SceneRoot(scene.clone()),
             ),],));
         }
@@ -164,11 +164,13 @@ fn insert_controller_section_render(
             commands.entity(entity).insert((children![
                 (
                     Name::new("Controller Section Body (A)"),
+                    SectionRenderOf(entity),
                     Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
                     MeshMaterial3d(materials.add(Color::srgb(0.2, 0.7, 0.9))),
                 ),
                 (
                     Name::new("Controller Section Window (B)"),
+                    SectionRenderOf(entity),
                     Mesh3d(meshes.add(Cylinder::new(0.2, 0.1))),
                     MeshMaterial3d(materials.add(Color::srgb(0.9, 0.9, 1.0))),
                     Transform::from_xyz(0.0, 0.5, 0.0),
@@ -215,15 +217,11 @@ fn compute_pd_torque(
     let final_torque = rot_inertia_to_world * torque_scaled;
 
     // Optionally clamp final torque magnitude
-    let torque_to_apply = {
-        if final_torque.length_squared() > max_torque * max_torque {
-            final_torque.normalize() * max_torque
-        } else {
-            final_torque
-        }
-    };
-
-    torque_to_apply
+    if final_torque.length_squared() > max_torque * max_torque {
+        final_torque.normalize() * max_torque
+    } else {
+        final_torque
+    }
 }
 
 #[cfg(test)]

@@ -8,9 +8,7 @@ use crate::sections::register_sections;
 mod sections;
 
 pub mod prelude {
-    pub use super::GameAssets;
-    pub use super::GameAssetsPlugin;
-    pub use super::GameAssetsStates;
+    pub use super::{GameAssets, GameAssetsPlugin, GameAssetsStates};
 }
 
 /// Game states for the asset loader.

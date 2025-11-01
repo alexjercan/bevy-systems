@@ -1,9 +1,14 @@
 //! The simulation plugin. This plugin should contain all the gameplay related logic.
 
-use bevy::prelude::*;
+use std::collections::VecDeque;
+
+use avian3d::prelude::*;
+use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_enhanced_input::prelude::*;
+use itertools::Itertools;
 use nova_assets::prelude::*;
 use nova_gameplay::prelude::*;
+use rand::prelude::*;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SimulationSystems;
@@ -20,7 +25,14 @@ impl Plugin for SimulationPlugin {
 
         app.add_systems(
             OnEnter(super::GameStates::Simulation),
-            (setup_camera_controller, setup_player_input),
+            (
+                setup_simple_scene,
+                setup_camera_controller,
+                setup_player_input,
+                setup_spaceship_sections,
+                setup_event_handlers,
+                switch_scene_on_no_player.run_if(run_once),
+            ),
         );
 
         // Setup the input system to get input from the mouse and keyboard.
@@ -36,8 +48,7 @@ impl Plugin for SimulationPlugin {
         // TODO: Use the input system for this
         app.add_systems(
             Update,
-            (switch_scene_editor, switch_scene_on_no_player)
-                .run_if(in_state(super::GameStates::Simulation)),
+            switch_scene_editor.run_if(in_state(super::GameStates::Simulation)),
         );
 
         app.add_systems(
@@ -140,6 +151,169 @@ fn remove_hud_health(
             }
         }
     }
+}
+
+fn setup_simple_scene(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let mut rng = rand::rng();
+
+    commands.spawn((
+        DespawnOnExit(super::GameStates::Simulation),
+        DirectionalLight {
+            illuminance: 10000.0,
+            ..default()
+        },
+        Transform::from_rotation(Quat::from_euler(
+            EulerRot::XYZ,
+            -std::f32::consts::FRAC_PI_2,
+            0.0,
+            0.0,
+        )),
+        GlobalTransform::default(),
+    ));
+
+    for i in 0..20 {
+        let pos = Vec3::new(
+            rng.random_range(-100.0..100.0),
+            rng.random_range(-20.0..20.0),
+            rng.random_range(-100.0..100.0),
+        );
+        let radius = rng.random_range(2.0..6.0);
+        let color = Color::srgb(
+            rng.random_range(0.0..1.0),
+            rng.random_range(0.0..1.0),
+            rng.random_range(0.0..1.0),
+        );
+
+        let planet = commands
+            .spawn((
+                DespawnOnExit(super::GameStates::Simulation),
+                Name::new(format!("Asteroid {}", i)),
+                Transform::from_translation(pos),
+                GlobalTransform::default(),
+                Mesh3d(meshes.add(Sphere::new(radius))),
+                MeshMaterial3d(materials.add(color)),
+                Collider::sphere(radius),
+                RigidBody::Dynamic,
+                Health::new(100.0),
+            ))
+            .id();
+
+        commands.entity(planet).insert(ExplodableMesh(vec![planet]));
+    }
+
+    for i in 0..40 {
+        let pos = Vec3::new(
+            rng.random_range(-120.0..120.0),
+            rng.random_range(-30.0..30.0),
+            rng.random_range(-120.0..120.0),
+        );
+        let size = rng.random_range(0.5..1.0);
+        let color = Color::srgb(
+            rng.random_range(0.6..1.0),
+            rng.random_range(0.6..1.0),
+            rng.random_range(0.0..0.6),
+        );
+
+        let satellite = commands
+            .spawn((
+                DespawnOnExit(super::GameStates::Simulation),
+                Name::new(format!("Junk {}", i)),
+                Transform::from_translation(pos),
+                GlobalTransform::default(),
+                Mesh3d(meshes.add(Cuboid::new(size, size, size))),
+                MeshMaterial3d(materials.add(color)),
+                Collider::cuboid(size, size, size),
+                ColliderDensity(1.0),
+                RigidBody::Dynamic,
+                Health::new(100.0),
+            ))
+            .id();
+
+        commands
+            .entity(satellite)
+            .insert(ExplodableMesh(vec![satellite]));
+    }
+}
+
+fn setup_spaceship_sections(
+    mut commands: Commands,
+    q_sections: Query<&ChildOf, With<SectionMarker>>,
+    q_section_mesh: Query<(Entity, &SectionRenderOf), With<Mesh3d>>,
+    q_scene: Query<(Entity, &SectionRenderOf, &Children), With<SceneRoot>>,
+    q_children: Query<&Children>,
+    q_mesh: Query<Entity, With<Mesh3d>>,
+) {
+    let mut map = HashMap::new();
+    for (section, group) in q_section_mesh
+        .iter()
+        .chunk_by(|(_, render_of)| *render_of)
+        .into_iter()
+    {
+        let Ok(ChildOf(spaceship)) = q_sections.get(section.0) else {
+            warn!(
+                "setup_spaceship_sections: section {:?} has no ChildOf component.",
+                section.0
+            );
+            continue;
+        };
+
+        map.entry(*spaceship)
+            .or_insert_with(Vec::new)
+            .extend(group.map(|(entity, _)| entity));
+    }
+
+    for (section, group) in q_scene
+        .iter()
+        .chunk_by(|(_, render_of, _)| *render_of)
+        .into_iter()
+    {
+        let Ok(ChildOf(spaceship)) = q_sections.get(section.0) else {
+            warn!(
+                "setup_spaceship_sections: section {:?} has no ChildOf component.",
+                section.0
+            );
+            continue;
+        };
+
+        let mut meshes = Vec::new();
+        for (_, _, children) in group {
+            let mut queue: VecDeque<Entity> = children.iter().collect();
+            while let Some(child) = queue.pop_front() {
+                if let Ok(mesh_entity) = q_mesh.get(child) {
+                    meshes.push(mesh_entity);
+                }
+
+                if let Ok(child_children) = q_children.get(child) {
+                    for grandchild in child_children {
+                        queue.push_back(*grandchild);
+                    }
+                }
+            }
+        }
+
+        map.entry(*spaceship)
+            .or_insert_with(Vec::new)
+            .extend(meshes);
+    }
+
+    for (spaceship, sections) in map {
+        commands.entity(spaceship).insert(ExplodableMesh(sections));
+    }
+}
+
+fn setup_event_handlers(mut commands: Commands) {
+    commands.spawn((
+        DespawnOnExit(super::GameStates::Simulation),
+        Name::new("OnDestroyedEvent Handler"),
+        EventHandler::<NovaEventWorld>::new::<OnDestroyedEvent>()
+            .with_filter(EntityFilter::default())
+            .with_action(InsertComponentAction(ExplodeMesh::default()))
+            .with_action(InsertComponentAction(DespawnEntity)),
+    ));
 }
 
 fn setup_camera_controller(mut commands: Commands, game_assets: Res<GameAssets>) {

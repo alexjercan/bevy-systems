@@ -10,16 +10,10 @@ pub mod input;
 pub mod sections;
 
 pub mod prelude {
-    pub use super::camera_controller::prelude::*;
-    pub use super::hud::prelude::*;
-    pub use super::input::prelude::*;
-    pub use super::sections::prelude::*;
-
-    pub use super::spaceship_root;
-    pub use super::SpaceshipConfig;
-    pub use super::SpaceshipPlugin;
-    pub use super::SpaceshipRootMarker;
-    pub use super::SpaceshipSystems;
+    pub use super::{
+        camera_controller::prelude::*, hud::prelude::*, input::prelude::*, sections::prelude::*,
+        spaceship_root, SpaceshipConfig, SpaceshipPlugin, SpaceshipRootMarker, SpaceshipSystems,
+    };
 }
 
 /// Configuration for the spaceship root entity.

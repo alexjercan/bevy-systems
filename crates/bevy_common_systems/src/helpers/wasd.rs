@@ -12,9 +12,9 @@ use bevy_enhanced_input::prelude::*;
 use crate::prelude::{WASDCamera, WASDCameraInput};
 
 pub mod prelude {
-    pub use super::WASDCameraController;
-    pub use super::WASDCameraControllerPlugin;
-    pub use super::WASDCameraControllerSystems;
+    pub use super::{
+        WASDCameraController, WASDCameraControllerPlugin, WASDCameraControllerSystems,
+    };
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]

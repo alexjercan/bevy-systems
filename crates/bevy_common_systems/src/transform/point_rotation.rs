@@ -7,11 +7,10 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::PointRotation;
-    pub use super::PointRotationInput;
-    pub use super::PointRotationOutput;
-    pub use super::PointRotationPlugin;
-    pub use super::PointRotationSystems;
+    pub use super::{
+        PointRotation, PointRotationInput, PointRotationOutput, PointRotationPlugin,
+        PointRotationSystems,
+    };
 }
 
 /// Component that marks an entity as a point that can be rotated.
@@ -91,7 +90,7 @@ fn point_rotation_update_system(
 ) {
     for (input, mut out) in &mut q_point {
         let mut state = PointRotationState::from(**out);
-        state = compute_point_rotation(&state, &input);
+        state = compute_point_rotation(&state, input);
         **out = point_rotation_quat(state);
     }
 }

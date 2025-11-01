@@ -3,15 +3,16 @@
 //! The `RandomSphereOrbit` component allows an entity to orbit around a point on the surface of a
 //! sphere, randomly picking new target angles to move toward over time.
 
-use crate::meth::prelude::*;
 use bevy::prelude::*;
 use rand::prelude::*;
 
+use crate::meth::prelude::*;
+
 pub mod prelude {
-    pub use super::RandomSphereOrbit;
-    pub use super::RandomSphereOrbitOutput;
-    pub use super::SphereRandomOrbitPlugin;
-    pub use super::SphereRandomOrbitSystems;
+    pub use super::{
+        RandomSphereOrbit, RandomSphereOrbitOutput, SphereRandomOrbitPlugin,
+        SphereRandomOrbitSystems,
+    };
 }
 
 /// Component to define a spherical orbit around a center point.
@@ -116,7 +117,7 @@ fn random_sphere_choose_next(
         let dtheta = (next.theta - state.theta).abs();
         let dphi = (next.phi - state.phi).abs();
 
-        let threshold = std::f32::EPSILON;
+        let threshold = f32::EPSILON;
         if dtheta < threshold && dphi < threshold {
             let new_theta = rng.random_range(0.0..(std::f32::consts::TAU));
 

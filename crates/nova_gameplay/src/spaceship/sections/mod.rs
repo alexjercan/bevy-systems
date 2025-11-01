@@ -9,13 +9,10 @@ pub mod thruster_section;
 pub mod turret_section;
 
 pub mod prelude {
-    pub use super::base_section::prelude::*;
-    pub use super::controller_section::prelude::*;
-    pub use super::hull_section::prelude::*;
-    pub use super::thruster_section::prelude::*;
-    pub use super::turret_section::prelude::*;
-
-    pub use super::SpaceshipSectionPlugin;
+    pub use super::{
+        base_section::prelude::*, controller_section::prelude::*, hull_section::prelude::*,
+        thruster_section::prelude::*, turret_section::prelude::*, SpaceshipSectionPlugin,
+    };
 }
 
 /// A plugin that adds all the spaceship sections and their related systems.
@@ -29,19 +26,15 @@ impl Plugin for SpaceshipSectionPlugin {
         app.add_plugins((
             hull_section::HullSectionPlugin {
                 render: self.render,
-                ..default()
             },
             thruster_section::ThrusterSectionPlugin {
                 render: self.render,
-                ..default()
             },
             turret_section::TurretSectionPlugin {
                 render: self.render,
-                ..default()
             },
             controller_section::ControllerSectionPlugin {
                 render: self.render,
-                ..default()
             },
         ));
     }

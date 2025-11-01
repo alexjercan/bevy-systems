@@ -3,9 +3,7 @@ use bevy::prelude::*;
 pub mod player;
 
 pub mod prelude {
-    pub use super::SpaceshipInputPlugin;
-
-    pub use super::player::prelude::*;
+    pub use super::{player::prelude::*, SpaceshipInputPlugin};
 }
 
 pub struct SpaceshipInputPlugin;
