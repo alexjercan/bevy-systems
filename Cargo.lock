@@ -3976,6 +3976,7 @@ dependencies = [
  "bevy",
  "bevy_asset_loader",
  "nova_gameplay",
+ "rand",
 ]
 
 [[package]]

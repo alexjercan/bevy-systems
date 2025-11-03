@@ -107,7 +107,7 @@ fn setup_health_entity(
                 fragment_count: 4,
                 force_multiplier_range: (5.0, 15.0),
             }))
-            .with_action(EntityDespawnAction),
+            .with_action(DespawnEntityAction),
     ));
 }
 

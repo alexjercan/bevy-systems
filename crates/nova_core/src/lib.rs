@@ -1,6 +1,5 @@
 //! TODO: Add description in this crate
 
-use avian3d::prelude::*;
 use bevy::{
     app::Plugins,
     log::{Level, LogPlugin},
@@ -10,10 +9,12 @@ use bevy::{
 use nova_assets::prelude::*;
 #[cfg(feature = "debug")]
 use nova_debug::DebugPlugin;
-use nova_gameplay::{bevy_common_systems, prelude::*};
+use nova_gameplay::prelude::*;
 
 pub mod editor;
+pub mod plugin;
 pub mod simulation;
+
 pub use nova_gameplay;
 
 pub mod prelude {
@@ -43,8 +44,17 @@ pub struct AppBuilder {
 
 impl AppBuilder {
     pub fn new() -> Self {
+        let mut app = App::new();
+        app.add_plugins(
+            DefaultPlugins
+                .build()
+                .set(assets_plugin())
+                .set(log_plugin())
+                .set(window_plugin()),
+        );
+
         Self {
-            app: App::new(),
+            app,
             use_default_plugins: true,
             render: true,
         }
@@ -62,13 +72,6 @@ impl AppBuilder {
     }
 
     pub fn build(mut self) -> App {
-        self.app.add_plugins(
-            DefaultPlugins
-                .build()
-                .set(assets_plugin())
-                .set(log_plugin())
-                .set(window_plugin()),
-        );
         // Experimental Plugins
         self.app.add_plugins(bevy::ui_widgets::UiWidgetsPlugins);
 
@@ -77,7 +80,7 @@ impl AppBuilder {
         self.app
             .add_plugins(bevy_enhanced_input::EnhancedInputPlugin);
         self.app.add_plugins(GameAssetsPlugin);
-        self.app.add_plugins(CorePlugin {
+        self.app.add_plugins(plugin::CorePlugin {
             render: self.render,
         });
 
@@ -135,71 +138,6 @@ impl AppBuilder {
 //
 //     app
 // }
-
-#[derive(Default, Clone, Debug)]
-struct CorePlugin {
-    pub render: bool,
-}
-
-impl Plugin for CorePlugin {
-    fn build(&self, app: &mut App) {
-        // We need to enable the physics plugins to have access to RigidBody and other components.
-        // We will also disable gravity for this example, since we are in space, duh.
-        app.add_plugins(PhysicsPlugins::default().with_collision_hooks::<TurretProjectileHooks>());
-        app.add_plugins(PhysicsPickingPlugin);
-        app.insert_resource(Gravity::ZERO);
-
-        // FIXME: For now we disable particle effects on wasm because it's not working
-        #[cfg(not(target_family = "wasm"))]
-        app.add_plugins(bevy_hanabi::HanabiPlugin);
-
-        // Bevy Common Systems - WASD Camera
-        app.add_plugins(bevy_common_systems::prelude::WASDCameraPlugin);
-        app.add_plugins(bevy_common_systems::prelude::WASDCameraControllerPlugin);
-        // Chase Camera Plugin to have a 3rd person camera following the spaceship
-        app.add_plugins(bevy_common_systems::prelude::ChaseCameraPlugin);
-        // Bevy Common Systems - Rendering
-        app.add_plugins(bevy_common_systems::prelude::SkyboxPlugin);
-        app.add_plugins(bevy_common_systems::prelude::PostProcessingDefaultPlugin);
-        // Point Rotation Plugin to convert linear movement to a target rotation
-        app.add_plugins(bevy_common_systems::prelude::PointRotationPlugin);
-        // for debug to have a random orbiting object
-        app.add_plugins(bevy_common_systems::prelude::SphereRandomOrbitPlugin);
-        // Rotation Plugin for the turret facing direction
-        app.add_plugins(bevy_common_systems::prelude::SmoothLookRotationPlugin);
-        // Sphere Orbit Plugin
-        app.add_plugins(bevy_common_systems::prelude::SphereOrbitPlugin);
-        app.add_plugins(bevy_common_systems::prelude::DirectionalSphereOrbitPlugin);
-        // Other helper plugins
-        app.add_plugins(bevy_common_systems::prelude::TempEntityPlugin);
-        app.add_plugins(bevy_common_systems::prelude::DespawnEntityPlugin);
-        app.add_plugins(bevy_common_systems::prelude::ExplodeMeshPlugin);
-        // Core Mechanics
-        app.add_plugins(bevy_common_systems::prelude::CollisionDamagePlugin);
-        app.add_plugins(bevy_common_systems::prelude::HealthPlugin);
-
-        // UI Plugins
-        app.add_plugins(nova_gameplay::bevy_common_systems::prelude::StatusBarPlugin);
-
-        // Core Plugins for simulation
-        app.add_plugins(nova_gameplay::spaceship::SpaceshipPlugin {
-            render: self.render,
-        });
-        app.add_plugins(nova_gameplay::damage::DamagePlugin);
-        app.add_plugins(nova_gameplay::events::NovaEventsPlugin);
-
-        // Diagnostics
-        if !app.is_plugin_added::<bevy::diagnostic::FrameTimeDiagnosticsPlugin>() {
-            app.add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default());
-        }
-
-        // Configure system Sets
-        app.configure_sets(
-            Update,
-            SpaceshipSystems::Input.run_if(in_state(GameStates::Simulation)),
-        );
-    }
-}
 
 fn window_plugin() -> WindowPlugin {
     WindowPlugin {

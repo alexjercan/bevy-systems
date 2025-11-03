@@ -236,7 +236,7 @@ fn reset_spaceship(
 
     commands
         .spawn((
-            spaceship_root(SpaceshipConfig { ..default() }),
+            spaceship_root(SpaceshipConfig1 { ..default() }),
             PlayerSpaceshipMarker,
         ))
         .add_children(&sections);
@@ -380,7 +380,7 @@ fn create_new_spaceship(
     }
     let entity = commands
         .spawn((
-            spaceship_root(SpaceshipConfig { ..default() }),
+            spaceship_root(SpaceshipConfig1 { ..default() }),
             PlayerSpaceshipMarker,
         ))
         .id();
@@ -411,7 +411,7 @@ fn create_new_spaceship_with_controller(
     }
     let entity = commands
         .spawn((
-            spaceship_root(SpaceshipConfig { ..default() }),
+            spaceship_root(SpaceshipConfig1 { ..default() }),
             PlayerSpaceshipMarker,
         ))
         .id();

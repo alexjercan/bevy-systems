@@ -43,7 +43,7 @@ fn update_spaceship_target_rotation_torque(
 
 fn setup_spaceship(mut commands: Commands) {
     let entity = commands
-        .spawn((spaceship_root(SpaceshipConfig { ..default() }),))
+        .spawn((spaceship_root(SpaceshipConfig1 { ..default() }),))
         .id();
 
     commands.entity(entity).with_children(|parent| {

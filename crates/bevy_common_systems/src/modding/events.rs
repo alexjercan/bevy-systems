@@ -22,7 +22,7 @@ pub trait EventKind: Clone + Send + Sync + 'static {
     fn name() -> &'static str;
 }
 
-pub trait EventAction<W: EventWorld>: std::fmt::Debug + Send + Sync {
+pub trait EventAction<W: EventWorld>: Send + Sync {
     fn action(&self, world: &mut W, info: &GameEventInfo);
 
     fn name(&self) -> &'static str {
@@ -30,7 +30,7 @@ pub trait EventAction<W: EventWorld>: std::fmt::Debug + Send + Sync {
     }
 }
 
-pub trait EventFilter<W: EventWorld>: std::fmt::Debug + Send + Sync {
+pub trait EventFilter<W: EventWorld>: Send + Sync {
     fn filter(&self, world: &W, info: &GameEventInfo) -> bool;
 
     fn name(&self) -> &'static str {

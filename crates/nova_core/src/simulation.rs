@@ -1,11 +1,7 @@
 //! The simulation plugin. This plugin should contain all the gameplay related logic.
 
-use std::collections::VecDeque;
-
 use avian3d::prelude::*;
-use bevy::{platform::collections::HashMap, prelude::*};
-use bevy_enhanced_input::prelude::*;
-use itertools::Itertools;
+use bevy::prelude::*;
 use nova_assets::prelude::*;
 use nova_gameplay::prelude::*;
 use rand::prelude::*;
@@ -18,31 +14,16 @@ pub struct SimulationPlugin;
 impl Plugin for SimulationPlugin {
     fn build(&self, app: &mut App) {
         // TODO: Might want to use observers more for spawning things to avoid ordering issues
-        app.add_observer(setup_hud_velocity);
-        app.add_observer(remove_hud_velocity);
-        app.add_observer(setup_hud_health);
-        app.add_observer(remove_hud_health);
 
         app.add_systems(
             OnEnter(super::GameStates::Simulation),
             (
                 setup_simple_scene,
                 setup_camera_controller,
-                setup_player_input,
                 setup_spaceship_sections,
-                setup_event_handlers,
                 switch_scene_on_no_player.run_if(run_once),
             ),
         );
-
-        // Setup the input system to get input from the mouse and keyboard.
-        app.add_input_context::<PlayerInputMarker>();
-        app.add_observer(on_rotation_input);
-        app.add_observer(on_rotation_input_completed);
-        app.add_observer(on_free_mode_input_started);
-        app.add_observer(on_free_mode_input_completed);
-        app.add_observer(on_combat_input_started);
-        app.add_observer(on_combat_input_completed);
 
         // On F1 we switch to editor
         // TODO: Use the input system for this
@@ -67,89 +48,6 @@ impl Plugin for SimulationPlugin {
                 }
             },
         );
-    }
-}
-
-fn setup_hud_velocity(
-    add: On<Add, PlayerSpaceshipMarker>,
-    mut commands: Commands,
-    q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
-) {
-    let entity = add.entity;
-    debug!("setup_hud_velocity: entity {:?}", entity);
-
-    let Ok(spaceship) = q_spaceship.get(entity) else {
-        warn!(
-            "setup_hud_velocity: entity {:?} not found in q_spaceship",
-            entity
-        );
-        return;
-    };
-
-    commands.spawn((
-        DespawnOnExit(super::GameStates::Simulation),
-        velocity_hud(VelocityHudConfig {
-            radius: 5.0,
-            target: Some(spaceship),
-        }),
-    ));
-}
-
-fn remove_hud_velocity(
-    remove: On<Remove, PlayerSpaceshipMarker>,
-    mut commands: Commands,
-    q_hud: Query<(Entity, &VelocityHudTargetEntity), With<VelocityHudMarker>>,
-) {
-    let entity = remove.entity;
-    debug!("remove_hud_velocity: entity {:?}", entity);
-
-    for (hud_entity, target) in &q_hud {
-        if let Some(target_entity) = **target {
-            if target_entity == entity {
-                commands.entity(hud_entity).despawn();
-            }
-        }
-    }
-}
-
-fn setup_hud_health(
-    add: On<Add, PlayerSpaceshipMarker>,
-    mut commands: Commands,
-    q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
-) {
-    let entity = add.entity;
-    debug!("setup_hud_health: entity {:?}", entity);
-
-    let Ok(spaceship) = q_spaceship.get(entity) else {
-        warn!(
-            "setup_hud_health: entity {:?} not found in q_spaceship",
-            entity
-        );
-        return;
-    };
-
-    commands.spawn((
-        DespawnOnExit(super::GameStates::Simulation),
-        health_hud(HealthHudConfig {
-            target: Some(spaceship),
-        }),
-    ));
-}
-
-fn remove_hud_health(
-    remove: On<Remove, PlayerSpaceshipMarker>,
-    mut commands: Commands,
-    q_hud: Query<(Entity, &HealthHudTargetEntity), With<HealthHudMarker>>,
-) {
-    let entity = remove.entity;
-    debug!("remove_hud_health: entity {:?}", entity);
-
-    for (hud_entity, target) in &q_hud {
-        if let Some(target_entity) = **target {
-            if target_entity == entity {
-                commands.entity(hud_entity).despawn();
-            }
-        }
     }
 }
 
@@ -188,21 +86,19 @@ fn setup_simple_scene(
             rng.random_range(0.0..1.0),
         );
 
-        let planet = commands
-            .spawn((
-                DespawnOnExit(super::GameStates::Simulation),
-                Name::new(format!("Asteroid {}", i)),
-                Transform::from_translation(pos),
-                GlobalTransform::default(),
-                Mesh3d(meshes.add(Sphere::new(radius))),
-                MeshMaterial3d(materials.add(color)),
-                Collider::sphere(radius),
-                RigidBody::Dynamic,
-                Health::new(100.0),
-            ))
-            .id();
-
-        commands.entity(planet).insert(ExplodableMesh(vec![planet]));
+        commands.spawn((
+            DespawnOnExit(super::GameStates::Simulation),
+            Name::new(format!("Asteroid {}", i)),
+            EntityTypeName::new("asteroid"),
+            Transform::from_translation(pos),
+            GlobalTransform::default(),
+            Mesh3d(meshes.add(Sphere::new(radius))),
+            MeshMaterial3d(materials.add(color)),
+            Collider::sphere(radius),
+            RigidBody::Dynamic,
+            Health::new(100.0),
+            ExplodableEntityMarker,
+        ));
     }
 
     for i in 0..40 {
@@ -218,102 +114,32 @@ fn setup_simple_scene(
             rng.random_range(0.0..0.6),
         );
 
-        let satellite = commands
-            .spawn((
-                DespawnOnExit(super::GameStates::Simulation),
-                Name::new(format!("Junk {}", i)),
-                Transform::from_translation(pos),
-                GlobalTransform::default(),
-                Mesh3d(meshes.add(Cuboid::new(size, size, size))),
-                MeshMaterial3d(materials.add(color)),
-                Collider::cuboid(size, size, size),
-                ColliderDensity(1.0),
-                RigidBody::Dynamic,
-                Health::new(100.0),
-            ))
-            .id();
-
-        commands
-            .entity(satellite)
-            .insert(ExplodableMesh(vec![satellite]));
+        commands.spawn((
+            DespawnOnExit(super::GameStates::Simulation),
+            Name::new(format!("Junk {}", i)),
+            EntityTypeName::new("junk"),
+            Transform::from_translation(pos),
+            GlobalTransform::default(),
+            Mesh3d(meshes.add(Cuboid::new(size, size, size))),
+            MeshMaterial3d(materials.add(color)),
+            Collider::cuboid(size, size, size),
+            ColliderDensity(1.0),
+            RigidBody::Dynamic,
+            Health::new(100.0),
+            ExplodableEntityMarker,
+        ));
     }
 }
 
 fn setup_spaceship_sections(
     mut commands: Commands,
-    q_sections: Query<&ChildOf, With<SectionMarker>>,
-    q_section_mesh: Query<(Entity, &SectionRenderOf), With<Mesh3d>>,
-    q_scene: Query<(Entity, &SectionRenderOf, &Children), With<SceneRoot>>,
-    q_children: Query<&Children>,
-    q_mesh: Query<Entity, With<Mesh3d>>,
+    q_spaceship: Query<Entity, With<SpaceshipRootMarker>>,
 ) {
-    let mut map = HashMap::new();
-    for (section, group) in q_section_mesh
-        .iter()
-        .chunk_by(|(_, render_of)| *render_of)
-        .into_iter()
-    {
-        let Ok(ChildOf(spaceship)) = q_sections.get(section.0) else {
-            warn!(
-                "setup_spaceship_sections: section {:?} has no ChildOf component.",
-                section.0
-            );
-            continue;
-        };
-
-        map.entry(*spaceship)
-            .or_insert_with(Vec::new)
-            .extend(group.map(|(entity, _)| entity));
+    for spaceship in &q_spaceship {
+        commands
+            .entity(spaceship)
+            .insert((EntityTypeName::new("spaceship"), ExplodableEntityMarker));
     }
-
-    for (section, group) in q_scene
-        .iter()
-        .chunk_by(|(_, render_of, _)| *render_of)
-        .into_iter()
-    {
-        let Ok(ChildOf(spaceship)) = q_sections.get(section.0) else {
-            warn!(
-                "setup_spaceship_sections: section {:?} has no ChildOf component.",
-                section.0
-            );
-            continue;
-        };
-
-        let mut meshes = Vec::new();
-        for (_, _, children) in group {
-            let mut queue: VecDeque<Entity> = children.iter().collect();
-            while let Some(child) = queue.pop_front() {
-                if let Ok(mesh_entity) = q_mesh.get(child) {
-                    meshes.push(mesh_entity);
-                }
-
-                if let Ok(child_children) = q_children.get(child) {
-                    for grandchild in child_children {
-                        queue.push_back(*grandchild);
-                    }
-                }
-            }
-        }
-
-        map.entry(*spaceship)
-            .or_insert_with(Vec::new)
-            .extend(meshes);
-    }
-
-    for (spaceship, sections) in map {
-        commands.entity(spaceship).insert(ExplodableMesh(sections));
-    }
-}
-
-fn setup_event_handlers(mut commands: Commands) {
-    commands.spawn((
-        DespawnOnExit(super::GameStates::Simulation),
-        Name::new("OnDestroyedEvent Handler"),
-        EventHandler::<NovaEventWorld>::new::<OnDestroyedEvent>()
-            .with_filter(EntityFilter::default())
-            .with_action(InsertComponentAction(ExplodeMesh::default()))
-            .with_action(InsertComponentAction(DespawnEntity)),
-    ));
 }
 
 fn setup_camera_controller(mut commands: Commands, game_assets: Res<GameAssets>) {
@@ -330,105 +156,6 @@ fn setup_camera_controller(mut commands: Commands, game_assets: Res<GameAssets>)
             brightness: 1000.0,
         },
     ));
-}
-
-fn setup_player_input(mut commands: Commands) {
-    // Spawn a player input controller entity to hold the input from the player
-    commands.spawn((
-        DespawnOnExit(super::GameStates::Simulation),
-        Name::new("Player Input Controller"),
-        Transform::default(),
-        GlobalTransform::default(),
-        PlayerInputMarker,
-        actions!(
-            PlayerInputMarker[
-                (
-                    Action::<CameraInputRotate>::new(),
-                    Bindings::spawn((
-                        // Bevy requires single entities to be wrapped in `Spawn`.
-                        // You can attach modifiers to individual bindings as well.
-                        Spawn((Binding::mouse_motion(), Scale::splat(0.001), Negate::all())),
-                        Axial::right_stick().with((Scale::splat(2.0), Negate::none())),
-                    )),
-                ),
-                (
-                    Action::<FreeLookInput>::new(),
-                    bindings![KeyCode::AltLeft, GamepadButton::LeftTrigger],
-                ),
-                (
-                    Action::<CombatInput>::new(),
-                    bindings![MouseButton::Right],
-                ),
-            ]
-        ),
-    ));
-}
-
-#[derive(Component, Debug, Clone)]
-struct PlayerInputMarker;
-
-#[derive(InputAction)]
-#[action_output(Vec2)]
-struct CameraInputRotate;
-
-#[derive(InputAction)]
-#[action_output(bool)]
-struct FreeLookInput;
-
-#[derive(InputAction)]
-#[action_output(bool)]
-struct CombatInput;
-
-fn on_rotation_input(
-    fire: On<Fire<CameraInputRotate>>,
-    mut q_input: Query<
-        &mut PointRotationInput,
-        (
-            With<SpaceshipCameraInputMarker>,
-            With<SpaceshipRotationInputActiveMarker>,
-        ),
-    >,
-) {
-    for mut input in &mut q_input {
-        **input = fire.value;
-    }
-}
-
-fn on_rotation_input_completed(
-    _: On<Complete<CameraInputRotate>>,
-    mut q_input: Query<&mut PointRotationInput, With<SpaceshipCameraInputMarker>>,
-) {
-    for mut input in &mut q_input {
-        **input = Vec2::ZERO;
-    }
-}
-
-fn on_free_mode_input_started(
-    _: On<Start<FreeLookInput>>,
-    mut mode: ResMut<SpaceshipCameraControlMode>,
-) {
-    *mode = SpaceshipCameraControlMode::FreeLook;
-}
-
-fn on_free_mode_input_completed(
-    _: On<Complete<FreeLookInput>>,
-    mut mode: ResMut<SpaceshipCameraControlMode>,
-) {
-    *mode = SpaceshipCameraControlMode::Normal;
-}
-
-fn on_combat_input_started(
-    _: On<Start<CombatInput>>,
-    mut mode: ResMut<SpaceshipCameraControlMode>,
-) {
-    *mode = SpaceshipCameraControlMode::Turret;
-}
-
-fn on_combat_input_completed(
-    _: On<Complete<CombatInput>>,
-    mut mode: ResMut<SpaceshipCameraControlMode>,
-) {
-    *mode = SpaceshipCameraControlMode::Normal;
 }
 
 fn switch_scene_editor(

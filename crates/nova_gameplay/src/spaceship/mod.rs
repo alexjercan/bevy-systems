@@ -12,19 +12,19 @@ pub mod sections;
 pub mod prelude {
     pub use super::{
         camera_controller::prelude::*, hud::prelude::*, input::prelude::*, sections::prelude::*,
-        spaceship_root, SpaceshipConfig, SpaceshipPlugin, SpaceshipRootMarker, SpaceshipSystems,
+        spaceship_root, SpaceshipConfig1, SpaceshipPlugin, SpaceshipRootMarker, SpaceshipSystems,
     };
 }
 
 /// Configuration for the spaceship root entity.
 #[derive(Default, Clone, Debug)]
-pub struct SpaceshipConfig {
+pub struct SpaceshipConfig1 {
     /// The transform of the spaceship root entity.
     pub transform: Transform,
 }
 
 /// Helper function to create a spaceship root entity bundle.
-pub fn spaceship_root(config: SpaceshipConfig) -> impl Bundle {
+pub fn spaceship_root(config: SpaceshipConfig1) -> impl Bundle {
     (
         Name::new("Spaceship Root"),
         SpaceshipRootMarker,

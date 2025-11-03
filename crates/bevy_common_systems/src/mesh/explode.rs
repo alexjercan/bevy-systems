@@ -8,13 +8,18 @@ use rand::Rng;
 use super::slicer::mesh_slice;
 
 pub mod prelude {
-    pub use super::{ExplodableMesh, ExplodeMesh, ExplodeMeshPlugin, FragmentMeshMarker};
+    pub use super::{
+        ExplodableEntityMarker, ExplodableMesh, ExplodeMesh, ExplodeMeshPlugin, FragmentMeshMarker,
+    };
 }
 
 const MAX_ITERATIONS: usize = 10;
 
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct FragmentMeshMarker;
+
+#[derive(Component, Clone, Debug, Default, Reflect)]
+pub struct ExplodableEntityMarker;
 
 #[derive(Component, Clone, Debug, Default, Deref, DerefMut, Reflect)]
 pub struct ExplodableMesh(pub Vec<Entity>);
@@ -41,6 +46,8 @@ impl Plugin for ExplodeMeshPlugin {
     fn build(&self, app: &mut App) {
         debug!("ExplodeOnDestroyPlugin: build");
 
+        // TODO: How can I implement this using observers only?
+        app.add_systems(Update, setup_explode_mesh_children);
         app.add_observer(handle_explosion);
     }
 }
@@ -174,4 +181,45 @@ fn slice_mesh_into_fragments(
     }
 
     None
+}
+
+fn setup_explode_mesh_children(
+    mut commands: Commands,
+    q_mesh: Query<Entity, With<Mesh3d>>,
+    q_children: Query<&Children>,
+    q_explode: Query<
+        (Entity, Option<&Children>),
+        (
+            With<ExplodableEntityMarker>,
+            Or<(Changed<Children>, Added<ExplodableEntityMarker>)>,
+        ),
+    >,
+) {
+    for (entity, children) in &q_explode {
+        trace!("setup_explode_mesh: entity {:?}", entity);
+
+        let mut meshes = Vec::new();
+        if let Ok(mesh_entity) = q_mesh.get(entity) {
+            meshes.push(mesh_entity);
+        }
+
+        if let Some(children) = children {
+            for child in children.iter() {
+                let mut queue: VecDeque<Entity> = VecDeque::from([child]);
+                while let Some(child) = queue.pop_front() {
+                    if let Ok(mesh_entity) = q_mesh.get(child) {
+                        meshes.push(mesh_entity);
+                    }
+
+                    if let Ok(child_children) = q_children.get(child) {
+                        for grandchild in child_children {
+                            queue.push_back(*grandchild);
+                        }
+                    }
+                }
+            }
+        }
+
+        commands.entity(entity).insert(ExplodableMesh(meshes));
+    }
 }

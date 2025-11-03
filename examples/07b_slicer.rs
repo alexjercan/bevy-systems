@@ -106,7 +106,7 @@ fn setup_event_handlers(mut commands: Commands) {
                 fragment_count: 2,
                 force_multiplier_range: (1.0, 2.0),
             }))
-            .with_action(EntityDespawnAction),
+            .with_action(DespawnEntityAction),
     ));
 }
 

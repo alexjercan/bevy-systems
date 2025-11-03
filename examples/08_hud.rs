@@ -29,7 +29,7 @@ fn custom_plugin(app: &mut App) {
 fn setup_spaceship(mut commands: Commands) {
     let entity = commands
         .spawn((
-            spaceship_root(SpaceshipConfig { ..default() }),
+            spaceship_root(SpaceshipConfig1 { ..default() }),
             PlayerSpaceshipMarker,
         ))
         .id();

@@ -8,7 +8,10 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
-use crate::events::{OnDestroyedEvent, OnDestroyedEventInfo};
+use crate::{
+    modding::prelude::{OnDestroyedEvent, OnDestroyedEventInfo},
+    prelude::{EntityId, EntityTypeName},
+};
 
 const DAMAGE_MODIFIER: f32 = 1.00;
 
@@ -22,6 +25,7 @@ impl Plugin for DamagePlugin {
         app.add_observer(on_rigidbody_spawn);
         app.add_observer(on_collision_hit_to_damage);
         app.add_observer(on_destroyed_entity);
+        app.add_observer(on_explode_entity);
     }
 }
 
@@ -71,9 +75,44 @@ fn on_collision_hit_to_damage(
     });
 }
 
-fn on_destroyed_entity(add: On<Add, DestroyedMarker>, mut commands: Commands) {
+fn on_destroyed_entity(
+    add: On<Add, DestroyedMarker>,
+    mut commands: Commands,
+    q_info: Query<(&EntityId, &EntityTypeName), With<DestroyedMarker>>,
+) {
     let entity = add.entity;
     trace!("on_destroyed_entity: entity {:?}", entity);
 
-    commands.fire::<OnDestroyedEvent>(OnDestroyedEventInfo { entity });
+    let Ok((id, type_name)) = q_info.get(entity) else {
+        warn!(
+            "on_destroyed_entity: entity {:?} not found in q_info",
+            entity
+        );
+        return;
+    };
+
+    commands.fire::<OnDestroyedEvent>(OnDestroyedEventInfo {
+        id: id.to_string(),
+        type_name: type_name.to_string(),
+    });
+}
+
+fn on_explode_entity(
+    add: On<Add, DestroyedMarker>,
+    mut commands: Commands,
+    q_explode: Query<(), (With<ExplodableMesh>, With<DestroyedMarker>)>,
+) {
+    let entity = add.entity;
+    trace!("on_explode_entity: entity {:?}", entity);
+
+    let Ok(_) = q_explode.get(entity) else {
+        // NOTE: Not an explodable entity
+        return;
+    };
+
+    debug!("on_explode_entity: entity {:?} will explode", entity);
+    commands
+        .entity(entity)
+        .insert(ExplodeMesh::default())
+        .insert(DespawnEntity);
 }

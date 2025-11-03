@@ -4,8 +4,10 @@ use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 
 use crate::sections::register_sections;
+use crate::scenario::register_scenario;
 
 mod sections;
+mod scenario;
 
 pub mod prelude {
     pub use super::{GameAssets, GameAssetsPlugin, GameAssetsStates};
@@ -39,6 +41,7 @@ impl Plugin for GameAssetsPlugin {
             OnEnter(GameAssetsStates::Processing),
             (
                 register_sections,
+                register_scenario,
                 |mut state: ResMut<NextState<GameAssetsStates>>| {
                     state.set(GameAssetsStates::Loaded);
                 },
