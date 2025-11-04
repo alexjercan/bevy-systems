@@ -4,12 +4,12 @@ use bevy_common_systems::prelude::*;
 
 use super::{
     actions::EventActionConfig,
-    events::{OnDestroyedEvent, OnStartEvent, OnStartEventInfo},
+    events::{OnStartEvent, OnStartEventInfo},
     filters::EventFilterConfig,
     world::NovaEventWorld,
 };
 use crate::{
-    prelude::{EntityId, EntityTypeName, SectionConfig},
+    prelude::{EntityId, EntityTypeName, EventConfig, SectionConfig},
     spaceship::prelude::*,
 };
 
@@ -76,7 +76,7 @@ pub struct SpaceshipSectionConfig {
 
 #[derive(Clone, Debug)]
 pub struct ScenarioEventConfig {
-    pub name: String,
+    pub name: EventConfig,
     pub filters: Vec<EventFilterConfig>,
     pub actions: Vec<EventActionConfig>,
 }
@@ -182,7 +182,7 @@ fn on_load_scenario(
 
     // Setup scenario events
     for event in scenario.events.iter() {
-        let mut event_handler = EventHandler::<NovaEventWorld>::new::<OnDestroyedEvent>();
+        let mut event_handler = EventHandler::<NovaEventWorld>::from(event.name);
         for filter in event.filters.iter() {
             event_handler.add_filter(filter.clone());
         }

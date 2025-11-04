@@ -62,6 +62,12 @@ pub enum ConditionalFilterConfig {
     Not(Box<EventFilterConfig>),
 }
 
+impl ConditionalFilterConfig {
+    pub fn not(inner: EventFilterConfig) -> Self {
+        ConditionalFilterConfig::Not(Box::new(inner))
+    }
+}
+
 impl EventFilter<NovaEventWorld> for ConditionalFilterConfig {
     fn filter(&self, world: &NovaEventWorld, info: &GameEventInfo) -> bool {
         match self {
