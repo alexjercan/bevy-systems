@@ -22,5 +22,6 @@ impl Plugin for NovaEventsPlugin {
         debug!("NovaEventsPlugin: build");
 
         app.add_plugins(GameEventsPlugin::<world::NovaEventWorld>::default());
+        app.add_plugins(scenario::ScenarioLoaderPlugin);
     }
 }

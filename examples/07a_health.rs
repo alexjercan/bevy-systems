@@ -20,7 +20,7 @@ fn main() {
 
 fn custom_plugin(app: &mut App) {
     app.add_systems(
-        OnEnter(GameStates::Simulation),
+        OnEnter(GameStates::Playing),
         (
             setup_health_entity,
             setup_hud_health,
@@ -35,7 +35,7 @@ fn custom_plugin(app: &mut App) {
 
 fn setup_hud_health(mut commands: Commands) {
     commands.spawn((
-        DespawnOnExit(GameStates::Simulation),
+        DespawnOnExit(GameStates::Playing),
         health_hud(HealthHudConfig { target: None }),
     ));
 }
@@ -83,31 +83,15 @@ fn setup_health_entity(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mesh_entity = commands
-        .spawn((
-            Name::new("Health Entity"),
-            Transform::from_xyz(0.0, 0.0, 0.0),
-            Visibility::Visible,
-            Mesh3d(meshes.add(Sphere::new(3.0))),
-            MeshMaterial3d(materials.add(Color::srgb(0.8, 0.1, 0.1))),
-            Health::new(100.0),
-            Collider::sphere(3.0),
-        ))
-        .id();
-
-    commands
-        .entity(mesh_entity)
-        .insert(ExplodableMesh(vec![mesh_entity]));
-
     commands.spawn((
-        Name::new("OnDestroyedEvent Handler"),
-        EventHandler::<NovaEventWorld>::new::<OnDestroyedEvent>()
-            .with_filter(EntityFilter::default().with_entity(mesh_entity))
-            .with_action(InsertComponentAction(ExplodeMesh {
-                fragment_count: 4,
-                force_multiplier_range: (5.0, 15.0),
-            }))
-            .with_action(DespawnEntityAction),
+        Name::new("Health Entity"),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+        Visibility::Visible,
+        Mesh3d(meshes.add(Sphere::new(3.0))),
+        MeshMaterial3d(materials.add(Color::srgb(0.8, 0.1, 0.1))),
+        Health::new(100.0),
+        Collider::sphere(3.0),
+        ExplodableEntityMarker,
     ));
 }
 

@@ -5,6 +5,7 @@
 pub mod components;
 pub mod damage;
 pub mod modding;
+pub mod plugin;
 pub mod spaceship;
 
 pub use bevy_common_systems;
@@ -14,6 +15,7 @@ pub mod prelude {
     pub use bevy_common_systems::prelude::*;
 
     pub use super::{
-        components::prelude::*, damage::prelude::*, modding::prelude::*, spaceship::prelude::*,
+        components::prelude::*, damage::prelude::*, modding::prelude::*,
+        plugin::NovaGameplayPlugin, spaceship::prelude::*,
     };
 }

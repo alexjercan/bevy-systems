@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::{EntityTypeName, EntityId};
+    pub use super::{EntityId, EntityTypeName};
 }
 
 #[derive(Component, Debug, Clone, Default, Deref, DerefMut, Reflect)]

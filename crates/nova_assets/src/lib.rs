@@ -3,11 +3,10 @@
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 
-use crate::sections::register_sections;
-use crate::scenario::register_scenario;
+use crate::{scenario::register_scenario, sections::register_sections};
 
-mod sections;
 mod scenario;
+mod sections;
 
 pub mod prelude {
     pub use super::{GameAssets, GameAssetsPlugin, GameAssetsStates};

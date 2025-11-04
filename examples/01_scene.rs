@@ -19,7 +19,7 @@ fn main() {
 
 fn custom_plugin(app: &mut App) {
     app.add_systems(
-        OnEnter(GameStates::Simulation),
+        OnEnter(GameStates::Playing),
         (setup_camera, setup_simple_scene),
     );
 }

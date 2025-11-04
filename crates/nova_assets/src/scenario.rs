@@ -1,6 +1,6 @@
-use rand::prelude::*;
 use bevy::prelude::*;
 use nova_gameplay::prelude::*;
+use rand::prelude::*;
 
 pub(crate) fn register_scenario(mut commands: Commands, game_assets: Res<super::GameAssets>) {
     commands.insert_resource(GameScenarios(vec![custom_scenario(&game_assets)]));
@@ -30,6 +30,7 @@ pub fn custom_scenario(game_assets: &super::GameAssets) -> ScenarioConfig {
             rotation: Quat::IDENTITY,
             radius,
             color,
+            health: 100.0,
         }));
     }
 
@@ -38,6 +39,7 @@ pub fn custom_scenario(game_assets: &super::GameAssets) -> ScenarioConfig {
         name: "Player Spaceship".to_string(),
         position: Vec3::ZERO,
         rotation: Quat::IDENTITY,
+        health: 500.0,
         sections: vec![
             SpaceshipSectionConfig {
                 position: Vec3::ZERO,
@@ -157,7 +159,10 @@ pub fn custom_scenario(game_assets: &super::GameAssets) -> ScenarioConfig {
     ScenarioConfig {
         name: "Asteroid Field".to_string(),
         description: "A dense asteroid field.".to_string(),
-        map: MapConfig { objects },
+        map: MapConfig {
+            cubemap: game_assets.cubemap.clone(),
+            objects,
+        },
         events: events,
     }
 }

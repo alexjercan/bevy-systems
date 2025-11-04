@@ -9,13 +9,8 @@ use bevy::{
 use nova_assets::prelude::*;
 #[cfg(feature = "debug")]
 use nova_debug::DebugPlugin;
-use nova_gameplay::prelude::*;
-
-pub mod editor;
-pub mod plugin;
-pub mod simulation;
-
 pub use nova_gameplay;
+use nova_gameplay::prelude::*;
 
 pub mod prelude {
     // NOTE: These are temporary, until I finis the refactor to move everything to new_gui_app
@@ -32,8 +27,7 @@ pub mod prelude {
 pub enum GameStates {
     #[default]
     Loading,
-    Simulation,
-    Editor,
+    Playing,
 }
 
 pub struct AppBuilder {
@@ -80,14 +74,17 @@ impl AppBuilder {
         self.app
             .add_plugins(bevy_enhanced_input::EnhancedInputPlugin);
         self.app.add_plugins(GameAssetsPlugin);
-        self.app.add_plugins(plugin::CorePlugin {
+        self.app.add_plugins(NovaGameplayPlugin {
             render: self.render,
         });
 
         // Add default game plugins if none were provided
         if self.use_default_plugins {
-            self.app.add_plugins(simulation::SimulationPlugin);
-            self.app.add_plugins(editor::EditorPlugin);
+            // TODO: Main menu plugin
+            // TODO: Gameplay loop plugin
+
+            // self.app.add_plugins(simulation::SimulationPlugin);
+            // self.app.add_plugins(editor::EditorPlugin);
         }
 
         #[cfg(feature = "debug")]
@@ -100,7 +97,7 @@ impl AppBuilder {
             OnEnter(GameAssetsStates::Loaded),
             (
                 |mut state: ResMut<NextState<GameStates>>| {
-                    state.set(GameStates::Simulation);
+                    state.set(GameStates::Playing);
                 },
                 setup_status_ui,
             ),
@@ -109,7 +106,7 @@ impl AppBuilder {
         if cfg!(not(feature = "debug")) {
             // TODO: implement this in a proper way for debug mode
             self.app.add_systems(
-                OnEnter(GameStates::Simulation),
+                OnEnter(GameStates::Playing),
                 |primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>| {
                     let mut primary_cursor_options = primary_cursor_options.into_inner();
                     primary_cursor_options.grab_mode = CursorGrabMode::Locked;

@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 use bevy_common_systems::modding::prelude::*;
+
 use super::world::NovaEventWorld;
 
 pub mod prelude {
-    pub use super::{EventFilterConfig, EntityFilterConfig, ConditionalFilterConfig};
+    pub use super::{ConditionalFilterConfig, EntityFilterConfig, EventFilterConfig};
 }
 
 #[derive(Clone, Debug)]

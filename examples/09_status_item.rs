@@ -18,7 +18,7 @@ fn main() {
 }
 
 fn custom_plugin(app: &mut App) {
-    app.add_systems(OnEnter(GameStates::Simulation), setup_camera);
+    app.add_systems(OnEnter(GameStates::Playing), setup_camera);
     app.add_observer(setup_status_ui);
 }
 

@@ -4013,6 +4013,7 @@ dependencies = [
  "avian3d",
  "bevy",
  "bevy_common_systems",
+ "bevy_enhanced_input",
  "bevy_hanabi",
  "rand",
  "serde",

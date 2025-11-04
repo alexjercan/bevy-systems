@@ -21,7 +21,7 @@ fn custom_plugin(app: &mut App) {
     app.add_observer(setup_hud_velocity);
 
     app.add_systems(
-        OnEnter(GameStates::Simulation),
+        OnEnter(GameStates::Playing),
         (setup_spaceship, setup_camera, setup_simple_scene).chain(),
     );
 }
@@ -68,7 +68,7 @@ fn setup_hud_velocity(
     };
 
     commands.spawn((
-        DespawnOnExit(GameStates::Simulation),
+        DespawnOnExit(GameStates::Playing),
         velocity_hud(VelocityHudConfig {
             radius: 5.0,
             target: Some(spaceship),

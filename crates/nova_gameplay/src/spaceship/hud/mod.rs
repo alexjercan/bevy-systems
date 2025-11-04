@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::spaceship::prelude::*;
+
 pub mod health;
 pub mod velocity;
 
@@ -16,5 +18,87 @@ impl Plugin for SpacehipHudPlugin {
 
         app.add_plugins(velocity::VelocityHudPlugin);
         app.add_plugins(health::HealthHudPlugin);
+
+        app.add_observer(setup_hud_velocity);
+        app.add_observer(remove_hud_velocity);
+        app.add_observer(setup_hud_health);
+        app.add_observer(remove_hud_health);
+    }
+}
+
+fn setup_hud_velocity(
+    add: On<Add, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
+) {
+    let entity = add.entity;
+    debug!("setup_hud_velocity: entity {:?}", entity);
+
+    let Ok(spaceship) = q_spaceship.get(entity) else {
+        warn!(
+            "setup_hud_velocity: entity {:?} not found in q_spaceship",
+            entity
+        );
+        return;
+    };
+
+    commands.spawn((velocity_hud(VelocityHudConfig {
+        radius: 5.0,
+        target: Some(spaceship),
+    }),));
+}
+
+fn remove_hud_velocity(
+    remove: On<Remove, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    q_hud: Query<(Entity, &VelocityHudTargetEntity), With<VelocityHudMarker>>,
+) {
+    let entity = remove.entity;
+    debug!("remove_hud_velocity: entity {:?}", entity);
+
+    for (hud_entity, target) in &q_hud {
+        if let Some(target_entity) = **target {
+            if target_entity == entity {
+                commands.entity(hud_entity).despawn();
+            }
+        }
+    }
+}
+
+fn setup_hud_health(
+    add: On<Add, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
+) {
+    let entity = add.entity;
+    debug!("setup_hud_health: entity {:?}", entity);
+
+    let Ok(spaceship) = q_spaceship.get(entity) else {
+        warn!(
+            "setup_hud_health: entity {:?} not found in q_spaceship",
+            entity
+        );
+        return;
+    };
+
+    commands.spawn((health_hud(HealthHudConfig {
+        target: Some(spaceship),
+    }),));
+}
+
+fn remove_hud_health(
+    remove: On<Remove, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    q_hud: Query<(Entity, &HealthHudTargetEntity), With<HealthHudMarker>>,
+) {
+    let entity = remove.entity;
+    debug!("remove_hud_health: entity {:?}", entity);
+
+    for (hud_entity, target) in &q_hud {
+        if let Some(target_entity) = **target {
+            if target_entity == entity {
+                commands.entity(hud_entity).despawn();
+            }
+        }
     }
 }
