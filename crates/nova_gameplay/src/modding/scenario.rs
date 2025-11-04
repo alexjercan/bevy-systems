@@ -1,5 +1,5 @@
 use avian3d::prelude::*;
-use bevy::prelude::*;
+use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_common_systems::prelude::*;
 
 use super::{
@@ -17,15 +17,18 @@ pub mod prelude {
     pub use super::{
         AsteroidConfig, GameObjectConfig, GameScenarios, MapConfig, ScenarioConfig,
         ScenarioEventConfig, ScenarioId, ScenarioLoad, ScenarioLoaded, ScenarioLoaderPlugin,
-        ScenarioScoped, SpaceshipConfig, SpaceshipSectionConfig,
+        ScenarioScopedMarker, SpaceshipConfig, SpaceshipSectionConfig,
     };
 }
 
+pub type ScenarioId = String;
+
 #[derive(Resource, Clone, Debug, Deref, DerefMut, Default)]
-pub struct GameScenarios(pub Vec<ScenarioConfig>);
+pub struct GameScenarios(pub HashMap<ScenarioId, ScenarioConfig>);
 
 #[derive(Clone, Debug)]
 pub struct ScenarioConfig {
+    pub id: String,
     pub name: String,
     pub description: String,
     pub map: MapConfig,
@@ -81,16 +84,14 @@ pub struct ScenarioEventConfig {
     pub actions: Vec<EventActionConfig>,
 }
 
-pub type ScenarioId = usize;
-
 #[derive(Event, Clone, Debug, Deref, DerefMut, Default, Reflect)]
 pub struct ScenarioLoad(pub ScenarioId);
 
 #[derive(Resource, Clone, Debug, Deref, DerefMut, Default, Reflect)]
 pub struct ScenarioLoaded(pub Option<ScenarioId>);
 
-#[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]
-pub struct ScenarioScoped(pub ScenarioId);
+#[derive(Component, Debug, Clone, Reflect)]
+pub struct ScenarioScopedMarker;
 
 pub struct ScenarioLoaderPlugin;
 
@@ -100,10 +101,6 @@ impl Plugin for ScenarioLoaderPlugin {
 
         app.init_resource::<ScenarioLoaded>();
         app.add_observer(on_load_scenario);
-        app.add_systems(
-            Update,
-            on_unload_scenario.run_if(resource_changed::<ScenarioLoaded>),
-        );
     }
 }
 
@@ -114,12 +111,17 @@ fn on_load_scenario(
     mut materials: ResMut<Assets<StandardMaterial>>,
     scenarios: Res<GameScenarios>,
     mut scenario_loaded: ResMut<ScenarioLoaded>,
+    q_scoped: Query<Entity, With<ScenarioScopedMarker>>,
 ) {
-    let scenario_index = **load;
-    **scenario_loaded = Some(scenario_index);
+    for entity in q_scoped.iter() {
+        commands.entity(entity).despawn();
+    }
+
+    let scenario_index = (**load).clone();
+    **scenario_loaded = Some(scenario_index.clone());
 
     // TODO: Here we pretend that we get the scenario from the assets
-    let scenario = scenarios.get(scenario_index).expect("No scenario found");
+    let scenario = scenarios.get(&scenario_index).expect("No scenario found");
     info!("Setting up scenario: {}", scenario.name);
 
     // Fire onstart event
@@ -130,7 +132,7 @@ fn on_load_scenario(
         match object {
             GameObjectConfig::Asteroid(config) => {
                 commands.spawn((
-                    ScenarioScoped(scenario_index),
+                    ScenarioScopedMarker,
                     Name::new(config.name.clone()),
                     EntityId::new(config.id.clone()),
                     EntityTypeName::new("asteroid"),
@@ -146,7 +148,7 @@ fn on_load_scenario(
             GameObjectConfig::Spaceship(config) => {
                 commands
                     .spawn((
-                        ScenarioScoped(scenario_index),
+                        ScenarioScopedMarker,
                         PlayerSpaceshipMarker,
                         Name::new(config.name.clone()),
                         EntityId::new(config.id.clone()),
@@ -197,12 +199,16 @@ fn on_load_scenario(
         for action in event.actions.iter() {
             event_handler.add_action(action.clone());
         }
-        commands.spawn(event_handler);
+        commands.spawn((
+            ScenarioScopedMarker,
+            Name::new(format!("Event Handler: {:?}", event.name)),
+            event_handler,
+        ));
     }
 
     // Setup chase camera
     commands.spawn((
-        ScenarioScoped(scenario_index),
+        ScenarioScopedMarker,
         Name::new("Chase Camera"),
         Camera3d::default(),
         ChaseCamera::default(),
@@ -216,7 +222,7 @@ fn on_load_scenario(
 
     // Setup directional light
     commands.spawn((
-        ScenarioScoped(scenario_index),
+        ScenarioScopedMarker,
         DirectionalLight {
             illuminance: 10000.0,
             ..default()
@@ -229,18 +235,4 @@ fn on_load_scenario(
         )),
         GlobalTransform::default(),
     ));
-}
-
-fn on_unload_scenario(
-    mut commands: Commands,
-    q_scoped: Query<(Entity, &ScenarioScoped)>,
-    loaded: Res<ScenarioLoaded>,
-) {
-    trace!("on_unload_scenario: unloading scenario {:?}", **loaded);
-
-    for (entity, scenario) in q_scoped.iter() {
-        if Some(**scenario) != **loaded {
-            commands.entity(entity).despawn();
-        }
-    }
 }

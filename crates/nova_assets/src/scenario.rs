@@ -1,12 +1,15 @@
-use bevy::prelude::*;
+use bevy::{platform::collections::HashMap, prelude::*};
 use nova_gameplay::prelude::*;
 use rand::prelude::*;
 
 pub(crate) fn register_scenario(mut commands: Commands, game_assets: Res<super::GameAssets>) {
-    commands.insert_resource(GameScenarios(vec![custom_scenario(&game_assets)]));
+    commands.insert_resource(GameScenarios(HashMap::from([
+        ("asteroid_field".to_string(), asteroid_field(&game_assets)),
+        ("asteroid_next".to_string(), asteroid_next(&game_assets)),
+    ])));
 }
 
-pub fn custom_scenario(game_assets: &super::GameAssets) -> ScenarioConfig {
+pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
     let mut rng = rand::rng();
 
     let mut objects = Vec::new();
@@ -234,6 +237,9 @@ pub fn custom_scenario(game_assets: &super::GameAssets) -> ScenarioConfig {
                     VariableFactorNode::new_literal(VariableLiteral::Boolean(true)),
                 )),
             }),
+            EventActionConfig::NextScenario(NextScenarioActionConfig {
+                scenario_id: "asteroid_next".to_string(),
+            }),
         ],
     });
 
@@ -249,6 +255,7 @@ pub fn custom_scenario(game_assets: &super::GameAssets) -> ScenarioConfig {
     });
 
     ScenarioConfig {
+        id: "asteroid_field".to_string(),
         name: "Asteroid Field".to_string(),
         description: "A dense asteroid field.".to_string(),
         map: MapConfig {
@@ -256,5 +263,18 @@ pub fn custom_scenario(game_assets: &super::GameAssets) -> ScenarioConfig {
             objects,
         },
         events: events,
+    }
+}
+
+pub fn asteroid_next(game_assets: &super::GameAssets) -> ScenarioConfig {
+    ScenarioConfig {
+        id: "asteroid_next".to_string(),
+        name: "Asteroid Field - Next".to_string(),
+        description: "The next scenario after the asteroid field.".to_string(),
+        map: MapConfig {
+            cubemap: game_assets.cubemap.clone(),
+            objects: vec![],
+        },
+        events: vec![],
     }
 }

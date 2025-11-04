@@ -19,7 +19,7 @@ fn custom_plugin(app: &mut App) {
     app.add_systems(
         OnEnter(GameAssetsStates::Loaded),
         |mut commands: Commands| {
-            commands.trigger(ScenarioLoad(0));
+            commands.trigger(ScenarioLoad("asteroid_field".to_string()));
         },
     );
 }
