@@ -134,14 +134,24 @@ pub fn custom_scenario(game_assets: &super::GameAssets) -> ScenarioConfig {
     objects.push(GameObjectConfig::Spaceship(spaceship));
 
     let mut events = Vec::new();
+
     events.push(ScenarioEventConfig {
-        name: EventConfig::OnDestroyed,
-        filters: vec![EventFilterConfig::Entity(EntityFilterConfig {
-            id: None,
-            type_name: Some("asteroid".to_string()),
-        })],
-        actions: vec![EventActionConfig::DebugMessage(DebugMessageActionConfig {
-            message: "An asteroid was destroyed!".to_string(),
+        name: EventConfig::OnStart,
+        filters: vec![],
+        actions: vec![EventActionConfig::Objective(ObjectiveActionConfig::new(
+            "destroy_asteroids",
+            "Objective: Destroy 5 asteroids!",
+        ))],
+    });
+
+    events.push(ScenarioEventConfig {
+        name: EventConfig::OnStart,
+        filters: vec![],
+        actions: vec![EventActionConfig::VariableSet(VariableSetActionConfig {
+            key: "objective_destroy_asteroids".to_string(),
+            expression: VariableExpressionNode::new_term(VariableTermNode::new_factor(
+                VariableFactorNode::new_literal(VariableLiteral::Boolean(false)),
+            )),
         })],
     });
 
@@ -169,12 +179,10 @@ pub fn custom_scenario(game_assets: &super::GameAssets) -> ScenarioConfig {
 
     events.push(ScenarioEventConfig {
         name: EventConfig::OnDestroyed,
-        filters: vec![EventFilterConfig::Conditional(
-            ConditionalFilterConfig::not(EventFilterConfig::Entity(EntityFilterConfig {
-                id: Some("player_spaceship".to_string()),
-                type_name: None,
-            })),
-        )],
+        filters: vec![EventFilterConfig::Entity(EntityFilterConfig {
+            id: None,
+            type_name: Some("asteroid".to_string()),
+        })],
         actions: vec![EventActionConfig::VariableSet(VariableSetActionConfig {
             key: "asteroids_destroyed".to_string(),
             expression: VariableExpressionNode::new_add(
@@ -189,12 +197,55 @@ pub fn custom_scenario(game_assets: &super::GameAssets) -> ScenarioConfig {
     });
 
     events.push(ScenarioEventConfig {
-        name: EventConfig::OnStart,
-        filters: vec![],
-        actions: vec![EventActionConfig::Objective(ObjectiveActionConfig::new(
-            "destroy_first_asteroid",
-            "Objective: Destroy your first asteroid!",
-        ))],
+        name: EventConfig::OnDestroyed,
+        filters: vec![
+            EventFilterConfig::Entity(EntityFilterConfig {
+                id: None,
+                type_name: Some("asteroid".to_string()),
+            }),
+            EventFilterConfig::Expression(ExpressionFilterConfig(
+                VariableConditionNode::new_greater_than(
+                    VariableExpressionNode::new_term(VariableTermNode::new_factor(
+                        VariableFactorNode::new_name("asteroids_destroyed".to_string()),
+                    )),
+                    VariableExpressionNode::new_term(VariableTermNode::new_factor(
+                        VariableFactorNode::new_literal(VariableLiteral::Number(4.0)),
+                    )),
+                ),
+            )),
+            EventFilterConfig::Expression(ExpressionFilterConfig(
+                VariableConditionNode::new_equals(
+                    VariableExpressionNode::new_term(VariableTermNode::new_factor(
+                        VariableFactorNode::new_name("objective_destroy_asteroids".to_string()),
+                    )),
+                    VariableExpressionNode::new_term(VariableTermNode::new_factor(
+                        VariableFactorNode::new_literal(VariableLiteral::Boolean(false)),
+                    )),
+                ),
+            )),
+        ],
+        actions: vec![
+            EventActionConfig::DebugMessage(DebugMessageActionConfig {
+                message: "Objective Complete: Destroyed 5 asteroids!".to_string(),
+            }),
+            EventActionConfig::VariableSet(VariableSetActionConfig {
+                key: "objective_destroy_asteroids".to_string(),
+                expression: VariableExpressionNode::new_term(VariableTermNode::new_factor(
+                    VariableFactorNode::new_literal(VariableLiteral::Boolean(true)),
+                )),
+            }),
+        ],
+    });
+
+    events.push(ScenarioEventConfig {
+        name: EventConfig::OnDestroyed,
+        filters: vec![EventFilterConfig::Entity(EntityFilterConfig {
+            id: None,
+            type_name: Some("asteroid".to_string()),
+        })],
+        actions: vec![EventActionConfig::DebugMessage(DebugMessageActionConfig {
+            message: "An asteroid was destroyed!".to_string(),
+        })],
     });
 
     ScenarioConfig {

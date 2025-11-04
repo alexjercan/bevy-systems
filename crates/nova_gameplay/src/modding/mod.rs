@@ -3,11 +3,12 @@ pub mod events;
 pub mod filters;
 pub mod scenario;
 pub mod world;
+pub mod variables;
 
 pub mod prelude {
     pub use super::{
         actions::prelude::*, events::prelude::*, filters::prelude::*, scenario::prelude::*,
-        world::NovaEventWorld, NovaEventsPlugin,
+        world::NovaEventWorld, NovaEventsPlugin, variables::prelude::*,
     };
 }
 

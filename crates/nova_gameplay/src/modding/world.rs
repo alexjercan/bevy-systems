@@ -1,7 +1,7 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_common_systems::prelude::EventWorld;
 
-use super::actions::{ObjectiveActionConfig, VariableLiteral};
+use super::{actions::ObjectiveActionConfig, variables::VariableLiteral};
 
 #[derive(Resource, Default)]
 pub struct NovaEventWorld {

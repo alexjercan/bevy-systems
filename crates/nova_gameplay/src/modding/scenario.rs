@@ -16,8 +16,8 @@ use crate::{
 pub mod prelude {
     pub use super::{
         AsteroidConfig, GameObjectConfig, GameScenarios, MapConfig, ScenarioConfig,
-        ScenarioEventConfig, ScenarioLoad, ScenarioLoaderPlugin, ScenarioStates, SpaceshipConfig,
-        SpaceshipSectionConfig,
+        ScenarioEventConfig, ScenarioId, ScenarioLoad, ScenarioLoaded, ScenarioLoaderPlugin,
+        ScenarioScoped, SpaceshipConfig, SpaceshipSectionConfig,
     };
 }
 
@@ -81,12 +81,16 @@ pub struct ScenarioEventConfig {
     pub actions: Vec<EventActionConfig>,
 }
 
-#[derive(Event, Clone, Debug, Deref, DerefMut, Default, Reflect)]
-pub struct ScenarioLoad(pub usize);
+pub type ScenarioId = usize;
 
-/// Scenario States
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
-pub struct ScenarioStates(pub Option<usize>);
+#[derive(Event, Clone, Debug, Deref, DerefMut, Default, Reflect)]
+pub struct ScenarioLoad(pub ScenarioId);
+
+#[derive(Resource, Clone, Debug, Deref, DerefMut, Default, Reflect)]
+pub struct ScenarioLoaded(pub Option<ScenarioId>);
+
+#[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]
+pub struct ScenarioScoped(pub ScenarioId);
 
 pub struct ScenarioLoaderPlugin;
 
@@ -94,8 +98,12 @@ impl Plugin for ScenarioLoaderPlugin {
     fn build(&self, app: &mut App) {
         debug!("ScenarioLoaderPlugin: build");
 
-        app.init_state::<ScenarioStates>();
+        app.init_resource::<ScenarioLoaded>();
         app.add_observer(on_load_scenario);
+        app.add_systems(
+            Update,
+            on_unload_scenario.run_if(resource_changed::<ScenarioLoaded>),
+        );
     }
 }
 
@@ -105,10 +113,10 @@ fn on_load_scenario(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     scenarios: Res<GameScenarios>,
-    mut scenario_state: ResMut<NextState<ScenarioStates>>,
+    mut scenario_loaded: ResMut<ScenarioLoaded>,
 ) {
     let scenario_index = **load;
-    scenario_state.set(ScenarioStates(Some(scenario_index)));
+    **scenario_loaded = Some(scenario_index);
 
     // TODO: Here we pretend that we get the scenario from the assets
     let scenario = scenarios.get(scenario_index).expect("No scenario found");
@@ -122,7 +130,7 @@ fn on_load_scenario(
         match object {
             GameObjectConfig::Asteroid(config) => {
                 commands.spawn((
-                    DespawnOnExit(ScenarioStates(Some(scenario_index))),
+                    ScenarioScoped(scenario_index),
                     Name::new(config.name.clone()),
                     EntityId::new(config.id.clone()),
                     EntityTypeName::new("asteroid"),
@@ -138,7 +146,7 @@ fn on_load_scenario(
             GameObjectConfig::Spaceship(config) => {
                 commands
                     .spawn((
-                        DespawnOnExit(ScenarioStates(Some(scenario_index))),
+                        ScenarioScoped(scenario_index),
                         PlayerSpaceshipMarker,
                         Name::new(config.name.clone()),
                         EntityId::new(config.id.clone()),
@@ -194,7 +202,7 @@ fn on_load_scenario(
 
     // Setup chase camera
     commands.spawn((
-        DespawnOnExit(ScenarioStates(Some(scenario_index))),
+        ScenarioScoped(scenario_index),
         Name::new("Chase Camera"),
         Camera3d::default(),
         ChaseCamera::default(),
@@ -208,7 +216,7 @@ fn on_load_scenario(
 
     // Setup directional light
     commands.spawn((
-        DespawnOnExit(ScenarioStates(Some(scenario_index))),
+        ScenarioScoped(scenario_index),
         DirectionalLight {
             illuminance: 10000.0,
             ..default()
@@ -221,4 +229,18 @@ fn on_load_scenario(
         )),
         GlobalTransform::default(),
     ));
+}
+
+fn on_unload_scenario(
+    mut commands: Commands,
+    q_scoped: Query<(Entity, &ScenarioScoped)>,
+    loaded: Res<ScenarioLoaded>,
+) {
+    trace!("on_unload_scenario: unloading scenario {:?}", **loaded);
+
+    for (entity, scenario) in q_scoped.iter() {
+        if Some(**scenario) != **loaded {
+            commands.entity(entity).despawn();
+        }
+    }
 }
