@@ -1,12 +1,15 @@
 use bevy::prelude::*;
 
-use crate::prelude::*;
+use crate::{hud::objectives::ObjectiveRootHudMarker, prelude::*};
 
 pub mod health;
+pub mod objectives;
 pub mod velocity;
 
 pub mod prelude {
-    pub use super::{health::prelude::*, velocity::prelude::*, NovaHudPlugin};
+    pub use super::{
+        health::prelude::*, objectives::prelude::*, velocity::prelude::*, NovaHudPlugin,
+    };
 }
 
 #[derive(Default)]
@@ -18,11 +21,14 @@ impl Plugin for NovaHudPlugin {
 
         app.add_plugins(velocity::VelocityHudPlugin);
         app.add_plugins(health::HealthHudPlugin);
+        app.add_plugins(objectives::ObjectivesHudPlugin);
 
         app.add_observer(setup_hud_velocity);
         app.add_observer(remove_hud_velocity);
         app.add_observer(setup_hud_health);
         app.add_observer(remove_hud_health);
+        app.add_observer(setup_hud_objectives);
+        app.add_observer(remove_hud_objectives);
     }
 }
 
@@ -100,5 +106,37 @@ fn remove_hud_health(
                 commands.entity(hud_entity).despawn();
             }
         }
+    }
+}
+
+fn setup_hud_objectives(
+    add: On<Add, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
+) {
+    let entity = add.entity;
+    debug!("setup_hud_objectives: entity {:?}", entity);
+
+    let Ok(_) = q_spaceship.get(entity) else {
+        warn!(
+            "setup_hud_objectives: entity {:?} not found in q_spaceship",
+            entity
+        );
+        return;
+    };
+
+    commands.spawn((objectives_hud(ObjectiveRootHudConfig {  }),));
+}
+
+fn remove_hud_objectives(
+    remove: On<Remove, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    q_hud: Query<(Entity, &ObjectiveRootHudMarker), With<ObjectiveRootHudMarker>>,
+) {
+    let entity = remove.entity;
+    debug!("remove_hud_objectives: entity {:?}", entity);
+
+    for (hud_entity, _marker) in &q_hud {
+        commands.entity(hud_entity).despawn();
     }
 }

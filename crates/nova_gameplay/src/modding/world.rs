@@ -1,9 +1,8 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_common_systems::prelude::EventWorld;
 
-use crate::prelude::ScenarioLoad;
-
-use super::{actions::ObjectiveActionConfig, variables::VariableLiteral, scenario::ScenarioId};
+use super::{actions::ObjectiveActionConfig, scenario::ScenarioId, variables::VariableLiteral};
+use crate::prelude::{GameObjectivesHud, ScenarioLoad};
 
 #[derive(Resource, Default)]
 pub struct NovaEventWorld {
@@ -20,13 +19,16 @@ impl EventWorld for NovaEventWorld {
     }
 
     fn state_to_world_system(world: &mut World) {
-        println!("# Current Objectives:");
-        for objective in &world.resource::<Self>().objectives {
-            println!("Objective: {} - {}", objective.id, objective.message);
-        }
-        println!("# Current Variables:");
+        let objectives = &world.resource::<Self>().objectives.clone();
+        world.resource_mut::<GameObjectivesHud>().objectives.clear();
+        world
+            .resource_mut::<GameObjectivesHud>()
+            .objectives
+            .extend(objectives.iter().cloned());
+
+        debug!("# Current Variables:");
         for (key, value) in &world.resource::<Self>().variables {
-            println!("Variable: {} = {:?}", key, value);
+            debug!("Variable: {} = {:?}", key, value);
         }
 
         if let Some(next_scenario) = &world.resource::<Self>().next_scenario {
