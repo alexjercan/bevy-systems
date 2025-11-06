@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 use bevy_enhanced_input::prelude::*;
 
-use crate::spaceship::prelude::*;
+use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{

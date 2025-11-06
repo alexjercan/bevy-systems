@@ -8,10 +8,7 @@ use super::{
     filters::EventFilterConfig,
     world::NovaEventWorld,
 };
-use crate::{
-    prelude::{EntityId, EntityTypeName, EventConfig, SectionConfig},
-    spaceship::prelude::*,
-};
+use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{

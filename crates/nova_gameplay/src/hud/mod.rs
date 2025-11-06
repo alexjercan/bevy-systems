@@ -1,18 +1,18 @@
 use bevy::prelude::*;
 
-use crate::spaceship::prelude::*;
+use crate::prelude::*;
 
 pub mod health;
 pub mod velocity;
 
 pub mod prelude {
-    pub use super::{health::prelude::*, velocity::prelude::*, SpacehipHudPlugin};
+    pub use super::{health::prelude::*, velocity::prelude::*, NovaHudPlugin};
 }
 
 #[derive(Default)]
-pub struct SpacehipHudPlugin;
+pub struct NovaHudPlugin;
 
-impl Plugin for SpacehipHudPlugin {
+impl Plugin for NovaHudPlugin {
     fn build(&self, app: &mut App) {
         debug!("HudPlugin: build");
 

@@ -3,6 +3,17 @@ use bevy::prelude::*;
 
 use crate::{bevy_common_systems, prelude::*};
 
+/// A system set that will contain all the systems related to the spaceship plugin.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum SpaceshipSystems {
+    First,
+    Input,
+    Sections,
+    Hud,
+    Camera,
+    Last,
+}
+
 #[derive(Default, Clone, Debug)]
 pub struct NovaGameplayPlugin {
     pub render: bool,
@@ -49,9 +60,12 @@ impl Plugin for NovaGameplayPlugin {
         app.add_plugins(bevy_common_systems::prelude::StatusBarPlugin);
 
         // Core Plugins for simulation
-        app.add_plugins(crate::spaceship::SpaceshipPlugin {
+        app.add_plugins(crate::input::SpaceshipInputPlugin);
+        app.add_plugins(crate::sections::SpaceshipSectionPlugin {
             render: self.render,
         });
+        app.add_plugins(crate::hud::NovaHudPlugin);
+        app.add_plugins(crate::camera_controller::SpaceshipCameraControllerPlugin);
         app.add_plugins(crate::damage::DamagePlugin);
         app.add_plugins(crate::modding::NovaEventsPlugin);
 
@@ -65,5 +79,30 @@ impl Plugin for NovaGameplayPlugin {
         //     Update,
         //     SpaceshipSystems::Input.run_if(in_state(super::GameStates::Playing)),
         // );
+        app.configure_sets(
+            Update,
+            (
+                SpaceshipSystems::First,
+                SpaceshipSystems::Input,
+                SpaceshipSystems::Sections,
+                SpaceshipSystems::Hud,
+                SpaceshipSystems::Camera,
+                SpaceshipSystems::Last,
+            )
+                .chain(),
+        );
+
+        app.configure_sets(
+            FixedUpdate,
+            (
+                SpaceshipSystems::First,
+                SpaceshipSystems::Input,
+                SpaceshipSystems::Sections,
+                SpaceshipSystems::Hud,
+                SpaceshipSystems::Camera,
+                SpaceshipSystems::Last,
+            )
+                .chain(),
+        );
     }
 }

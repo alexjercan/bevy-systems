@@ -2,7 +2,7 @@ use avian3d::prelude::*;
 use bevy::{color::palettes::tailwind, prelude::*};
 use itertools::Itertools;
 use nova_gameplay::{
-    prelude::*, spaceship::sections::turret_section::TurretSectionBarrelFireState,
+    prelude::*, sections::turret_section::TurretSectionBarrelFireState,
 };
 
 pub struct SectionsDebugPlugin;

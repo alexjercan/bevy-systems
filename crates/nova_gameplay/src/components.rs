@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::{EntityId, EntityTypeName};
+    pub use super::{EntityId, EntityTypeName, SpaceshipRootMarker};
 }
 
 #[derive(Component, Debug, Clone, Default, Deref, DerefMut, Reflect)]
@@ -21,3 +21,8 @@ impl EntityTypeName {
         EntityTypeName(s.into())
     }
 }
+
+/// This will be the root component for the entire spaceship. All other sections will be children
+/// of this entity.
+#[derive(Component, Clone, Debug, Default, Reflect)]
+pub struct SpaceshipRootMarker;

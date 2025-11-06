@@ -12,7 +12,7 @@ use bevy::{
 use bevy_common_systems::prelude::*;
 use bevy_hanabi::prelude::*;
 
-use crate::spaceship::prelude::*;
+use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{
