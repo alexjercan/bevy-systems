@@ -7,22 +7,8 @@ use bevy::{
     ui_widgets::{observe, Activate, Button},
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
-use clap::Parser;
-use nova_protocol::prelude::*;
+use crate::prelude::*;
 use rand::prelude::*;
-
-#[derive(Parser)]
-#[command(name = "12_editor")]
-#[command(version = "1.0.0")]
-#[command(about = "A simple example showing how to create a basic editor in nova_protocol", long_about = None)]
-struct Cli;
-
-fn main() {
-    let _ = Cli::parse();
-    let mut app = AppBuilder::new().with_game_plugins(custom_plugin).build();
-
-    app.run();
-}
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
 pub enum ExampleStates {
@@ -32,7 +18,7 @@ pub enum ExampleStates {
     Scenario,
 }
 
-fn custom_plugin(app: &mut App) {
+pub fn core_plugin(app: &mut App) {
     app.init_state::<ExampleStates>();
     app.insert_resource(SectionChoice::None);
 

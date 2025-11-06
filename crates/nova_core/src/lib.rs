@@ -12,6 +12,8 @@ use nova_debug::DebugPlugin;
 pub use nova_gameplay;
 use nova_gameplay::prelude::*;
 
+mod core;
+
 pub mod prelude {
     // NOTE: These are temporary, until I finis the refactor to move everything to new_gui_app
     pub use nova_assets::prelude::*;
@@ -83,8 +85,7 @@ impl AppBuilder {
             // TODO: Main menu plugin
             // TODO: Gameplay loop plugin
 
-            // self.app.add_plugins(simulation::SimulationPlugin);
-            // self.app.add_plugins(editor::EditorPlugin);
+            self.app.add_plugins(core::core_plugin);
         }
 
         #[cfg(feature = "debug")]
