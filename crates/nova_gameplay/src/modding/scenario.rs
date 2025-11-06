@@ -1,18 +1,33 @@
-use bevy::prelude::*;
-use crate::prelude::SectionConfig;
+use avian3d::prelude::*;
+use bevy::{platform::collections::HashMap, prelude::*};
+use bevy_common_systems::prelude::*;
+use bevy_enhanced_input::prelude::*;
 
-use super::filters::EventFilterConfig;
-use super::actions::EventActionConfig;
+use super::{
+    actions::EventActionConfig,
+    events::{OnStartEvent, OnStartEventInfo},
+    filters::EventFilterConfig,
+    world::NovaEventWorld,
+};
+use crate::prelude::*;
 
 pub mod prelude {
-    pub use super::{GameScenarios, MapConfig, ScenarioConfig, GameObjectConfig, AsteroidConfig, SpaceshipConfig, SpaceshipSectionConfig, ScenarioEventConfig};
+    pub use super::{
+        AsteroidConfig, CurrentScenario, GameObjectConfig, GameScenarios, LoadScenario,
+        LoadScenarioById, MapConfig, ScenarioConfig, ScenarioEventConfig, ScenarioId,
+        ScenarioLoaded, ScenarioLoaderPlugin, ScenarioScopedMarker, SpaceshipConfig,
+        SpaceshipController, SpaceshipSectionConfig, UnloadScenario,
+    };
 }
 
+pub type ScenarioId = String;
+
 #[derive(Resource, Clone, Debug, Deref, DerefMut, Default)]
-pub struct GameScenarios(pub Vec<ScenarioConfig>);
+pub struct GameScenarios(pub HashMap<ScenarioId, ScenarioConfig>);
 
 #[derive(Clone, Debug)]
 pub struct ScenarioConfig {
+    pub id: String,
     pub name: String,
     pub description: String,
     pub map: MapConfig,
@@ -21,6 +36,7 @@ pub struct ScenarioConfig {
 
 #[derive(Clone, Debug)]
 pub struct MapConfig {
+    pub cubemap: Handle<Image>,
     pub objects: Vec<GameObjectConfig>,
 }
 
@@ -38,6 +54,13 @@ pub struct AsteroidConfig {
     pub rotation: Quat,
     pub radius: f32,
     pub color: Color,
+    pub health: f32,
+}
+
+#[derive(Clone, Debug)]
+pub enum SpaceshipController {
+    None,
+    Player,
 }
 
 #[derive(Clone, Debug)]
@@ -46,6 +69,8 @@ pub struct SpaceshipConfig {
     pub name: String,
     pub position: Vec3,
     pub rotation: Quat,
+    pub health: f32,
+    pub controller: SpaceshipController,
     pub sections: Vec<SpaceshipSectionConfig>,
 }
 
@@ -60,7 +85,304 @@ pub struct SpaceshipSectionConfig {
 
 #[derive(Clone, Debug)]
 pub struct ScenarioEventConfig {
-    pub name: String,
+    pub name: EventConfig,
     pub filters: Vec<EventFilterConfig>,
     pub actions: Vec<EventActionConfig>,
+}
+
+#[derive(Event, Clone, Debug, Deref, DerefMut, Default, Reflect)]
+pub struct LoadScenarioById(pub ScenarioId);
+
+#[derive(Event, Clone, Debug, Deref, DerefMut)]
+pub struct LoadScenario(pub ScenarioConfig);
+
+#[derive(Event, Clone, Debug)]
+pub struct UnloadScenario;
+
+#[derive(Event, Clone, Debug, Deref, DerefMut)]
+pub struct ScenarioLoaded(pub ScenarioConfig);
+
+#[derive(Resource, Clone, Debug, Deref, DerefMut, Default)]
+pub struct CurrentScenario(pub Option<ScenarioConfig>);
+
+#[derive(Component, Debug, Clone, Reflect)]
+pub struct ScenarioScopedMarker;
+
+pub struct ScenarioLoaderPlugin;
+
+impl Plugin for ScenarioLoaderPlugin {
+    fn build(&self, app: &mut App) {
+        debug!("ScenarioLoaderPlugin: build");
+
+        app.init_resource::<CurrentScenario>();
+        app.add_observer(on_load_scenario_id);
+        app.add_observer(on_load_scenario);
+        app.add_observer(on_player_spaceship_spawned);
+        app.add_observer(on_player_spaceship_destroyed);
+
+        app.add_input_context::<ScenarioInputMarker>();
+        app.add_observer(on_next_input);
+        app.add_observer(unload_scenario);
+    }
+}
+
+fn unload_scenario(
+    _: On<UnloadScenario>,
+    mut commands: Commands,
+    q_scoped: Query<Entity, With<ScenarioScopedMarker>>,
+) {
+    for entity in q_scoped.iter() {
+        commands.entity(entity).despawn();
+    }
+}
+
+fn on_load_scenario_id(
+    load: On<LoadScenarioById>,
+    mut commands: Commands,
+    scenarios: Res<GameScenarios>,
+) {
+    let scenario_index = (**load).clone();
+    let scenario = scenarios.get(&scenario_index).expect("No scenario found");
+    commands.trigger(LoadScenario(scenario.clone()));
+}
+
+fn on_load_scenario(
+    load: On<LoadScenario>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut current_scenario: ResMut<CurrentScenario>,
+    q_scoped: Query<Entity, With<ScenarioScopedMarker>>,
+) {
+    // NOTE: Clean up any existing scenario-scoped entities
+    // TODO: Maybe in the future we want to filter more specifically in case we keep other
+    // scenario-scoped entities around (e.g the player spaceship or similar)
+    for entity in q_scoped.iter() {
+        commands.entity(entity).despawn();
+    }
+
+    let scenario = (**load).clone();
+    **current_scenario = Some(scenario.clone());
+    info!("Setting up scenario: {}", scenario.name);
+
+    // Setup Scenario Camera
+    commands.spawn((
+        ScenarioScopedMarker,
+        Name::new("Scenario Camera"),
+        ScenarioCameraMarker,
+        Camera3d::default(),
+        WASDCameraController,
+        Transform::from_xyz(0.0, 10.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
+        SkyboxConfig {
+            cubemap: scenario.map.cubemap.clone(),
+            brightness: 1000.0,
+        },
+    ));
+
+    // Setup directional light
+    commands.spawn((
+        ScenarioScopedMarker,
+        DirectionalLight {
+            illuminance: 10000.0,
+            ..default()
+        },
+        Transform::from_rotation(Quat::from_euler(
+            EulerRot::XYZ,
+            -std::f32::consts::FRAC_PI_2,
+            0.0,
+            0.0,
+        )),
+        GlobalTransform::default(),
+    ));
+
+    // Setup scenario input context
+    commands.spawn((
+        ScenarioScopedMarker,
+        Name::new(format!("Scenario Input Context: {}", scenario.name)),
+        ScenarioInputMarker,
+        actions!(
+            ScenarioInputMarker[(
+                Name::new("Input: Next Scenario"),
+                Action::<NextScenarioInput>::new(),
+                bindings![KeyCode::Enter, GamepadButton::South]
+            )]
+        ),
+    ));
+
+    // Fire onstart event
+    commands.fire::<OnStartEvent>(OnStartEventInfo::default());
+
+    // Spawn all objects in the scenario
+    for object in scenario.map.objects.iter() {
+        match object {
+            GameObjectConfig::Asteroid(config) => {
+                commands.spawn((
+                    ScenarioScopedMarker,
+                    Name::new(config.name.clone()),
+                    EntityId::new(config.id.clone()),
+                    EntityTypeName::new("asteroid"),
+                    Transform::from_translation(config.position).with_rotation(config.rotation),
+                    Mesh3d(meshes.add(Sphere::new(config.radius))),
+                    MeshMaterial3d(materials.add(config.color)),
+                    Collider::sphere(config.radius),
+                    RigidBody::Dynamic,
+                    Health::new(config.health),
+                    ExplodableEntityMarker,
+                ));
+            }
+            GameObjectConfig::Spaceship(config) => {
+                let entity = commands
+                    .spawn((
+                        ScenarioScopedMarker,
+                        SpaceshipRootMarker,
+                        Name::new(config.name.clone()),
+                        EntityId::new(config.id.clone()),
+                        EntityTypeName::new("spaceship"),
+                        Transform::from_translation(config.position).with_rotation(config.rotation),
+                        RigidBody::Dynamic,
+                        Visibility::Visible,
+                        Health::new(config.health),
+                        ExplodableEntityMarker,
+                    ))
+                    .with_children(|parent| {
+                        for section in config.sections.iter() {
+                            let mut section_entity = parent.spawn((
+                                base_section(section.config.base.clone()),
+                                Transform::from_translation(section.position)
+                                    .with_rotation(section.rotation),
+                            ));
+
+                            match &section.config.kind {
+                                SectionKind::Hull(hull_config) => {
+                                    section_entity.insert(hull_section(hull_config.clone()));
+                                }
+                                SectionKind::Controller(controller_config) => {
+                                    section_entity
+                                        .insert(controller_section(controller_config.clone()));
+                                }
+                                SectionKind::Thruster(thruster_config) => {
+                                    section_entity
+                                        .insert(thruster_section(thruster_config.clone()))
+                                        // TODO: Make the input key configurable
+                                        .insert(SpaceshipThrusterInputKey(KeyCode::Space));
+                                }
+                                SectionKind::Turret(turret_config) => {
+                                    section_entity.insert(turret_section(turret_config.clone()));
+                                }
+                            }
+                        }
+                    })
+                    .id();
+
+                match config.controller {
+                    SpaceshipController::None => {}
+                    SpaceshipController::Player => {
+                        commands.entity(entity).insert(PlayerSpaceshipMarker);
+                    }
+                }
+            }
+        }
+    }
+
+    // Setup scenario events
+    for event in scenario.events.iter() {
+        let mut event_handler = EventHandler::<NovaEventWorld>::from(event.name);
+        for filter in event.filters.iter() {
+            event_handler.add_filter(filter.clone());
+        }
+        for action in event.actions.iter() {
+            event_handler.add_action(action.clone());
+        }
+        commands.spawn((
+            ScenarioScopedMarker,
+            Name::new(format!("Event Handler: {:?}", event.name)),
+            event_handler,
+        ));
+    }
+
+    commands.trigger(ScenarioLoaded(scenario));
+}
+
+#[derive(Component, Debug, Clone)]
+struct ScenarioInputMarker;
+
+#[derive(InputAction)]
+#[action_output(bool)]
+struct NextScenarioInput;
+
+fn on_next_input(_: On<Start<NextScenarioInput>>, mut world: ResMut<super::world::NovaEventWorld>) {
+    let Some(mut next_scenario) = world.next_scenario.clone() else {
+        return;
+    };
+
+    next_scenario.linger = false;
+    world.next_scenario = Some(next_scenario);
+}
+
+#[derive(Component, Debug, Clone)]
+struct ScenarioCameraMarker;
+
+fn on_player_spaceship_spawned(
+    add: On<Add, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    current_scenario: Res<CurrentScenario>,
+    camera: Single<(Entity, &Transform), With<ScenarioCameraMarker>>,
+) {
+    trace!("on_player_spaceship_spawned: {:?}", add.entity);
+
+    let Some(scenario) = &**current_scenario else {
+        warn!("on_player_spaceship_spawned: no scenario loaded");
+        return;
+    };
+    let (camera, transform) = camera.into_inner();
+
+    // Replace the existing scenario camera with a chase camera
+    commands.entity(camera).despawn();
+    commands.spawn((
+        ScenarioScopedMarker,
+        Name::new("Scenario Camera"),
+        ScenarioCameraMarker,
+        Camera3d::default(),
+        ChaseCamera::default(),
+        SpaceshipCameraControllerMarker,
+        *transform,
+        SkyboxConfig {
+            cubemap: scenario.map.cubemap.clone(),
+            brightness: 1000.0,
+        },
+    ));
+}
+
+fn on_player_spaceship_destroyed(
+    add: On<Add, DestroyedMarker>,
+    mut commands: Commands,
+    current_scenario: Res<CurrentScenario>,
+    camera: Single<(Entity, &Transform), With<SpaceshipCameraControllerMarker>>,
+    spaceship: Single<Entity, With<PlayerSpaceshipMarker>>,
+) {
+    trace!("on_player_spaceship_destroyed: {:?}", add.entity);
+    if add.entity != spaceship.into_inner() {
+        return;
+    }
+
+    let Some(scenario) = &**current_scenario else {
+        warn!("on_player_spaceship_despawned: no scenario loaded");
+        return;
+    };
+    let (camera, transform) = camera.into_inner();
+
+    // Replace the chase camera with the scenario camera
+    commands.entity(camera).despawn();
+    commands.spawn((
+        ScenarioScopedMarker,
+        Name::new("Scenario Camera"),
+        ScenarioCameraMarker,
+        Camera3d::default(),
+        WASDCameraController,
+        *transform,
+        SkyboxConfig {
+            cubemap: scenario.map.cubemap.clone(),
+            brightness: 1000.0,
+        },
+    ));
 }

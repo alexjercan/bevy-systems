@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
+use bevy_enhanced_input::prelude::*;
 
-use crate::spaceship::prelude::*;
+use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{
@@ -19,10 +20,19 @@ impl Plugin for SpaceshipCameraControllerPlugin {
         debug!("SpaceshipCameraControllerPlugin: build");
 
         app.init_resource::<SpaceshipCameraControlMode>();
+        app.add_input_context::<PlayerInputMarker>();
 
         app.add_observer(insert_camera_controller);
         app.add_observer(insert_camera_freelook);
         app.add_observer(insert_camera_turret);
+        app.add_observer(insert_player_input);
+
+        app.add_observer(on_rotation_input);
+        app.add_observer(on_rotation_input_completed);
+        app.add_observer(on_free_mode_input_started);
+        app.add_observer(on_free_mode_input_completed);
+        app.add_observer(on_combat_input_started);
+        app.add_observer(on_combat_input_completed);
 
         app.add_systems(
             Update,
@@ -143,6 +153,55 @@ fn insert_camera_turret(
     });
 }
 
+fn insert_player_input(
+    add: On<Add, SpaceshipCameraControllerMarker>,
+    mut commands: Commands,
+    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
+) {
+    let entity = add.entity;
+    trace!("insert_camera_turret: entity {:?}", entity);
+
+    let Ok(camera) = q_camera.get(entity) else {
+        warn!(
+            "insert_player_input: entity {:?} not found in q_camera",
+            entity
+        );
+        return;
+    };
+
+    // Spawn a player input controller entity to hold the input from the player
+    commands.entity(camera).with_children(|parent| {
+        parent.spawn((
+            Name::new("Player Input Controller"),
+            PlayerInputMarker,
+            actions!(
+                PlayerInputMarker[
+                    (
+                        Name::new("Input: Camera Rotate"),
+                        Action::<CameraInputRotate>::new(),
+                        Bindings::spawn((
+                            // Bevy requires single entities to be wrapped in `Spawn`.
+                            // You can attach modifiers to individual bindings as well.
+                            Spawn((Binding::mouse_motion(), Scale::splat(0.001), Negate::all())),
+                            Axial::right_stick().with((Scale::splat(2.0), Negate::none())),
+                        )),
+                    ),
+                    (
+                        Name::new("Input: Free Look Mode"),
+                        Action::<FreeLookInput>::new(),
+                        bindings![KeyCode::AltLeft, GamepadButton::LeftTrigger],
+                    ),
+                    (
+                        Name::new("Input: Combat Mode"),
+                        Action::<CombatInput>::new(),
+                        bindings![MouseButton::Right],
+                    ),
+                ]
+            ),
+        ));
+    });
+}
+
 fn update_chase_camera_input(
     camera: Single<
         &mut ChaseCameraInput,
@@ -246,4 +305,71 @@ fn sync_spaceship_control_mode(
             });
         }
     }
+}
+
+#[derive(Component, Debug, Clone)]
+struct PlayerInputMarker;
+
+#[derive(InputAction)]
+#[action_output(Vec2)]
+struct CameraInputRotate;
+
+#[derive(InputAction)]
+#[action_output(bool)]
+struct FreeLookInput;
+
+#[derive(InputAction)]
+#[action_output(bool)]
+struct CombatInput;
+
+fn on_rotation_input(
+    fire: On<Fire<CameraInputRotate>>,
+    mut q_input: Query<
+        &mut PointRotationInput,
+        (
+            With<SpaceshipCameraInputMarker>,
+            With<SpaceshipRotationInputActiveMarker>,
+        ),
+    >,
+) {
+    for mut input in &mut q_input {
+        **input = fire.value;
+    }
+}
+
+fn on_rotation_input_completed(
+    _: On<Complete<CameraInputRotate>>,
+    mut q_input: Query<&mut PointRotationInput, With<SpaceshipCameraInputMarker>>,
+) {
+    for mut input in &mut q_input {
+        **input = Vec2::ZERO;
+    }
+}
+
+fn on_free_mode_input_started(
+    _: On<Start<FreeLookInput>>,
+    mut mode: ResMut<SpaceshipCameraControlMode>,
+) {
+    *mode = SpaceshipCameraControlMode::FreeLook;
+}
+
+fn on_free_mode_input_completed(
+    _: On<Complete<FreeLookInput>>,
+    mut mode: ResMut<SpaceshipCameraControlMode>,
+) {
+    *mode = SpaceshipCameraControlMode::Normal;
+}
+
+fn on_combat_input_started(
+    _: On<Start<CombatInput>>,
+    mut mode: ResMut<SpaceshipCameraControlMode>,
+) {
+    *mode = SpaceshipCameraControlMode::Turret;
+}
+
+fn on_combat_input_completed(
+    _: On<Complete<CombatInput>>,
+    mut mode: ResMut<SpaceshipCameraControlMode>,
+) {
+    *mode = SpaceshipCameraControlMode::Normal;
 }

@@ -2,12 +2,13 @@ pub mod actions;
 pub mod events;
 pub mod filters;
 pub mod scenario;
+pub mod variables;
 pub mod world;
 
 pub mod prelude {
     pub use super::{
         actions::prelude::*, events::prelude::*, filters::prelude::*, scenario::prelude::*,
-        world::NovaEventWorld, NovaEventsPlugin,
+        variables::prelude::*, world::NovaEventWorld, NovaEventsPlugin,
     };
 }
 
@@ -22,5 +23,6 @@ impl Plugin for NovaEventsPlugin {
         debug!("NovaEventsPlugin: build");
 
         app.add_plugins(GameEventsPlugin::<world::NovaEventWorld>::default());
+        app.add_plugins(scenario::ScenarioLoaderPlugin);
     }
 }

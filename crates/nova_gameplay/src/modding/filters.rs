@@ -1,15 +1,19 @@
 use bevy::prelude::*;
 use bevy_common_systems::modding::prelude::*;
-use super::world::NovaEventWorld;
+
+use super::{variables::VariableConditionNode, world::NovaEventWorld};
 
 pub mod prelude {
-    pub use super::{EventFilterConfig, EntityFilterConfig, ConditionalFilterConfig};
+    pub use super::{
+        ConditionalFilterConfig, EntityFilterConfig, EventFilterConfig, ExpressionFilterConfig,
+    };
 }
 
 #[derive(Clone, Debug)]
 pub enum EventFilterConfig {
     Entity(EntityFilterConfig),
     Conditional(ConditionalFilterConfig),
+    Expression(ExpressionFilterConfig),
 }
 
 impl EventFilter<NovaEventWorld> for EventFilterConfig {
@@ -17,6 +21,7 @@ impl EventFilter<NovaEventWorld> for EventFilterConfig {
         match self {
             EventFilterConfig::Entity(config) => config.filter(world, info),
             EventFilterConfig::Conditional(config) => config.filter(world, info),
+            EventFilterConfig::Expression(config) => config.filter(world, info),
         }
     }
 }
@@ -59,12 +64,53 @@ impl EventFilter<NovaEventWorld> for EntityFilterConfig {
 #[derive(Clone, Debug)]
 pub enum ConditionalFilterConfig {
     Not(Box<EventFilterConfig>),
+    Or(Box<EventFilterConfig>, Box<EventFilterConfig>),
+    And(Box<EventFilterConfig>, Box<EventFilterConfig>),
+}
+
+impl ConditionalFilterConfig {
+    pub fn not(inner: EventFilterConfig) -> Self {
+        ConditionalFilterConfig::Not(Box::new(inner))
+    }
+
+    pub fn or(left: EventFilterConfig, right: EventFilterConfig) -> Self {
+        ConditionalFilterConfig::Or(Box::new(left), Box::new(right))
+    }
+
+    pub fn and(left: EventFilterConfig, right: EventFilterConfig) -> Self {
+        ConditionalFilterConfig::And(Box::new(left), Box::new(right))
+    }
 }
 
 impl EventFilter<NovaEventWorld> for ConditionalFilterConfig {
     fn filter(&self, world: &NovaEventWorld, info: &GameEventInfo) -> bool {
         match self {
             ConditionalFilterConfig::Not(inner) => !inner.filter(world, info),
+            ConditionalFilterConfig::Or(left, right) => {
+                left.filter(world, info) || right.filter(world, info)
+            }
+            ConditionalFilterConfig::And(left, right) => {
+                left.filter(world, info) && right.filter(world, info)
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ExpressionFilterConfig(pub VariableConditionNode);
+
+impl EventFilter<NovaEventWorld> for ExpressionFilterConfig {
+    fn filter(&self, world: &NovaEventWorld, _: &GameEventInfo) -> bool {
+        match self.0.evaluate(world) {
+            Ok(result) => result,
+            Err(e) => {
+                // TODO: Proper error handling
+                error!(
+                    "VariableFilterConfig: failed to evaluate condition: {:?}",
+                    e
+                );
+                false
+            }
         }
     }
 }

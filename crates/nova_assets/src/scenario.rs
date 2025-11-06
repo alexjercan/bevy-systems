@@ -1,12 +1,15 @@
-use rand::prelude::*;
-use bevy::prelude::*;
+use bevy::{platform::collections::HashMap, prelude::*};
 use nova_gameplay::prelude::*;
+use rand::prelude::*;
 
 pub(crate) fn register_scenario(mut commands: Commands, game_assets: Res<super::GameAssets>) {
-    commands.insert_resource(GameScenarios(vec![custom_scenario(&game_assets)]));
+    commands.insert_resource(GameScenarios(HashMap::from([
+        ("asteroid_field".to_string(), asteroid_field(&game_assets)),
+        ("asteroid_next".to_string(), asteroid_next(&game_assets)),
+    ])));
 }
 
-pub fn custom_scenario(game_assets: &super::GameAssets) -> ScenarioConfig {
+pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
     let mut rng = rand::rng();
 
     let mut objects = Vec::new();
@@ -30,6 +33,7 @@ pub fn custom_scenario(game_assets: &super::GameAssets) -> ScenarioConfig {
             rotation: Quat::IDENTITY,
             radius,
             color,
+            health: 100.0,
         }));
     }
 
@@ -38,6 +42,8 @@ pub fn custom_scenario(game_assets: &super::GameAssets) -> ScenarioConfig {
         name: "Player Spaceship".to_string(),
         position: Vec3::ZERO,
         rotation: Quat::IDENTITY,
+        health: 500.0,
+        controller: SpaceshipController::Player,
         sections: vec![
             SpaceshipSectionConfig {
                 position: Vec3::ZERO,
@@ -132,32 +138,154 @@ pub fn custom_scenario(game_assets: &super::GameAssets) -> ScenarioConfig {
     objects.push(GameObjectConfig::Spaceship(spaceship));
 
     let mut events = Vec::new();
+
     events.push(ScenarioEventConfig {
-        name: "AsteroidDestroyedMessage".to_string(),
-        filters: vec![EventFilterConfig::Entity(EntityFilterConfig {
-            id: None,
-            type_name: Some("asteroid".to_string()),
-        })],
-        actions: vec![EventActionConfig::PrintMessage(PrintMessageActionConfig {
-            message: "An asteroid was destroyed!".to_string(),
+        name: EventConfig::OnStart,
+        filters: vec![],
+        actions: vec![EventActionConfig::Objective(ObjectiveActionConfig::new(
+            "destroy_asteroids",
+            "Objective: Destroy 5 asteroids!",
+        ))],
+    });
+
+    events.push(ScenarioEventConfig {
+        name: EventConfig::OnStart,
+        filters: vec![],
+        actions: vec![EventActionConfig::VariableSet(VariableSetActionConfig {
+            key: "asteroids_destroyed".to_string(),
+            expression: VariableExpressionNode::new_term(VariableTermNode::new_factor(
+                VariableFactorNode::new_literal(VariableLiteral::Number(0.0)),
+            )),
         })],
     });
 
     events.push(ScenarioEventConfig {
-        name: "SpaceshipDestroyedMessage".to_string(),
+        name: EventConfig::OnStart,
+        filters: vec![],
+        actions: vec![EventActionConfig::VariableSet(VariableSetActionConfig {
+            key: "objective_destroy_asteroids".to_string(),
+            expression: VariableExpressionNode::new_term(VariableTermNode::new_factor(
+                VariableFactorNode::new_literal(VariableLiteral::Boolean(false)),
+            )),
+        })],
+    });
+
+    events.push(ScenarioEventConfig {
+        name: EventConfig::OnDestroyed,
         filters: vec![EventFilterConfig::Entity(EntityFilterConfig {
             id: Some("player_spaceship".to_string()),
             type_name: None,
         })],
-        actions: vec![EventActionConfig::PrintMessage(PrintMessageActionConfig {
-            message: "The player's spaceship was destroyed!".to_string(),
+        actions: vec![
+            EventActionConfig::DebugMessage(DebugMessageActionConfig {
+                message: "The player's spaceship was destroyed!".to_string(),
+            }),
+            EventActionConfig::NextScenario(NextScenarioActionConfig {
+                scenario_id: "asteroid_field".to_string(),
+                linger: true,
+            }),
+        ],
+    });
+
+    events.push(ScenarioEventConfig {
+        name: EventConfig::OnDestroyed,
+        filters: vec![EventFilterConfig::Entity(EntityFilterConfig {
+            id: None,
+            type_name: Some("asteroid".to_string()),
+        })],
+        actions: vec![EventActionConfig::VariableSet(VariableSetActionConfig {
+            key: "asteroids_destroyed".to_string(),
+            expression: VariableExpressionNode::new_add(
+                VariableTermNode::new_factor(VariableFactorNode::new_name(
+                    "asteroids_destroyed".to_string(),
+                )),
+                VariableExpressionNode::new_term(VariableTermNode::new_factor(
+                    VariableFactorNode::new_literal(VariableLiteral::Number(1.0)),
+                )),
+            ),
+        })],
+    });
+
+    events.push(ScenarioEventConfig {
+        name: EventConfig::OnDestroyed,
+        filters: vec![
+            EventFilterConfig::Entity(EntityFilterConfig {
+                id: None,
+                type_name: Some("asteroid".to_string()),
+            }),
+            EventFilterConfig::Expression(ExpressionFilterConfig(
+                VariableConditionNode::new_greater_than(
+                    VariableExpressionNode::new_term(VariableTermNode::new_factor(
+                        VariableFactorNode::new_name("asteroids_destroyed".to_string()),
+                    )),
+                    VariableExpressionNode::new_term(VariableTermNode::new_factor(
+                        VariableFactorNode::new_literal(VariableLiteral::Number(4.0)),
+                    )),
+                ),
+            )),
+            EventFilterConfig::Expression(ExpressionFilterConfig(
+                VariableConditionNode::new_equals(
+                    VariableExpressionNode::new_term(VariableTermNode::new_factor(
+                        VariableFactorNode::new_name("objective_destroy_asteroids".to_string()),
+                    )),
+                    VariableExpressionNode::new_term(VariableTermNode::new_factor(
+                        VariableFactorNode::new_literal(VariableLiteral::Boolean(false)),
+                    )),
+                ),
+            )),
+        ],
+        actions: vec![
+            EventActionConfig::DebugMessage(DebugMessageActionConfig {
+                message: "Objective Complete: Destroyed 5 asteroids!".to_string(),
+            }),
+            EventActionConfig::VariableSet(VariableSetActionConfig {
+                key: "objective_destroy_asteroids".to_string(),
+                expression: VariableExpressionNode::new_term(VariableTermNode::new_factor(
+                    VariableFactorNode::new_literal(VariableLiteral::Boolean(true)),
+                )),
+            }),
+            EventActionConfig::ObjectiveComplete(ObjectiveCompleteActionConfig {
+                id: "destroy_asteroids".to_string(),
+            }),
+            EventActionConfig::NextScenario(NextScenarioActionConfig {
+                scenario_id: "asteroid_next".to_string(),
+                linger: true,
+            }),
+        ],
+    });
+
+    events.push(ScenarioEventConfig {
+        name: EventConfig::OnDestroyed,
+        filters: vec![EventFilterConfig::Entity(EntityFilterConfig {
+            id: None,
+            type_name: Some("asteroid".to_string()),
+        })],
+        actions: vec![EventActionConfig::DebugMessage(DebugMessageActionConfig {
+            message: "An asteroid was destroyed!".to_string(),
         })],
     });
 
     ScenarioConfig {
+        id: "asteroid_field".to_string(),
         name: "Asteroid Field".to_string(),
         description: "A dense asteroid field.".to_string(),
-        map: MapConfig { objects },
+        map: MapConfig {
+            cubemap: game_assets.cubemap.clone(),
+            objects,
+        },
         events: events,
+    }
+}
+
+pub fn asteroid_next(game_assets: &super::GameAssets) -> ScenarioConfig {
+    ScenarioConfig {
+        id: "asteroid_next".to_string(),
+        name: "Asteroid Field - Next".to_string(),
+        description: "The next scenario after the asteroid field.".to_string(),
+        map: MapConfig {
+            cubemap: game_assets.cubemap.clone(),
+            objects: vec![],
+        },
+        events: vec![],
     }
 }

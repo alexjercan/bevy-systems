@@ -1,8 +1,4 @@
-//! TODO: refactor this in a nicer way once I know what I want to do with the editor, for now it is
-//! used only for prototyping the spaceship editor UI
-
-// https://github.com/bevyengine/bevy/blob/release-0.17.2/examples/ui/standard_widgets_observers.rs
-
+use avian3d::prelude::*;
 use bevy::{
     picking::{hover::Hovered, pointer::PointerInteraction},
     prelude::*,
@@ -11,8 +7,145 @@ use bevy::{
     ui_widgets::{observe, Activate, Button},
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
-use nova_assets::prelude::*;
-use nova_gameplay::prelude::*;
+use crate::prelude::*;
+use rand::prelude::*;
+
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
+pub enum ExampleStates {
+    #[default]
+    Loading,
+    Editor,
+    Scenario,
+}
+
+pub fn core_plugin(app: &mut App) {
+    app.init_state::<ExampleStates>();
+    app.insert_resource(SectionChoice::None);
+
+    app.add_systems(
+        OnEnter(GameStates::Playing),
+        (|mut game_state: ResMut<NextState<ExampleStates>>| {
+            game_state.set(ExampleStates::Editor);
+        },),
+    );
+
+    app.add_systems(
+        OnEnter(ExampleStates::Editor),
+        (
+            setup_editor_scene,
+            setup_grab_cursor,
+            |mut selection: ResMut<SectionChoice>| {
+                *selection = SectionChoice::None;
+            },
+        ),
+    );
+    app.add_systems(
+        OnEnter(ExampleStates::Scenario),
+        (setup_scenario, |mut selection: ResMut<SectionChoice>| {
+            *selection = SectionChoice::None;
+        }),
+    );
+
+    app.add_observer(make_spaceship_player);
+
+    app.add_observer(button_on_interaction::<Add, Pressed>)
+        .add_observer(button_on_interaction::<Remove, Pressed>)
+        .add_observer(button_on_interaction::<Add, InteractionDisabled>)
+        .add_observer(button_on_interaction::<Remove, InteractionDisabled>)
+        .add_observer(button_on_interaction::<Insert, Hovered>);
+
+    app.add_observer(on_add_selected)
+        .add_observer(on_remove_selected);
+    app.add_observer(button_on_setting::<SectionChoice>);
+
+    app.add_observer(on_click_spaceship_section)
+        .add_observer(on_hover_spaceship_section)
+        .add_observer(on_move_spaceship_section)
+        .add_observer(on_out_spaceship_section);
+
+    app.add_systems(Update, lock_on_left_click);
+    app.add_systems(
+        Update,
+        switch_scene_editor.run_if(in_state(ExampleStates::Scenario)),
+    );
+
+    app.configure_sets(
+        Update,
+        SpaceshipSystems::Input.run_if(in_state(ExampleStates::Scenario)),
+    );
+}
+
+fn setup_scenario(mut commands: Commands, game_assets: Res<GameAssets>) {
+    commands.trigger(LoadScenario(test_scenario(&game_assets)));
+}
+
+fn switch_scene_editor(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut state: ResMut<NextState<ExampleStates>>,
+    mut commands: Commands,
+) {
+    if keys.just_pressed(KeyCode::F1) {
+        debug!("switch_scene_editor: F1 pressed, switching to Editor state.");
+        state.set(ExampleStates::Editor);
+        commands.trigger(UnloadScenario);
+    }
+}
+
+fn make_spaceship_player(
+    _: On<ScenarioLoaded>,
+    mut commands: Commands,
+    q_spaceship: Query<Entity, With<SpaceshipRootMarker>>,
+) {
+    for entity in &q_spaceship {
+        commands.entity(entity).insert((
+            ScenarioScopedMarker,
+            PlayerSpaceshipMarker,
+            Name::new("Player Spaceship".to_string()),
+            EntityId::new("player_spaceship"),
+            EntityTypeName::new("spaceship"),
+        ));
+    }
+}
+
+pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
+    let mut rng = rand::rng();
+
+    let mut objects = Vec::new();
+    for i in 0..20 {
+        let pos = Vec3::new(
+            rng.random_range(-100.0..100.0),
+            rng.random_range(-20.0..20.0),
+            rng.random_range(-100.0..100.0),
+        );
+        let radius = rng.random_range(2.0..6.0);
+        let color = Color::srgb(
+            rng.random_range(0.0..1.0),
+            rng.random_range(0.0..1.0),
+            rng.random_range(0.0..1.0),
+        );
+
+        objects.push(GameObjectConfig::Asteroid(AsteroidConfig {
+            id: format!("asteroid_{}", i),
+            name: format!("Asteroid {}", i),
+            position: pos,
+            rotation: Quat::IDENTITY,
+            radius,
+            color,
+            health: 100.0,
+        }));
+    }
+
+    ScenarioConfig {
+        id: "test_scenario".to_string(),
+        name: "Test Scenario".to_string(),
+        description: "A test scenario.".to_string(),
+        map: MapConfig {
+            cubemap: game_assets.cubemap.clone(),
+            objects: objects,
+        },
+        events: vec![],
+    }
+}
 
 const NORMAL_BUTTON: Color = Color::srgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::srgb(0.25, 0.25, 0.25);
@@ -26,56 +159,121 @@ const BACKGROUND_COLOR: Color = Color::srgb(0.1, 0.1, 0.1);
 
 const TEXT_COLOR: Color = Color::srgb(0.9, 0.9, 0.9);
 
-#[derive(Resource, Default, Debug, Component, PartialEq, Eq, Clone, Copy, Reflect)]
-enum SectionChoice {
-    #[default]
-    None,
-    HullSection,
-    ThrusterSection,
-    TurretSection,
-    Delete,
-}
+fn setup_editor_scene(mut commands: Commands, game_assets: Res<GameAssets>) {
+    commands.spawn((
+        DespawnOnExit(ExampleStates::Editor),
+        DirectionalLight {
+            illuminance: 10000.0,
+            ..default()
+        },
+        Transform::from_rotation(Quat::from_euler(
+            EulerRot::XYZ,
+            -std::f32::consts::FRAC_PI_2,
+            0.0,
+            0.0,
+        )),
+        GlobalTransform::default(),
+    ));
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct EditorSystems;
+    commands.spawn((
+        DespawnOnExit(ExampleStates::Editor),
+        Name::new("WASD Camera"),
+        Camera3d::default(),
+        WASDCameraController,
+        Transform::from_xyz(0.0, 5.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
+        SkyboxConfig {
+            cubemap: game_assets.cubemap.clone(),
+            brightness: 1000.0,
+        },
+    ));
 
-pub struct EditorPlugin;
-
-impl Plugin for EditorPlugin {
-    fn build(&self, app: &mut App) {
-        app.insert_resource(SectionChoice::None);
-
-        app.add_systems(
-            OnEnter(super::GameStates::Editor),
-            (reset_spaceship, setup_editor_scene, setup_grab_cursor),
-        );
-        app.add_systems(
-            Update,
-            lock_on_left_click.run_if(in_state(super::GameStates::Editor)),
-        );
-
-        app.add_observer(button_on_interaction::<Add, Pressed>)
-            .add_observer(button_on_interaction::<Remove, Pressed>)
-            .add_observer(button_on_interaction::<Add, InteractionDisabled>)
-            .add_observer(button_on_interaction::<Remove, InteractionDisabled>)
-            .add_observer(button_on_interaction::<Insert, Hovered>);
-
-        app.add_observer(on_add_selected)
-            .add_observer(on_remove_selected);
-        app.add_observer(button_on_setting::<SectionChoice>);
-
-        app.add_observer(on_click_spaceship_section)
-            .add_observer(on_hover_spaceship_section)
-            .add_observer(on_move_spaceship_section)
-            .add_observer(on_out_spaceship_section);
-
-        app.add_systems(
-            OnExit(super::GameStates::Editor),
-            |mut selection: ResMut<SectionChoice>| {
-                *selection = SectionChoice::None;
+    commands.spawn((
+        DespawnOnExit(ExampleStates::Editor),
+        Name::new("Editor Main Menu"),
+        Pickable {
+            should_block_lower: false,
+            is_hoverable: false,
+        },
+        Node {
+            width: percent(100),
+            height: percent(100),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::FlexStart,
+            ..default()
+        },
+        children![(
+            Name::new("Menu Container"),
+            Node {
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::FlexStart,
+                height: percent(80),
+                width: px(400),
+                margin: UiRect::all(px(50)),
+                padding: UiRect::all(px(0)).with_top(px(20)).with_bottom(px(20)),
+                ..default()
             },
-        );
-    }
+            BackgroundColor(BACKGROUND_COLOR),
+            children![
+                (
+                    Name::new("Title"),
+                    Text::new("Spaceship Editor"),
+                    TextFont {
+                        font_size: 24.0,
+                        ..default()
+                    },
+                    TextColor(TEXT_COLOR),
+                    Node { ..default() },
+                ),
+                (
+                    Name::new("Separator 1"),
+                    Node {
+                        width: percent(80),
+                        height: px(2),
+                        margin: UiRect::all(px(10)),
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgb(0.5, 0.5, 0.5)),
+                ),
+                (
+                    Name::new("Create New Spaceship Button V1"),
+                    button("Create New Spaceship V1"),
+                    observe(create_new_spaceship),
+                ),
+                (
+                    Name::new("Create New Spaceship Button V2"),
+                    button("Create New Spaceship V2"),
+                    observe(create_new_spaceship_with_controller),
+                ),
+                (
+                    Name::new("Separator 2"),
+                    Node {
+                        width: percent(80),
+                        height: px(2),
+                        margin: UiRect::all(px(10)),
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgb(0.5, 0.5, 0.5)),
+                ),
+                sections(),
+                (
+                    Name::new("Separator 3"),
+                    Node {
+                        width: percent(80),
+                        height: px(2),
+                        margin: UiRect::all(px(10)),
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgb(0.5, 0.5, 0.5)),
+                ),
+                (
+                    Name::new("Play Button"),
+                    button("Play"),
+                    observe(continue_to_simulation),
+                ),
+            ],
+        )],
+    ));
 }
 
 fn lock_on_left_click(
@@ -92,6 +290,16 @@ fn lock_on_left_click(
         primary_cursor_options.grab_mode = CursorGrabMode::None;
         primary_cursor_options.visible = true;
     }
+}
+
+#[derive(Resource, Default, Debug, Component, PartialEq, Eq, Clone, Copy, Reflect)]
+pub enum SectionChoice {
+    #[default]
+    None,
+    HullSection,
+    ThrusterSection,
+    TurretSection,
+    Delete,
 }
 
 #[derive(Component)]
@@ -222,148 +430,7 @@ fn button(text: &str) -> impl Bundle {
     )
 }
 
-fn reset_spaceship(
-    mut commands: Commands,
-    spaceship: Single<Entity, With<SpaceshipRootMarker>>,
-    q_sections: Query<(Entity, &ChildOf), With<SectionMarker>>,
-) {
-    let spaceship = spaceship.into_inner();
-    let sections = q_sections
-        .iter()
-        .filter(|(_, parent)| parent.0 == spaceship)
-        .map(|(entity, _)| entity)
-        .collect::<Vec<_>>();
-
-    commands
-        .spawn((
-            spaceship_root(SpaceshipConfig1 { ..default() }),
-            PlayerSpaceshipMarker,
-        ))
-        .add_children(&sections);
-    commands
-        .entity(spaceship)
-        .remove_children(&sections)
-        .despawn();
-}
-
-fn setup_editor_scene(mut commands: Commands, game_assets: Res<GameAssets>) {
-    commands.spawn((
-        DespawnOnExit(super::GameStates::Editor),
-        DirectionalLight {
-            illuminance: 10000.0,
-            ..default()
-        },
-        Transform::from_rotation(Quat::from_euler(
-            EulerRot::XYZ,
-            -std::f32::consts::FRAC_PI_2,
-            0.0,
-            0.0,
-        )),
-        GlobalTransform::default(),
-    ));
-
-    commands.spawn((
-        DespawnOnExit(super::GameStates::Editor),
-        Name::new("WASD Camera"),
-        Camera3d::default(),
-        WASDCameraController,
-        Transform::from_xyz(0.0, 5.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
-        SkyboxConfig {
-            cubemap: game_assets.cubemap.clone(),
-            brightness: 1000.0,
-        },
-    ));
-
-    commands.spawn((
-        DespawnOnExit(super::GameStates::Editor),
-        Name::new("Editor Main Menu"),
-        Pickable {
-            should_block_lower: false,
-            is_hoverable: false,
-        },
-        Node {
-            width: percent(100),
-            height: percent(100),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::FlexStart,
-            ..default()
-        },
-        children![(
-            Name::new("Menu Container"),
-            Node {
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::FlexStart,
-                height: percent(80),
-                width: px(400),
-                margin: UiRect::all(px(50)),
-                padding: UiRect::all(px(0)).with_top(px(20)).with_bottom(px(20)),
-                ..default()
-            },
-            BackgroundColor(BACKGROUND_COLOR),
-            children![
-                (
-                    Name::new("Title"),
-                    Text::new("Spaceship Editor"),
-                    TextFont {
-                        font_size: 24.0,
-                        ..default()
-                    },
-                    TextColor(TEXT_COLOR),
-                    Node { ..default() },
-                ),
-                (
-                    Name::new("Separator 1"),
-                    Node {
-                        width: percent(80),
-                        height: px(2),
-                        margin: UiRect::all(px(10)),
-                        ..default()
-                    },
-                    BackgroundColor(Color::srgb(0.5, 0.5, 0.5)),
-                ),
-                (
-                    Name::new("Create New Spaceship Button V1"),
-                    button("Create New Spaceship V1"),
-                    observe(create_new_spaceship),
-                ),
-                (
-                    Name::new("Create New Spaceship Button V2"),
-                    button("Create New Spaceship V2"),
-                    observe(create_new_spaceship_with_controller),
-                ),
-                (
-                    Name::new("Separator 2"),
-                    Node {
-                        width: percent(80),
-                        height: px(2),
-                        margin: UiRect::all(px(10)),
-                        ..default()
-                    },
-                    BackgroundColor(Color::srgb(0.5, 0.5, 0.5)),
-                ),
-                sections(),
-                (
-                    Name::new("Separator 3"),
-                    Node {
-                        width: percent(80),
-                        height: px(2),
-                        margin: UiRect::all(px(10)),
-                        ..default()
-                    },
-                    BackgroundColor(Color::srgb(0.5, 0.5, 0.5)),
-                ),
-                (
-                    Name::new("Play Button"),
-                    button("Play"),
-                    observe(continue_to_simulation),
-                ),
-            ],
-        )],
-    ));
-}
-
-fn setup_grab_cursor(primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>) {
+pub fn setup_grab_cursor(primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>) {
     let mut primary_cursor_options = primary_cursor_options.into_inner();
     primary_cursor_options.grab_mode = CursorGrabMode::None;
     primary_cursor_options.visible = true;
@@ -380,8 +447,13 @@ fn create_new_spaceship(
     }
     let entity = commands
         .spawn((
-            spaceship_root(SpaceshipConfig1 { ..default() }),
-            PlayerSpaceshipMarker,
+            SpaceshipRootMarker,
+            Name::new("Spaceship Prefab"),
+            Transform::default(),
+            RigidBody::Dynamic,
+            Visibility::Visible,
+            Health::new(1000.0),
+            ExplodableEntityMarker,
         ))
         .id();
 
@@ -392,11 +464,11 @@ fn create_new_spaceship(
                 description: "A basic hull section for spaceships.".to_string(),
                 mass: 1.0,
             }),
+            Transform::from_xyz(0.0, 0.0, 0.0),
             hull_section(HullSectionConfig {
                 render_mesh: Some(game_assets.hull_01.clone()),
                 ..default()
             }),
-            Transform::from_xyz(0.0, 0.0, 0.0),
         ));
     });
 }
@@ -411,8 +483,13 @@ fn create_new_spaceship_with_controller(
     }
     let entity = commands
         .spawn((
-            spaceship_root(SpaceshipConfig1 { ..default() }),
-            PlayerSpaceshipMarker,
+            SpaceshipRootMarker,
+            Name::new("Spaceship Prefab with Controller"),
+            Transform::default(),
+            RigidBody::Dynamic,
+            Visibility::Visible,
+            Health::new(1000.0),
+            ExplodableEntityMarker,
         ))
         .id();
 
@@ -423,22 +500,22 @@ fn create_new_spaceship_with_controller(
                 description: "A basic controller section for spaceships.".to_string(),
                 mass: 1.0,
             }),
+            Transform::from_xyz(0.0, 0.0, 0.0),
             controller_section(ControllerSectionConfig {
                 frequency: 4.0,
                 damping_ratio: 4.0,
                 max_torque: 100.0,
                 ..default()
             }),
-            Transform::from_xyz(0.0, 0.0, 0.0),
         ));
     });
 }
 
 fn continue_to_simulation(
     _activate: On<Activate>,
-    mut game_state: ResMut<NextState<super::GameStates>>,
+    mut game_state: ResMut<NextState<ExampleStates>>,
 ) {
-    game_state.set(super::GameStates::Simulation);
+    game_state.set(ExampleStates::Scenario);
 }
 
 fn sections() -> impl Bundle {

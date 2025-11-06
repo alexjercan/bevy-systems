@@ -1,0 +1,143 @@
+use bevy::prelude::*;
+
+use crate::{hud::objectives::ObjectiveRootHudMarker, prelude::*};
+
+pub mod health;
+pub mod objectives;
+pub mod velocity;
+
+pub mod prelude {
+    pub use super::{
+        health::prelude::*, objectives::prelude::*, velocity::prelude::*, NovaHudPlugin,
+    };
+}
+
+#[derive(Default)]
+pub struct NovaHudPlugin;
+
+impl Plugin for NovaHudPlugin {
+    fn build(&self, app: &mut App) {
+        debug!("HudPlugin: build");
+
+        app.add_plugins(velocity::VelocityHudPlugin);
+        app.add_plugins(health::HealthHudPlugin);
+        app.add_plugins(objectives::ObjectivesHudPlugin);
+
+        // NOTE: Setup and remove HUDs when player spaceship is added/removed
+        app.add_observer(setup_hud_velocity);
+        app.add_observer(remove_hud_velocity);
+        app.add_observer(setup_hud_health);
+        app.add_observer(remove_hud_health);
+        app.add_observer(setup_hud_objectives);
+        app.add_observer(remove_hud_objectives);
+    }
+}
+
+fn setup_hud_velocity(
+    add: On<Add, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
+) {
+    let entity = add.entity;
+    debug!("setup_hud_velocity: entity {:?}", entity);
+
+    let Ok(spaceship) = q_spaceship.get(entity) else {
+        warn!(
+            "setup_hud_velocity: entity {:?} not found in q_spaceship",
+            entity
+        );
+        return;
+    };
+
+    commands.spawn((velocity_hud(VelocityHudConfig {
+        radius: 5.0,
+        target: Some(spaceship),
+    }),));
+}
+
+fn remove_hud_velocity(
+    remove: On<Remove, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    q_hud: Query<(Entity, &VelocityHudTargetEntity), With<VelocityHudMarker>>,
+) {
+    let entity = remove.entity;
+    debug!("remove_hud_velocity: entity {:?}", entity);
+
+    for (hud_entity, target) in &q_hud {
+        if let Some(target_entity) = **target {
+            if target_entity == entity {
+                commands.entity(hud_entity).despawn();
+            }
+        }
+    }
+}
+
+fn setup_hud_health(
+    add: On<Add, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
+) {
+    let entity = add.entity;
+    debug!("setup_hud_health: entity {:?}", entity);
+
+    let Ok(spaceship) = q_spaceship.get(entity) else {
+        warn!(
+            "setup_hud_health: entity {:?} not found in q_spaceship",
+            entity
+        );
+        return;
+    };
+
+    commands.spawn((health_hud(HealthHudConfig {
+        target: Some(spaceship),
+    }),));
+}
+
+fn remove_hud_health(
+    remove: On<Remove, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    q_hud: Query<(Entity, &HealthHudTargetEntity), With<HealthHudMarker>>,
+) {
+    let entity = remove.entity;
+    debug!("remove_hud_health: entity {:?}", entity);
+
+    for (hud_entity, target) in &q_hud {
+        if let Some(target_entity) = **target {
+            if target_entity == entity {
+                commands.entity(hud_entity).despawn();
+            }
+        }
+    }
+}
+
+fn setup_hud_objectives(
+    add: On<Add, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
+) {
+    let entity = add.entity;
+    debug!("setup_hud_objectives: entity {:?}", entity);
+
+    let Ok(_) = q_spaceship.get(entity) else {
+        warn!(
+            "setup_hud_objectives: entity {:?} not found in q_spaceship",
+            entity
+        );
+        return;
+    };
+
+    commands.spawn((objectives_hud(ObjectiveRootHudConfig {}),));
+}
+
+fn remove_hud_objectives(
+    remove: On<Remove, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    q_hud: Query<(Entity, &ObjectiveRootHudMarker), With<ObjectiveRootHudMarker>>,
+) {
+    let entity = remove.entity;
+    debug!("remove_hud_objectives: entity {:?}", entity);
+
+    for (hud_entity, _marker) in &q_hud {
+        commands.entity(hud_entity).despawn();
+    }
+}

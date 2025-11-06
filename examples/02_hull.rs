@@ -1,4 +1,3 @@
-use avian3d::prelude::*;
 use bevy::prelude::*;
 use clap::Parser;
 use nova_protocol::prelude::*;
@@ -18,67 +17,17 @@ fn main() {
 }
 
 fn custom_plugin(app: &mut App) {
-    app.add_systems(
-        OnEnter(GameStates::Simulation),
-        (setup_spaceship, setup_camera, setup_simple_scene),
-    );
+    app.add_systems(OnEnter(GameStates::Playing), setup_scenario);
 }
 
-fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {
-    let entity = commands
-        .spawn((spaceship_root(SpaceshipConfig1 { ..default() }),))
-        .id();
-
-    commands.entity(entity).with_children(|parent| {
-        parent.spawn((
-            base_section(BaseSectionConfig {
-                name: "Reinforced Hull Section".to_string(),
-                description: "A reinforced hull section for spaceships.".to_string(),
-                mass: 1.0,
-            }),
-            hull_section(HullSectionConfig {
-                render_mesh: Some(game_assets.hull_01.clone()),
-                ..default()
-            }),
-            Transform::from_xyz(0.0, 0.0, 0.0),
-        ));
-    });
+fn setup_scenario(mut commands: Commands, game_assets: Res<GameAssets>) {
+    commands.trigger(LoadScenario(test_scenario(&game_assets)));
 }
 
-fn setup_camera(mut commands: Commands, game_assets: Res<GameAssets>) {
-    commands.spawn((
-        Name::new("Main Camera"),
-        Camera3d::default(),
-        WASDCameraController,
-        Transform::from_xyz(0.0, 10.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
-        SkyboxConfig {
-            cubemap: game_assets.cubemap.clone(),
-            brightness: 1000.0,
-        },
-    ));
-}
-
-fn setup_simple_scene(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
+pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
     let mut rng = rand::rng();
 
-    commands.spawn((
-        DirectionalLight {
-            illuminance: 10000.0,
-            ..default()
-        },
-        Transform::from_rotation(Quat::from_euler(
-            EulerRot::XYZ,
-            -std::f32::consts::FRAC_PI_2,
-            0.0,
-            0.0,
-        )),
-        GlobalTransform::default(),
-    ));
-
+    let mut objects = Vec::new();
     for i in 0..20 {
         let pos = Vec3::new(
             rng.random_range(-100.0..100.0),
@@ -92,39 +41,49 @@ fn setup_simple_scene(
             rng.random_range(0.0..1.0),
         );
 
-        commands.spawn((
-            Name::new(format!("Planet {}", i)),
-            Transform::from_translation(pos),
-            GlobalTransform::default(),
-            Mesh3d(meshes.add(Sphere::new(radius))),
-            MeshMaterial3d(materials.add(color)),
-            Collider::sphere(radius),
-            RigidBody::Static,
-        ));
+        objects.push(GameObjectConfig::Asteroid(AsteroidConfig {
+            id: format!("asteroid_{}", i),
+            name: format!("Asteroid {}", i),
+            position: pos,
+            rotation: Quat::IDENTITY,
+            radius,
+            color,
+            health: 100.0,
+        }));
     }
 
-    for i in 0..40 {
-        let pos = Vec3::new(
-            rng.random_range(-120.0..120.0),
-            rng.random_range(-30.0..30.0),
-            rng.random_range(-120.0..120.0),
-        );
-        let size = rng.random_range(0.5..1.0);
-        let color = Color::srgb(
-            rng.random_range(0.6..1.0),
-            rng.random_range(0.6..1.0),
-            rng.random_range(0.0..0.6),
-        );
+    let spaceship = SpaceshipConfig {
+        id: "player_spaceship".to_string(),
+        name: "Player Spaceship".to_string(),
+        position: Vec3::ZERO,
+        rotation: Quat::IDENTITY,
+        controller: SpaceshipController::None,
+        health: 500.0,
+        sections: vec![
+            SpaceshipSectionConfig {
+                position: Vec3::new(0.0, 0.0, 0.0),
+                rotation: Quat::IDENTITY,
+                config: SectionConfig {
+                    base: BaseSectionConfig {
+                        name: "Basic Hull Section".to_string(),
+                        description: "A basic hull section for spaceships.".to_string(),
+                        mass: 1.0,
+                    },
+                    kind: SectionKind::Hull(HullSectionConfig { render_mesh: None }),
+                },
+            },
+        ],
+    };
+    objects.push(GameObjectConfig::Spaceship(spaceship));
 
-        commands.spawn((
-            Name::new(format!("Satellite {}", i)),
-            Transform::from_translation(pos),
-            GlobalTransform::default(),
-            Mesh3d(meshes.add(Cuboid::new(size, size, size))),
-            MeshMaterial3d(materials.add(color)),
-            Collider::cuboid(size, size, size),
-            ColliderDensity(1.0),
-            RigidBody::Dynamic,
-        ));
+    ScenarioConfig {
+        id: "test_scenario".to_string(),
+        name: "Test Scenario".to_string(),
+        description: "A test scenario.".to_string(),
+        map: MapConfig {
+            cubemap: game_assets.cubemap.clone(),
+            objects: objects,
+        },
+        events: vec![],
     }
 }
