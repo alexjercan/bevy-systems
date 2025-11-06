@@ -13,9 +13,10 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{
-        AsteroidConfig, GameObjectConfig, GameScenarios, MapConfig, ScenarioConfig,
-        ScenarioEventConfig, ScenarioId, ScenarioLoad, ScenarioLoaded, ScenarioLoaderPlugin,
-        ScenarioScopedMarker, SpaceshipConfig, SpaceshipSectionConfig,
+        AsteroidConfig, CurrentScenario, GameObjectConfig, GameScenarios, LoadScenario,
+        LoadScenarioById, MapConfig, ScenarioConfig, ScenarioEventConfig, ScenarioId,
+        ScenarioLoaded, ScenarioLoaderPlugin, ScenarioScopedMarker, SpaceshipConfig,
+        SpaceshipController, SpaceshipSectionConfig, UnloadScenario,
     };
 }
 
@@ -57,12 +58,19 @@ pub struct AsteroidConfig {
 }
 
 #[derive(Clone, Debug)]
+pub enum SpaceshipController {
+    None,
+    Player,
+}
+
+#[derive(Clone, Debug)]
 pub struct SpaceshipConfig {
     pub id: String,
     pub name: String,
     pub position: Vec3,
     pub rotation: Quat,
     pub health: f32,
+    pub controller: SpaceshipController,
     pub sections: Vec<SpaceshipSectionConfig>,
 }
 
@@ -83,10 +91,19 @@ pub struct ScenarioEventConfig {
 }
 
 #[derive(Event, Clone, Debug, Deref, DerefMut, Default, Reflect)]
-pub struct ScenarioLoad(pub ScenarioId);
+pub struct LoadScenarioById(pub ScenarioId);
 
-#[derive(Resource, Clone, Debug, Deref, DerefMut, Default, Reflect)]
-pub struct ScenarioLoaded(pub Option<ScenarioId>);
+#[derive(Event, Clone, Debug, Deref, DerefMut)]
+pub struct LoadScenario(pub ScenarioConfig);
+
+#[derive(Event, Clone, Debug)]
+pub struct UnloadScenario;
+
+#[derive(Event, Clone, Debug, Deref, DerefMut)]
+pub struct ScenarioLoaded(pub ScenarioConfig);
+
+#[derive(Resource, Clone, Debug, Deref, DerefMut, Default)]
+pub struct CurrentScenario(pub Option<ScenarioConfig>);
 
 #[derive(Component, Debug, Clone, Reflect)]
 pub struct ScenarioScopedMarker;
@@ -97,23 +114,44 @@ impl Plugin for ScenarioLoaderPlugin {
     fn build(&self, app: &mut App) {
         debug!("ScenarioLoaderPlugin: build");
 
-        app.init_resource::<ScenarioLoaded>();
+        app.init_resource::<CurrentScenario>();
+        app.add_observer(on_load_scenario_id);
         app.add_observer(on_load_scenario);
         app.add_observer(on_player_spaceship_spawned);
         app.add_observer(on_player_spaceship_destroyed);
 
         app.add_input_context::<ScenarioInputMarker>();
         app.add_observer(on_next_input);
+        app.add_observer(unload_scenario);
     }
 }
 
+fn unload_scenario(
+    _: On<UnloadScenario>,
+    mut commands: Commands,
+    q_scoped: Query<Entity, With<ScenarioScopedMarker>>,
+) {
+    for entity in q_scoped.iter() {
+        commands.entity(entity).despawn();
+    }
+}
+
+fn on_load_scenario_id(
+    load: On<LoadScenarioById>,
+    mut commands: Commands,
+    scenarios: Res<GameScenarios>,
+) {
+    let scenario_index = (**load).clone();
+    let scenario = scenarios.get(&scenario_index).expect("No scenario found");
+    commands.trigger(LoadScenario(scenario.clone()));
+}
+
 fn on_load_scenario(
-    load: On<ScenarioLoad>,
+    load: On<LoadScenario>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    scenarios: Res<GameScenarios>,
-    mut scenario_loaded: ResMut<ScenarioLoaded>,
+    mut current_scenario: ResMut<CurrentScenario>,
     q_scoped: Query<Entity, With<ScenarioScopedMarker>>,
 ) {
     // NOTE: Clean up any existing scenario-scoped entities
@@ -123,11 +161,8 @@ fn on_load_scenario(
         commands.entity(entity).despawn();
     }
 
-    let scenario_index = (**load).clone();
-    **scenario_loaded = Some(scenario_index.clone());
-
-    // TODO: Here we pretend that we get the scenario from the assets
-    let scenario = scenarios.get(&scenario_index).expect("No scenario found");
+    let scenario = (**load).clone();
+    **current_scenario = Some(scenario.clone());
     info!("Setting up scenario: {}", scenario.name);
 
     // Setup Scenario Camera
@@ -196,12 +231,9 @@ fn on_load_scenario(
                 ));
             }
             GameObjectConfig::Spaceship(config) => {
-                commands
+                let entity = commands
                     .spawn((
                         ScenarioScopedMarker,
-                        // TODO: Insert the PlayerSpaceshipMarker only for player-controlled
-                        // spaceships
-                        PlayerSpaceshipMarker,
                         SpaceshipRootMarker,
                         Name::new(config.name.clone()),
                         EntityId::new(config.id.clone()),
@@ -231,6 +263,7 @@ fn on_load_scenario(
                                 SectionKind::Thruster(thruster_config) => {
                                     section_entity
                                         .insert(thruster_section(thruster_config.clone()))
+                                        // TODO: Make the input key configurable
                                         .insert(SpaceshipThrusterInputKey(KeyCode::Space));
                                 }
                                 SectionKind::Turret(turret_config) => {
@@ -238,7 +271,15 @@ fn on_load_scenario(
                                 }
                             }
                         }
-                    });
+                    })
+                    .id();
+
+                match config.controller {
+                    SpaceshipController::None => {}
+                    SpaceshipController::Player => {
+                        commands.entity(entity).insert(PlayerSpaceshipMarker);
+                    }
+                }
             }
         }
     }
@@ -258,6 +299,8 @@ fn on_load_scenario(
             event_handler,
         ));
     }
+
+    commands.trigger(ScenarioLoaded(scenario));
 }
 
 #[derive(Component, Debug, Clone)]
@@ -282,17 +325,15 @@ struct ScenarioCameraMarker;
 fn on_player_spaceship_spawned(
     add: On<Add, PlayerSpaceshipMarker>,
     mut commands: Commands,
-    scenario_loaded: Res<ScenarioLoaded>,
-    scenarios: Res<GameScenarios>,
-    camera: Single<(Entity, &Transform), With<ScenarioCameraMarker>>
+    current_scenario: Res<CurrentScenario>,
+    camera: Single<(Entity, &Transform), With<ScenarioCameraMarker>>,
 ) {
     trace!("on_player_spaceship_spawned: {:?}", add.entity);
 
-    let Some(scenario_index) = &**scenario_loaded else {
+    let Some(scenario) = &**current_scenario else {
         warn!("on_player_spaceship_spawned: no scenario loaded");
         return;
     };
-    let scenario = scenarios.get(scenario_index).expect("No scenario found");
     let (camera, transform) = camera.into_inner();
 
     // Replace the existing scenario camera with a chase camera
@@ -315,8 +356,7 @@ fn on_player_spaceship_spawned(
 fn on_player_spaceship_destroyed(
     add: On<Add, DestroyedMarker>,
     mut commands: Commands,
-    scenario_loaded: Res<ScenarioLoaded>,
-    scenarios: Res<GameScenarios>,
+    current_scenario: Res<CurrentScenario>,
     camera: Single<(Entity, &Transform), With<SpaceshipCameraControllerMarker>>,
     spaceship: Single<Entity, With<PlayerSpaceshipMarker>>,
 ) {
@@ -325,11 +365,10 @@ fn on_player_spaceship_destroyed(
         return;
     }
 
-    let Some(scenario_index) = &**scenario_loaded else {
+    let Some(scenario) = &**current_scenario else {
         warn!("on_player_spaceship_despawned: no scenario loaded");
         return;
     };
-    let scenario = scenarios.get(scenario_index).expect("No scenario found");
     let (camera, transform) = camera.into_inner();
 
     // Replace the chase camera with the scenario camera

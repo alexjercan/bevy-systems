@@ -2,7 +2,7 @@ use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_common_systems::prelude::EventWorld;
 
 use crate::prelude::{
-    GameObjectivesHud, NextScenarioActionConfig, ObjectiveActionConfig, ScenarioLoad,
+    GameObjectivesHud, NextScenarioActionConfig, ObjectiveActionConfig, LoadScenarioById,
     VariableLiteral,
 };
 
@@ -31,7 +31,7 @@ impl EventWorld for NovaEventWorld {
 
         if let Some(next_scenario) = &world.resource::<Self>().next_scenario {
             if !next_scenario.linger {
-                world.trigger(ScenarioLoad(next_scenario.scenario_id.clone()));
+                world.trigger(LoadScenarioById(next_scenario.scenario_id.clone()));
                 world.resource_mut::<Self>().clear();
             }
         }

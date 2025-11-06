@@ -74,11 +74,7 @@ impl Plugin for NovaGameplayPlugin {
             app.add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default());
         }
 
-        // // TODO: Configure system Sets
-        // app.configure_sets(
-        //     Update,
-        //     SpaceshipSystems::Input.run_if(in_state(super::GameStates::Playing)),
-        // );
+        // Configure system Sets
         app.configure_sets(
             Update,
             (

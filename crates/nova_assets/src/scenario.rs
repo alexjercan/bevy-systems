@@ -43,6 +43,7 @@ pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
         position: Vec3::ZERO,
         rotation: Quat::IDENTITY,
         health: 500.0,
+        controller: SpaceshipController::Player,
         sections: vec![
             SpaceshipSectionConfig {
                 position: Vec3::ZERO,
