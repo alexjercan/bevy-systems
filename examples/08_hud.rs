@@ -30,6 +30,7 @@ fn setup_spaceship(mut commands: Commands) {
     let entity = commands
         .spawn((
             PlayerSpaceshipMarker,
+            SpaceshipRootMarker,
             Name::new("Spaceship"),
             Transform::default(),
             RigidBody::Dynamic,

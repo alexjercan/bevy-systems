@@ -151,6 +151,17 @@ pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
         name: EventConfig::OnStart,
         filters: vec![],
         actions: vec![EventActionConfig::VariableSet(VariableSetActionConfig {
+            key: "asteroids_destroyed".to_string(),
+            expression: VariableExpressionNode::new_term(VariableTermNode::new_factor(
+                VariableFactorNode::new_literal(VariableLiteral::Number(0.0)),
+            )),
+        })],
+    });
+
+    events.push(ScenarioEventConfig {
+        name: EventConfig::OnStart,
+        filters: vec![],
+        actions: vec![EventActionConfig::VariableSet(VariableSetActionConfig {
             key: "objective_destroy_asteroids".to_string(),
             expression: VariableExpressionNode::new_term(VariableTermNode::new_factor(
                 VariableFactorNode::new_literal(VariableLiteral::Boolean(false)),
@@ -164,20 +175,15 @@ pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
             id: Some("player_spaceship".to_string()),
             type_name: None,
         })],
-        actions: vec![EventActionConfig::DebugMessage(DebugMessageActionConfig {
-            message: "The player's spaceship was destroyed!".to_string(),
-        })],
-    });
-
-    events.push(ScenarioEventConfig {
-        name: EventConfig::OnStart,
-        filters: vec![],
-        actions: vec![EventActionConfig::VariableSet(VariableSetActionConfig {
-            key: "asteroids_destroyed".to_string(),
-            expression: VariableExpressionNode::new_term(VariableTermNode::new_factor(
-                VariableFactorNode::new_literal(VariableLiteral::Number(0.0)),
-            )),
-        })],
+        actions: vec![
+            EventActionConfig::DebugMessage(DebugMessageActionConfig {
+                message: "The player's spaceship was destroyed!".to_string(),
+            }),
+            EventActionConfig::NextScenario(NextScenarioActionConfig {
+                scenario_id: "asteroid_field".to_string(),
+                linger: true,
+            }),
+        ],
     });
 
     events.push(ScenarioEventConfig {

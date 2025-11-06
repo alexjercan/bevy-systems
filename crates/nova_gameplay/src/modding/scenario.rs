@@ -99,6 +99,8 @@ impl Plugin for ScenarioLoaderPlugin {
 
         app.init_resource::<ScenarioLoaded>();
         app.add_observer(on_load_scenario);
+        app.add_observer(on_player_spaceship_spawned);
+        app.add_observer(on_player_spaceship_destroyed);
 
         app.add_input_context::<ScenarioInputMarker>();
         app.add_observer(on_next_input);
@@ -114,6 +116,9 @@ fn on_load_scenario(
     mut scenario_loaded: ResMut<ScenarioLoaded>,
     q_scoped: Query<Entity, With<ScenarioScopedMarker>>,
 ) {
+    // NOTE: Clean up any existing scenario-scoped entities
+    // TODO: Maybe in the future we want to filter more specifically in case we keep other
+    // scenario-scoped entities around (e.g the player spaceship or similar)
     for entity in q_scoped.iter() {
         commands.entity(entity).despawn();
     }
@@ -125,8 +130,35 @@ fn on_load_scenario(
     let scenario = scenarios.get(&scenario_index).expect("No scenario found");
     info!("Setting up scenario: {}", scenario.name);
 
-    // Fire onstart event
-    commands.fire::<OnStartEvent>(OnStartEventInfo::default());
+    // Setup Scenario Camera
+    commands.spawn((
+        ScenarioScopedMarker,
+        Name::new("Scenario Camera"),
+        ScenarioCameraMarker,
+        Camera3d::default(),
+        WASDCameraController,
+        Transform::from_xyz(0.0, 10.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
+        SkyboxConfig {
+            cubemap: scenario.map.cubemap.clone(),
+            brightness: 1000.0,
+        },
+    ));
+
+    // Setup directional light
+    commands.spawn((
+        ScenarioScopedMarker,
+        DirectionalLight {
+            illuminance: 10000.0,
+            ..default()
+        },
+        Transform::from_rotation(Quat::from_euler(
+            EulerRot::XYZ,
+            -std::f32::consts::FRAC_PI_2,
+            0.0,
+            0.0,
+        )),
+        GlobalTransform::default(),
+    ));
 
     // Setup scenario input context
     commands.spawn((
@@ -141,6 +173,9 @@ fn on_load_scenario(
             )]
         ),
     ));
+
+    // Fire onstart event
+    commands.fire::<OnStartEvent>(OnStartEventInfo::default());
 
     // Spawn all objects in the scenario
     for object in scenario.map.objects.iter() {
@@ -164,7 +199,10 @@ fn on_load_scenario(
                 commands
                     .spawn((
                         ScenarioScopedMarker,
+                        // TODO: Insert the PlayerSpaceshipMarker only for player-controlled
+                        // spaceships
                         PlayerSpaceshipMarker,
+                        SpaceshipRootMarker,
                         Name::new(config.name.clone()),
                         EntityId::new(config.id.clone()),
                         EntityTypeName::new("spaceship"),
@@ -220,36 +258,6 @@ fn on_load_scenario(
             event_handler,
         ));
     }
-
-    // Setup chase camera
-    commands.spawn((
-        ScenarioScopedMarker,
-        Name::new("Chase Camera"),
-        Camera3d::default(),
-        ChaseCamera::default(),
-        SpaceshipCameraControllerMarker,
-        Transform::from_xyz(0.0, 10.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
-        SkyboxConfig {
-            cubemap: scenario.map.cubemap.clone(),
-            brightness: 1000.0,
-        },
-    ));
-
-    // Setup directional light
-    commands.spawn((
-        ScenarioScopedMarker,
-        DirectionalLight {
-            illuminance: 10000.0,
-            ..default()
-        },
-        Transform::from_rotation(Quat::from_euler(
-            EulerRot::XYZ,
-            -std::f32::consts::FRAC_PI_2,
-            0.0,
-            0.0,
-        )),
-        GlobalTransform::default(),
-    ));
 }
 
 #[derive(Component, Debug, Clone)]
@@ -266,4 +274,76 @@ fn on_next_input(_: On<Start<NextScenarioInput>>, mut world: ResMut<super::world
 
     next_scenario.linger = false;
     world.next_scenario = Some(next_scenario);
+}
+
+#[derive(Component, Debug, Clone)]
+struct ScenarioCameraMarker;
+
+fn on_player_spaceship_spawned(
+    add: On<Add, PlayerSpaceshipMarker>,
+    mut commands: Commands,
+    scenario_loaded: Res<ScenarioLoaded>,
+    scenarios: Res<GameScenarios>,
+    camera: Single<(Entity, &Transform), With<ScenarioCameraMarker>>
+) {
+    trace!("on_player_spaceship_spawned: {:?}", add.entity);
+
+    let Some(scenario_index) = &**scenario_loaded else {
+        warn!("on_player_spaceship_spawned: no scenario loaded");
+        return;
+    };
+    let scenario = scenarios.get(scenario_index).expect("No scenario found");
+    let (camera, transform) = camera.into_inner();
+
+    // Replace the existing scenario camera with a chase camera
+    commands.entity(camera).despawn();
+    commands.spawn((
+        ScenarioScopedMarker,
+        Name::new("Scenario Camera"),
+        ScenarioCameraMarker,
+        Camera3d::default(),
+        ChaseCamera::default(),
+        SpaceshipCameraControllerMarker,
+        *transform,
+        SkyboxConfig {
+            cubemap: scenario.map.cubemap.clone(),
+            brightness: 1000.0,
+        },
+    ));
+}
+
+fn on_player_spaceship_destroyed(
+    add: On<Add, DestroyedMarker>,
+    mut commands: Commands,
+    scenario_loaded: Res<ScenarioLoaded>,
+    scenarios: Res<GameScenarios>,
+    camera: Single<(Entity, &Transform), With<SpaceshipCameraControllerMarker>>,
+    spaceship: Single<Entity, With<PlayerSpaceshipMarker>>,
+) {
+    trace!("on_player_spaceship_destroyed: {:?}", add.entity);
+    if add.entity != spaceship.into_inner() {
+        return;
+    }
+
+    let Some(scenario_index) = &**scenario_loaded else {
+        warn!("on_player_spaceship_despawned: no scenario loaded");
+        return;
+    };
+    let scenario = scenarios.get(scenario_index).expect("No scenario found");
+    let (camera, transform) = camera.into_inner();
+
+    // Replace the chase camera with the scenario camera
+    commands.entity(camera).despawn();
+    commands.spawn((
+        ScenarioScopedMarker,
+        Name::new("Scenario Camera"),
+        ScenarioCameraMarker,
+        Camera3d::default(),
+        WASDCameraController,
+        *transform,
+        SkyboxConfig {
+            cubemap: scenario.map.cubemap.clone(),
+            brightness: 1000.0,
+        },
+    ));
 }
