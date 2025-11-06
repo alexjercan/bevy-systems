@@ -237,8 +237,12 @@ pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
                     VariableFactorNode::new_literal(VariableLiteral::Boolean(true)),
                 )),
             }),
+            EventActionConfig::ObjectiveComplete(ObjectiveCompleteActionConfig {
+                id: "destroy_asteroids".to_string(),
+            }),
             EventActionConfig::NextScenario(NextScenarioActionConfig {
                 scenario_id: "asteroid_next".to_string(),
+                linger: true,
             }),
         ],
     });

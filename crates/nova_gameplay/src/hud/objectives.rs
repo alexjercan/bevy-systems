@@ -63,7 +63,6 @@ fn update_text_hud(
     game_objectives: Res<GameObjectivesHud>,
 ) {
     trace!("update_text_hud: game_objectives {:?}", *game_objectives);
-    println!("update_text_hud: game_objectives {:?}", *game_objectives);
     let (entity, children) = q_hud.into_inner();
 
     let new_children = game_objectives

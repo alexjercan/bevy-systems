@@ -177,6 +177,7 @@ fn insert_player_input(
             actions!(
                 PlayerInputMarker[
                     (
+                        Name::new("Input: Camera Rotate"),
                         Action::<CameraInputRotate>::new(),
                         Bindings::spawn((
                             // Bevy requires single entities to be wrapped in `Spawn`.
@@ -186,10 +187,12 @@ fn insert_player_input(
                         )),
                     ),
                     (
+                        Name::new("Input: Free Look Mode"),
                         Action::<FreeLookInput>::new(),
                         bindings![KeyCode::AltLeft, GamepadButton::LeftTrigger],
                     ),
                     (
+                        Name::new("Input: Combat Mode"),
                         Action::<CombatInput>::new(),
                         bindings![MouseButton::Right],
                     ),

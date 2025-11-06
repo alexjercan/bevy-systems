@@ -83,6 +83,7 @@ fn setup_wasd_camera(insert: On<Insert, WASDCameraController>, mut commands: Com
         actions!(
             WASDCameraInputMarker[
                 (
+                    Name::new("Input: WASD Camera Move"),
                     Action::<WASDCameraInputMove>::new(),
                     Bindings::spawn((
                         Cardinal::wasd_keys().with(Scale::splat(1.0)),
@@ -90,6 +91,7 @@ fn setup_wasd_camera(insert: On<Insert, WASDCameraController>, mut commands: Com
                     )),
                 ),
                 (
+                    Name::new("Input: WASD Camera Look"),
                     Action::<WASDCameraInputLook>::new(),
                     Bindings::spawn((
                         // Bevy requires single entities to be wrapped in `Spawn`.
@@ -99,10 +101,12 @@ fn setup_wasd_camera(insert: On<Insert, WASDCameraController>, mut commands: Com
                     )),
                 ),
                 (
+                    Name::new("Input: WASD Camera Enable Look"),
                     Action::<WASDCameraInputEnableLook>::new(),
                     bindings![MouseButton::Right],
                 ),
                 (
+                    Name::new("Input: WASD Camera Vertical"),
                     Action::<WASDCameraInputVertical>::new(),
                     Bindings::spawn((
                         Bidirectional::<Binding, Binding> {

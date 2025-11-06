@@ -1,6 +1,7 @@
 use avian3d::prelude::*;
 use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_common_systems::prelude::*;
+use bevy_enhanced_input::prelude::*;
 
 use super::{
     actions::EventActionConfig,
@@ -98,6 +99,9 @@ impl Plugin for ScenarioLoaderPlugin {
 
         app.init_resource::<ScenarioLoaded>();
         app.add_observer(on_load_scenario);
+
+        app.add_input_context::<ScenarioInputMarker>();
+        app.add_observer(on_next_input);
     }
 }
 
@@ -123,6 +127,22 @@ fn on_load_scenario(
 
     // Fire onstart event
     commands.fire::<OnStartEvent>(OnStartEventInfo::default());
+
+    // Setup scenario input context
+    commands.spawn((
+        ScenarioScopedMarker,
+        Name::new(format!("Scenario Input Context: {}", scenario.name)),
+        ScenarioInputMarker,
+        actions!(
+            ScenarioInputMarker[
+                (
+                    Name::new("Input: Next Scenario"),
+                    Action::<NextScenarioInput>::new(),
+                    bindings![KeyCode::Enter, GamepadButton::South]
+                )
+            ]
+        )
+    ));
 
     // Spawn all objects in the scenario
     for object in scenario.map.objects.iter() {
@@ -232,4 +252,23 @@ fn on_load_scenario(
         )),
         GlobalTransform::default(),
     ));
+}
+
+#[derive(Component, Debug, Clone)]
+struct ScenarioInputMarker;
+
+#[derive(InputAction)]
+#[action_output(bool)]
+struct NextScenarioInput;
+
+fn on_next_input(
+    _: On<Start<NextScenarioInput>,>,
+    mut world: ResMut<super::world::NovaEventWorld>,
+) {
+    let Some(mut next_scenario) = world.next_scenario.clone() else {
+        return;
+    };
+
+    next_scenario.linger = false;
+    world.next_scenario = Some(next_scenario);
 }

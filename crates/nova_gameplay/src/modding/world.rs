@@ -1,22 +1,17 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_common_systems::prelude::EventWorld;
 
-use super::{actions::ObjectiveActionConfig, scenario::ScenarioId, variables::VariableLiteral};
-use crate::prelude::{GameObjectivesHud, ScenarioLoad};
+use crate::prelude::{ObjectiveActionConfig, VariableLiteral, GameObjectivesHud, NextScenarioActionConfig, ScenarioLoad};
 
 #[derive(Resource, Default)]
 pub struct NovaEventWorld {
     pub objectives: Vec<ObjectiveActionConfig>,
     pub variables: HashMap<String, VariableLiteral>,
-    pub next_scenario: Option<ScenarioId>,
+    pub next_scenario: Option<NextScenarioActionConfig>,
 }
 
 impl EventWorld for NovaEventWorld {
-    fn world_to_state_system(world: &mut World) {
-        let mut resource = world.resource_mut::<Self>();
-
-        resource.next_scenario = None;
-    }
+    fn world_to_state_system(_world: &mut World) {}
 
     fn state_to_world_system(world: &mut World) {
         let objectives = &world.resource::<Self>().objectives.clone();
@@ -32,7 +27,18 @@ impl EventWorld for NovaEventWorld {
         }
 
         if let Some(next_scenario) = &world.resource::<Self>().next_scenario {
-            world.trigger(ScenarioLoad(next_scenario.clone()));
+            if !next_scenario.linger {
+                world.trigger(ScenarioLoad(next_scenario.scenario_id.clone()));
+                world.resource_mut::<Self>().clear();
+            }
         }
+    }
+}
+
+impl NovaEventWorld {
+    pub fn clear(&mut self) {
+        self.objectives.clear();
+        self.variables.clear();
+        self.next_scenario = None;
     }
 }

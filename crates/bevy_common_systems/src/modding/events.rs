@@ -155,7 +155,7 @@ where
                 W::state_to_world_system,
             )
                 .chain()
-                .run_if(not(is_queue_empty::<W>)),
+                .run_if(not(is_queue_empty::<W>).or(resource_changed::<W>)),
         );
     }
 }

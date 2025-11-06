@@ -26,3 +26,4 @@ impl Plugin for NovaEventsPlugin {
         app.add_plugins(scenario::ScenarioLoaderPlugin);
     }
 }
+

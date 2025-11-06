@@ -7,7 +7,7 @@ use super::world::NovaEventWorld;
 pub mod prelude {
     pub use super::{
         DebugMessageActionConfig, EventActionConfig, ObjectiveActionConfig, VariableSetActionConfig,
-        NextScenarioActionConfig,
+        NextScenarioActionConfig, ObjectiveCompleteActionConfig,
     };
 }
 
@@ -16,6 +16,7 @@ pub enum EventActionConfig {
     DebugMessage(DebugMessageActionConfig),
     VariableSet(VariableSetActionConfig),
     Objective(ObjectiveActionConfig),
+    ObjectiveComplete(ObjectiveCompleteActionConfig),
     NextScenario(NextScenarioActionConfig),
 }
 
@@ -29,6 +30,9 @@ impl EventAction<NovaEventWorld> for EventActionConfig {
                 config.action(world, info);
             }
             EventActionConfig::Objective(config) => {
+                config.action(world, info);
+            }
+            EventActionConfig::ObjectiveComplete(config) => {
                 config.action(world, info);
             }
             EventActionConfig::NextScenario(config) => {
@@ -72,14 +76,15 @@ impl EventAction<NovaEventWorld> for DebugMessageActionConfig {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct NextScenarioActionConfig {
     pub scenario_id: String,
+    pub linger: bool,
 }
 
 impl EventAction<NovaEventWorld> for NextScenarioActionConfig {
     fn action(&self, world: &mut NovaEventWorld, _: &GameEventInfo) {
-        world.next_scenario = Some(self.scenario_id.clone());
+        world.next_scenario = Some(self.clone());
     }
 }
 
