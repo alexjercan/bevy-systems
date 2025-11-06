@@ -1,7 +1,7 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use clap::Parser;
-use nova_core::nova_gameplay::spaceship::hud::health::HealthHudTargetEntity;
+use nova_core::nova_gameplay::hud::health::HealthHudTargetEntity;
 use nova_protocol::prelude::*;
 use rand::prelude::*;
 

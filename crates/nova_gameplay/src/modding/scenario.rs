@@ -134,14 +134,12 @@ fn on_load_scenario(
         Name::new(format!("Scenario Input Context: {}", scenario.name)),
         ScenarioInputMarker,
         actions!(
-            ScenarioInputMarker[
-                (
-                    Name::new("Input: Next Scenario"),
-                    Action::<NextScenarioInput>::new(),
-                    bindings![KeyCode::Enter, GamepadButton::South]
-                )
-            ]
-        )
+            ScenarioInputMarker[(
+                Name::new("Input: Next Scenario"),
+                Action::<NextScenarioInput>::new(),
+                bindings![KeyCode::Enter, GamepadButton::South]
+            )]
+        ),
     ));
 
     // Spawn all objects in the scenario
@@ -261,10 +259,7 @@ struct ScenarioInputMarker;
 #[action_output(bool)]
 struct NextScenarioInput;
 
-fn on_next_input(
-    _: On<Start<NextScenarioInput>,>,
-    mut world: ResMut<super::world::NovaEventWorld>,
-) {
+fn on_next_input(_: On<Start<NextScenarioInput>>, mut world: ResMut<super::world::NovaEventWorld>) {
     let Some(mut next_scenario) = world.next_scenario.clone() else {
         return;
     };

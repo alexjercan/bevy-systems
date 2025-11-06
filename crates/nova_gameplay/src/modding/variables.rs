@@ -4,8 +4,8 @@ use super::world::NovaEventWorld;
 
 pub mod prelude {
     pub use super::{
-        VariableError, VariableExpressionNode, VariableFactorNode, VariableLiteral,
-        VariableTermNode, VariableConditionNode,
+        VariableConditionNode, VariableError, VariableExpressionNode, VariableFactorNode,
+        VariableLiteral, VariableTermNode,
     };
 }
 
@@ -104,9 +104,10 @@ impl VariableTermNode {
                             Ok(VariableLiteral::Number(l / r))
                         }
                     }
-                    (left_val, right_val) => Err(VariableError::TypeMismatch(
-                        format!("evaluate: lhs and rhs must be numbers for division, but got {:?} and {:?}", left_val, right_val)
-                    )),
+                    (left_val, right_val) => Err(VariableError::TypeMismatch(format!(
+                        "evaluate: lhs and rhs must be numbers for division, but got {:?} and {:?}",
+                        left_val, right_val
+                    ))),
                 }
             }
             VariableTermNode::Factor(factor) => factor.evaluate(world),
@@ -179,24 +180,15 @@ pub enum VariableConditionNode {
 }
 
 impl VariableConditionNode {
-    pub fn new_less_than(
-        left: VariableExpressionNode,
-        right: VariableExpressionNode,
-    ) -> Self {
+    pub fn new_less_than(left: VariableExpressionNode, right: VariableExpressionNode) -> Self {
         VariableConditionNode::LessThan(Box::new(left), Box::new(right))
     }
 
-    pub fn new_greater_than(
-        left: VariableExpressionNode,
-        right: VariableExpressionNode,
-    ) -> Self {
+    pub fn new_greater_than(left: VariableExpressionNode, right: VariableExpressionNode) -> Self {
         VariableConditionNode::GreaterThan(Box::new(left), Box::new(right))
     }
 
-    pub fn new_equals(
-        left: VariableExpressionNode,
-        right: VariableExpressionNode,
-    ) -> Self {
+    pub fn new_equals(left: VariableExpressionNode, right: VariableExpressionNode) -> Self {
         VariableConditionNode::Equal(Box::new(left), Box::new(right))
     }
 

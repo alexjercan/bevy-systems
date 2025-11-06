@@ -7,7 +7,7 @@ use bevy::{
 };
 use clap::Parser;
 use nova_protocol::{
-    nova_gameplay::spaceship::sections::thruster_section::ThrusterExhaustMaterial, prelude::*,
+    nova_gameplay::sections::thruster_section::ThrusterExhaustMaterial, prelude::*,
 };
 use rand::prelude::*;
 

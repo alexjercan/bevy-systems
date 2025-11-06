@@ -20,11 +20,7 @@ fn main() {
 fn custom_plugin(app: &mut App) {
     app.add_systems(
         OnEnter(GameStates::Playing),
-        (
-            setup_health_entity,
-            setup_camera,
-            setup_simple_scene,
-        ),
+        (setup_health_entity, setup_camera, setup_simple_scene),
     );
 
     app.add_observer(on_click_damage_health);

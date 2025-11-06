@@ -1,7 +1,10 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_common_systems::prelude::EventWorld;
 
-use crate::prelude::{ObjectiveActionConfig, VariableLiteral, GameObjectivesHud, NextScenarioActionConfig, ScenarioLoad};
+use crate::prelude::{
+    GameObjectivesHud, NextScenarioActionConfig, ObjectiveActionConfig, ScenarioLoad,
+    VariableLiteral,
+};
 
 #[derive(Resource, Default)]
 pub struct NovaEventWorld {

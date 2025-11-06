@@ -29,8 +29,11 @@ fn custom_plugin(app: &mut App) {
 fn setup_spaceship(mut commands: Commands) {
     let entity = commands
         .spawn((
-            spaceship_root(SpaceshipConfig1 { ..default() }),
             PlayerSpaceshipMarker,
+            Name::new("Spaceship"),
+            Transform::default(),
+            RigidBody::Dynamic,
+            Visibility::Visible,
         ))
         .id();
 

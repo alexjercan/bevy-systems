@@ -26,7 +26,12 @@ fn custom_plugin(app: &mut App) {
 
 fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {
     let entity = commands
-        .spawn((spaceship_root(SpaceshipConfig1 { ..default() }),))
+        .spawn((
+            Name::new("Spaceship"),
+            Transform::default(),
+            RigidBody::Dynamic,
+            Visibility::Visible,
+        ))
         .id();
 
     commands.entity(entity).with_children(|parent| {

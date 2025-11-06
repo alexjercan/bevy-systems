@@ -1,13 +1,12 @@
 use bevy::prelude::*;
 use bevy_common_systems::modding::prelude::*;
-use super::variables::prelude::*;
 
-use super::world::NovaEventWorld;
+use super::{variables::prelude::*, world::NovaEventWorld};
 
 pub mod prelude {
     pub use super::{
-        DebugMessageActionConfig, EventActionConfig, ObjectiveActionConfig, VariableSetActionConfig,
-        NextScenarioActionConfig, ObjectiveCompleteActionConfig,
+        DebugMessageActionConfig, EventActionConfig, NextScenarioActionConfig,
+        ObjectiveActionConfig, ObjectiveCompleteActionConfig, VariableSetActionConfig,
     };
 }
 

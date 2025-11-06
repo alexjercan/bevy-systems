@@ -125,7 +125,7 @@ fn setup_hud_objectives(
         return;
     };
 
-    commands.spawn((objectives_hud(ObjectiveRootHudConfig {  }),));
+    commands.spawn((objectives_hud(ObjectiveRootHudConfig {}),));
 }
 
 fn remove_hud_objectives(

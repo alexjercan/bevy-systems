@@ -41,7 +41,12 @@ fn on_thruster_input(
 
 fn setup_spaceship(mut commands: Commands, game_assets: Res<GameAssets>) {
     let entity = commands
-        .spawn((spaceship_root(SpaceshipConfig1 { ..default() }),))
+        .spawn((
+            Name::new("Spaceship"),
+            Transform::default(),
+            RigidBody::Dynamic,
+            Visibility::Visible,
+        ))
         .id();
 
     let cube_size = 1;
