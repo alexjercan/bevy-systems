@@ -82,16 +82,17 @@ fn on_thruster_input(
     let player_transform = player.into_inner();
 
     for (entity, spaceship_transform) in &q_spaceship {
+        let to_player = player_transform.translation - spaceship_transform.translation;
+        let direction_to_player = to_player.normalize();
+
         for (mut thruster_input, thruster_transform, _) in q_thruster
             .iter_mut()
             .filter(|(_, _, ChildOf(c_parent))| *c_parent == entity)
         {
-            let direction_to_player =
-                (player_transform.translation - spaceship_transform.translation).normalize();
-            let forward = thruster_transform.forward();
-
             // TODO: consider using a more sophisticated method to determine thrust level
-            let alignment = forward.dot(direction_to_player);
+            let forward = thruster_transform.forward();
+            let alignment = forward.dot(direction_to_player).clamp(-1.0, 1.0);
+
             **thruster_input = alignment.max(0.0);
         }
     }
