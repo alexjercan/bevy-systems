@@ -18,7 +18,7 @@ pub mod prelude {
     pub use super::{
         turret_section, TurretBulletProjectileMarker, TurretProjectileHooks,
         TurretSectionBarrelMuzzleMarker, TurretSectionConfig, TurretSectionMarker,
-        TurretSectionPlugin, TurretSectionTargetInput, TurretShoot,
+        TurretSectionPlugin, TurretSectionTargetInput, TurretShoot, TurretSectionMuzzleEntity,
     };
 }
 
@@ -177,7 +177,7 @@ struct TurretSectionBarrelMuzzleEffectMarker;
 
 /// The entity that represents the muzzle of the turret.
 #[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
-struct TurretSectionMuzzleEntity(pub Entity);
+pub struct TurretSectionMuzzleEntity(pub Entity);
 
 /// The spaceship entity that owns the projectile.
 #[derive(Component, Clone, Debug, Reflect)]
