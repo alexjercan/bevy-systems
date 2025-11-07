@@ -137,6 +137,106 @@ pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
     };
     objects.push(GameObjectConfig::Spaceship(spaceship));
 
+    let spaceship = SpaceshipConfig {
+        id: "other_spaceship".to_string(),
+        name: "Other Spaceship".to_string(),
+        position: Vec3::new(10.0, 0.0, 0.0),
+        rotation: Quat::IDENTITY,
+        health: 100.0,
+        controller: SpaceshipController::None,
+        sections: vec![
+            SpaceshipSectionConfig {
+                position: Vec3::ZERO,
+                rotation: Quat::IDENTITY,
+                config: SectionConfig {
+                    base: BaseSectionConfig {
+                        name: "Basic Controller Section".to_string(),
+                        description: "A basic controller section for spaceships.".to_string(),
+                        mass: 1.0,
+                    },
+                    kind: SectionKind::Controller(ControllerSectionConfig {
+                        frequency: 4.0,
+                        damping_ratio: 4.0,
+                        max_torque: 100.0,
+                        render_mesh: None,
+                    }),
+                },
+            },
+            SpaceshipSectionConfig {
+                position: Vec3::new(0.0, 0.0, 1.0),
+                rotation: Quat::IDENTITY,
+                config: SectionConfig {
+                    base: BaseSectionConfig {
+                        name: "Basic Hull Section".to_string(),
+                        description: "A basic hull section for spaceships.".to_string(),
+                        mass: 1.0,
+                    },
+                    kind: SectionKind::Hull(HullSectionConfig { render_mesh: None }),
+                },
+            },
+            SpaceshipSectionConfig {
+                position: Vec3::new(0.0, 0.0, -1.0),
+                rotation: Quat::IDENTITY,
+                config: SectionConfig {
+                    base: BaseSectionConfig {
+                        name: "Basic Hull Section".to_string(),
+                        description: "A basic hull section for spaceships.".to_string(),
+                        mass: 1.0,
+                    },
+                    kind: SectionKind::Hull(HullSectionConfig { render_mesh: None }),
+                },
+            },
+            SpaceshipSectionConfig {
+                position: Vec3::new(0.0, 0.0, 2.0),
+                rotation: Quat::IDENTITY,
+                config: SectionConfig {
+                    base: BaseSectionConfig {
+                        name: "Basic Thruster Section".to_string(),
+                        description: "A basic thruster section for spaceships.".to_string(),
+                        mass: 1.0,
+                    },
+                    kind: SectionKind::Thruster(ThrusterSectionConfig {
+                        magnitude: 1.0,
+                        render_mesh: None,
+                    }),
+                },
+            },
+            SpaceshipSectionConfig {
+                position: Vec3::new(0.0, 0.0, -2.0),
+                rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2),
+                config: SectionConfig {
+                    base: BaseSectionConfig {
+                        name: "Basic Turret Section".to_string(),
+                        description: "A basic turret section for spaceships.".to_string(),
+                        mass: 1.0,
+                    },
+                    kind: SectionKind::Turret(TurretSectionConfig {
+                        yaw_speed: std::f32::consts::PI,
+                        pitch_speed: std::f32::consts::PI,
+                        min_pitch: Some(-std::f32::consts::FRAC_PI_6),
+                        max_pitch: Some(std::f32::consts::FRAC_PI_2),
+                        render_mesh_base: None,
+                        base_offset: Vec3::new(0.0, -0.5, 0.0),
+                        render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
+                        yaw_offset: Vec3::new(0.0, 0.1, 0.0),
+                        render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
+                        pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
+                        render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
+                        barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
+                        muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
+                        fire_rate: 100.0,
+                        muzzle_speed: 100.0,
+                        projectile_lifetime: 5.0,
+                        projectile_mass: 0.1,
+                        projectile_render_mesh: None,
+                        muzzle_effect: None,
+                    }),
+                },
+            },
+        ],
+    };
+    objects.push(GameObjectConfig::Spaceship(spaceship));
+
     let mut events = Vec::new();
 
     events.push(ScenarioEventConfig {

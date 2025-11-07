@@ -4,7 +4,7 @@ use bevy_common_systems::prelude::*;
 use crate::prelude::*;
 
 pub mod prelude {
-    pub use super::{PlayerSpaceshipMarker, SpaceshipPlayerInputPlugin, SpaceshipThrusterInputKey};
+    pub use super::{PlayerSpaceshipMarker, SpaceshipPlayerInputPlugin, SpaceshipThrusterInputKey, SpaceshipTurretInputKey};
 }
 
 pub struct SpaceshipPlayerInputPlugin;
@@ -114,13 +114,16 @@ fn on_thruster_input(
     }
 }
 
+#[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]
+pub struct SpaceshipTurretInputKey(pub MouseButton);
+
 fn on_projectile_input(
     mut commands: Commands,
     mouse: Res<ButtonInput<MouseButton>>,
-    q_turret: Query<Entity, With<TurretSectionMarker>>,
+    q_turret: Query<(Entity, &SpaceshipTurretInputKey), With<TurretSectionMarker>>,
 ) {
-    for turret in &q_turret {
-        if mouse.pressed(MouseButton::Left) {
+    for (turret, key) in &q_turret {
+        if mouse.pressed(**key) {
             commands.trigger(TurretShoot { entity: turret });
         }
     }

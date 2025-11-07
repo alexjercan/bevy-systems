@@ -262,12 +262,27 @@ fn on_load_scenario(
                                 }
                                 SectionKind::Thruster(thruster_config) => {
                                     section_entity
-                                        .insert(thruster_section(thruster_config.clone()))
-                                        // TODO: Make the input key configurable
-                                        .insert(SpaceshipThrusterInputKey(KeyCode::Space));
+                                        .insert(thruster_section(thruster_config.clone()));
+                                    // TODO: Make the input key configurable
+
+                                    match config.controller {
+                                        SpaceshipController::None => {}
+                                        SpaceshipController::Player => {
+                                            section_entity
+                                                .insert(SpaceshipThrusterInputKey(KeyCode::Space));
+                                        }
+                                    }
                                 }
                                 SectionKind::Turret(turret_config) => {
                                     section_entity.insert(turret_section(turret_config.clone()));
+
+                                    match config.controller {
+                                        SpaceshipController::None => {}
+                                        SpaceshipController::Player => {
+                                            section_entity
+                                                .insert(SpaceshipTurretInputKey(MouseButton::Left));
+                                        }
+                                    }
                                 }
                             }
                         }

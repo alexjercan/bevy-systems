@@ -655,6 +655,7 @@ fn on_click_spaceship_section(
                         projectile_mass: 0.1,
                         ..default()
                     }),
+                    SpaceshipTurretInputKey(MouseButton::Left),
                     Transform {
                         translation: position,
                         rotation,
