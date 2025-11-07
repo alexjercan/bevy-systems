@@ -132,6 +132,8 @@ impl Plugin for ScenarioLoaderPlugin {
         app.add_observer(on_player_spaceship_spawned);
         app.add_observer(on_player_spaceship_destroyed);
 
+        app.add_observer(on_add_entity);
+
         app.add_input_context::<ScenarioInputMarker>();
         app.add_observer(on_next_input);
         app.add_observer(unload_scenario);
@@ -142,10 +144,13 @@ fn unload_scenario(
     _: On<UnloadScenario>,
     mut commands: Commands,
     q_scoped: Query<Entity, With<ScenarioScopedMarker>>,
+    mut current_scenario: ResMut<CurrentScenario>,
 ) {
     for entity in q_scoped.iter() {
         commands.entity(entity).despawn();
     }
+
+    **current_scenario = None;
 }
 
 fn on_load_scenario_id(
@@ -334,6 +339,22 @@ fn on_load_scenario(
     }
 
     commands.trigger(ScenarioLoaded(scenario));
+}
+
+fn on_add_entity(
+    add: On<Add, Name>,
+    mut commands: Commands,
+    current_scenario: Res<CurrentScenario>,
+) {
+    if let Some(scenario) = &**current_scenario {
+        trace!(
+            "on_add_entity: Added entity {:?} in scenario {:?}",
+            add.entity,
+            scenario.name
+        );
+
+        commands.entity(add.entity).insert(ScenarioScopedMarker);
+    }
 }
 
 #[derive(Component, Debug, Clone)]

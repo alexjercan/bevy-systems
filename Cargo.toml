@@ -58,7 +58,7 @@ strip = true
 embed-resource = "1"
 
 [features]
-debug = ["nova_core/debug"]
+debug = ["nova_core/debug", "bevy/track_location"]
 dev = ["debug"]
 
 [workspace.lints.rust]
