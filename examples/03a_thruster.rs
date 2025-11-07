@@ -59,23 +59,21 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         rotation: Quat::IDENTITY,
         controller: SpaceshipController::None,
         health: 500.0,
-        sections: vec![
-            SpaceshipSectionConfig {
-                position: Vec3::new(0.0, 0.0, 0.0),
-                rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Thruster Section".to_string(),
-                        description: "A basic thruster section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Thruster(ThrusterSectionConfig {
-                        magnitude: 1.0,
-                        render_mesh: None,
-                    }),
+        sections: vec![SpaceshipSectionConfig {
+            position: Vec3::new(0.0, 0.0, 0.0),
+            rotation: Quat::IDENTITY,
+            config: SectionConfig {
+                base: BaseSectionConfig {
+                    name: "Basic Thruster Section".to_string(),
+                    description: "A basic thruster section for spaceships.".to_string(),
+                    mass: 1.0,
                 },
+                kind: SectionKind::Thruster(ThrusterSectionConfig {
+                    magnitude: 1.0,
+                    render_mesh: None,
+                }),
             },
-        ],
+        }],
     };
     objects.push(GameObjectConfig::Spaceship(spaceship));
 
@@ -85,7 +83,7 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         description: "A test scenario.".to_string(),
         map: MapConfig {
             cubemap: game_assets.cubemap.clone(),
-            objects: objects,
+            objects,
         },
         events: vec![],
     }

@@ -75,7 +75,10 @@ fn update_turret_target_input(
 }
 
 fn on_thruster_input(
-    mut q_thruster: Query<(&mut ThrusterSectionInput, &GlobalTransform, &ChildOf), With<ThrusterSectionMarker>>,
+    mut q_thruster: Query<
+        (&mut ThrusterSectionInput, &GlobalTransform, &ChildOf),
+        With<ThrusterSectionMarker>,
+    >,
     q_spaceship: Query<(Entity, &Transform), (With<SpaceshipRootMarker>, With<AISpaceshipMarker>)>,
     player: Single<&Transform, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
 ) {

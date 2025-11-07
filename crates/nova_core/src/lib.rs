@@ -38,6 +38,12 @@ pub struct AppBuilder {
     render: bool,
 }
 
+impl Default for AppBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AppBuilder {
     pub fn new() -> Self {
         let mut app = App::new();

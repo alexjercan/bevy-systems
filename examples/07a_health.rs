@@ -1,4 +1,3 @@
-use avian3d::prelude::*;
 use bevy::prelude::*;
 use clap::Parser;
 use nova_core::nova_gameplay::hud::health::HealthHudTargetEntity;
@@ -21,10 +20,7 @@ fn main() {
 fn custom_plugin(app: &mut App) {
     app.add_systems(
         OnEnter(GameStates::Playing),
-        (
-            setup_scenario,
-            setup_hud_health,
-        ),
+        (setup_scenario, setup_hud_health),
     );
 
     app.add_observer(on_click_damage_health);
@@ -114,7 +110,7 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         description: "A test scenario.".to_string(),
         map: MapConfig {
             cubemap: game_assets.cubemap.clone(),
-            objects: objects,
+            objects,
         },
         events: vec![],
     }

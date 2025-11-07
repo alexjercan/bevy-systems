@@ -17,10 +17,7 @@ fn main() {
 }
 
 fn custom_plugin(app: &mut App) {
-    app.add_systems(
-        OnEnter(GameStates::Playing),
-        setup_scenario,
-    );
+    app.add_systems(OnEnter(GameStates::Playing), setup_scenario);
 
     app.add_observer(on_click_damage_health);
     app.add_observer(on_fragment_added);
@@ -96,7 +93,7 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         description: "A test scenario.".to_string(),
         map: MapConfig {
             cubemap: game_assets.cubemap.clone(),
-            objects: objects,
+            objects,
         },
         events: vec![],
     }

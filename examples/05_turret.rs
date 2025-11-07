@@ -1,4 +1,3 @@
-use avian3d::prelude::*;
 use bevy::prelude::*;
 use clap::Parser;
 use nova_protocol::prelude::*;
@@ -58,7 +57,7 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         name: "Player Spaceship".to_string(),
         position: Vec3::ZERO,
         rotation: Quat::IDENTITY,
-        controller: SpaceshipController::Player,
+        controller: SpaceshipController::Player(PlayerControllerConfig {}),
         health: 500.0,
         sections: vec![
             SpaceshipSectionConfig {
@@ -115,7 +114,7 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         description: "A test scenario.".to_string(),
         map: MapConfig {
             cubemap: game_assets.cubemap.clone(),
-            objects: objects,
+            objects,
         },
         events: vec![],
     }

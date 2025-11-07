@@ -18,7 +18,7 @@ pub mod prelude {
     pub use super::{
         turret_section, TurretBulletProjectileMarker, TurretProjectileHooks,
         TurretSectionBarrelMuzzleMarker, TurretSectionConfig, TurretSectionMarker,
-        TurretSectionPlugin, TurretSectionTargetInput, TurretShoot, TurretSectionMuzzleEntity,
+        TurretSectionMuzzleEntity, TurretSectionPlugin, TurretSectionTargetInput, TurretShoot,
     };
 }
 

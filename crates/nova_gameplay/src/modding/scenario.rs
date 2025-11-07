@@ -227,7 +227,7 @@ fn on_load_scenario(
     ));
 
     // Fire onstart event
-    commands.fire::<OnStartEvent>(OnStartEventInfo::default());
+    commands.fire::<OnStartEvent>(OnStartEventInfo);
 
     // Spawn all objects in the scenario
     for object in scenario.map.objects.iter() {

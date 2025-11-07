@@ -57,27 +57,25 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         name: "Player Spaceship".to_string(),
         position: Vec3::ZERO,
         rotation: Quat::IDENTITY,
-        controller: SpaceshipController::Player,
+        controller: SpaceshipController::Player(PlayerControllerConfig {}),
         health: 500.0,
-        sections: vec![
-            SpaceshipSectionConfig {
-                position: Vec3::ZERO,
-                rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Controller Section".to_string(),
-                        description: "A basic controller section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Controller(ControllerSectionConfig {
-                        frequency: 4.0,
-                        damping_ratio: 4.0,
-                        max_torque: 100.0,
-                        render_mesh: None,
-                    }),
+        sections: vec![SpaceshipSectionConfig {
+            position: Vec3::ZERO,
+            rotation: Quat::IDENTITY,
+            config: SectionConfig {
+                base: BaseSectionConfig {
+                    name: "Basic Controller Section".to_string(),
+                    description: "A basic controller section for spaceships.".to_string(),
+                    mass: 1.0,
                 },
+                kind: SectionKind::Controller(ControllerSectionConfig {
+                    frequency: 4.0,
+                    damping_ratio: 4.0,
+                    max_torque: 100.0,
+                    render_mesh: None,
+                }),
             },
-        ],
+        }],
     };
     objects.push(GameObjectConfig::Spaceship(spaceship));
 
@@ -87,7 +85,7 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         description: "A test scenario.".to_string(),
         map: MapConfig {
             cubemap: game_assets.cubemap.clone(),
-            objects: objects,
+            objects,
         },
         events: vec![],
     }

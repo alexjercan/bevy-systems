@@ -26,6 +26,7 @@ pub struct BaseSectionConfig {
 }
 
 #[derive(Clone, Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum SectionKind {
     Hull(HullSectionConfig),
     Thruster(ThrusterSectionConfig),

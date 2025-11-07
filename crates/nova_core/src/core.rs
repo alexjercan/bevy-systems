@@ -243,47 +243,41 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
     };
     objects.push(GameObjectConfig::Spaceship(spaceship));
 
-    let mut events = Vec::new();
-
-    events.push(ScenarioEventConfig {
-        name: EventConfig::OnStart,
-        filters: vec![],
-        actions: vec![EventActionConfig::Objective(ObjectiveActionConfig::new(
-            "destroy_spaceship",
-            "Objective: Destroy the other spaceship.",
-        ))],
-    });
-
-    events.push(ScenarioEventConfig {
-        name: EventConfig::OnDestroyed,
-        filters: vec![EventFilterConfig::Entity(EntityFilterConfig {
-            id: Some("player_spaceship".to_string()),
-            type_name: None,
-        })],
-        actions: vec![
-            EventActionConfig::DebugMessage(DebugMessageActionConfig {
+    let events = vec![
+        ScenarioEventConfig {
+            name: EventConfig::OnStart,
+            filters: vec![],
+            actions: vec![EventActionConfig::Objective(ObjectiveActionConfig::new(
+                "destroy_spaceship",
+                "Objective: Destroy the other spaceship.",
+            ))],
+        },
+        ScenarioEventConfig {
+            name: EventConfig::OnDestroyed,
+            filters: vec![EventFilterConfig::Entity(EntityFilterConfig {
+                id: Some("player_spaceship".to_string()),
+                type_name: None,
+            })],
+            actions: vec![EventActionConfig::DebugMessage(DebugMessageActionConfig {
                 message: "The player's spaceship was destroyed!".to_string(),
-            }),
-        ],
-    });
-
-    events.push(ScenarioEventConfig {
-        name: EventConfig::OnDestroyed,
-        filters: vec![
-            EventFilterConfig::Entity(EntityFilterConfig {
+            })],
+        },
+        ScenarioEventConfig {
+            name: EventConfig::OnDestroyed,
+            filters: vec![EventFilterConfig::Entity(EntityFilterConfig {
                 id: Some("other_spaceship".to_string()),
                 type_name: None,
-            }),
-        ],
-        actions: vec![
-            EventActionConfig::DebugMessage(DebugMessageActionConfig {
-                message: "Objective Complete: Destroyed the other spaceship!".to_string(),
-            }),
-            EventActionConfig::ObjectiveComplete(ObjectiveCompleteActionConfig {
-                id: "destroy_spaceship".to_string(),
-            }),
-        ],
-    });
+            })],
+            actions: vec![
+                EventActionConfig::DebugMessage(DebugMessageActionConfig {
+                    message: "Objective Complete: Destroyed the other spaceship!".to_string(),
+                }),
+                EventActionConfig::ObjectiveComplete(ObjectiveCompleteActionConfig {
+                    id: "destroy_spaceship".to_string(),
+                }),
+            ],
+        },
+    ];
 
     ScenarioConfig {
         id: "test_scenario".to_string(),
@@ -291,9 +285,9 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         description: "A test scenario.".to_string(),
         map: MapConfig {
             cubemap: game_assets.cubemap.clone(),
-            objects: objects,
+            objects,
         },
-        events: events,
+        events,
     }
 }
 
@@ -618,7 +612,6 @@ fn create_new_spaceship(
             Transform::from_xyz(0.0, 0.0, 0.0),
             hull_section(HullSectionConfig {
                 render_mesh: Some(game_assets.hull_01.clone()),
-                ..default()
             }),
         ));
     });
@@ -751,7 +744,6 @@ fn on_click_spaceship_section(
                     }),
                     hull_section(HullSectionConfig {
                         render_mesh: Some(game_assets.hull_01.clone()),
-                        ..default()
                     }),
                     Transform {
                         translation: position,

@@ -2,7 +2,7 @@ use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_common_systems::prelude::EventWorld;
 
 use crate::prelude::{
-    GameObjectivesHud, NextScenarioActionConfig, ObjectiveActionConfig, LoadScenarioById,
+    GameObjectivesHud, LoadScenarioById, NextScenarioActionConfig, ObjectiveActionConfig,
     VariableLiteral,
 };
 

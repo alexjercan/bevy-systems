@@ -197,7 +197,7 @@ pub fn mesh_slice(mesh: &Mesh, plane_normal: Vec3, plane_point: Vec3) -> Option<
     };
 
     let triangles = match mesh.indices().unwrap() {
-        Indices::U32(indices) => indices.iter().cloned().collect::<Vec<_>>(),
+        Indices::U32(indices) => indices.to_vec(),
         Indices::U16(indices) => indices.iter().map(|&i| i as u32).collect::<Vec<_>>(),
     }
     .chunks(3)
