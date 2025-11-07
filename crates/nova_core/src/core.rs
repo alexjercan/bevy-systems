@@ -7,8 +7,9 @@ use bevy::{
     ui_widgets::{observe, Activate, Button},
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
-use crate::prelude::*;
 use rand::prelude::*;
+
+use crate::prelude::*;
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
 pub enum ExampleStates {
@@ -91,10 +92,13 @@ fn switch_scene_editor(
     }
 }
 
+#[derive(Component, Debug, Clone, Reflect)]
+struct SpaceshipEditorMarker;
+
 fn make_spaceship_player(
     _: On<ScenarioLoaded>,
     mut commands: Commands,
-    q_spaceship: Query<Entity, With<SpaceshipRootMarker>>,
+    q_spaceship: Query<Entity, With<SpaceshipEditorMarker>>,
 ) {
     for entity in &q_spaceship {
         commands.entity(entity).insert((
@@ -135,6 +139,152 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         }));
     }
 
+    let spaceship = SpaceshipConfig {
+        id: "other_spaceship".to_string(),
+        name: "Other Spaceship".to_string(),
+        position: Vec3::new(
+            rng.random_range(-50.0..50.0),
+            rng.random_range(-10.0..10.0),
+            rng.random_range(-50.0..50.0),
+        ),
+        rotation: Quat::IDENTITY,
+        health: 100.0,
+        controller: SpaceshipController::AI(AIControllerConfig {}),
+        sections: vec![
+            SpaceshipSectionConfig {
+                position: Vec3::ZERO,
+                rotation: Quat::IDENTITY,
+                config: SectionConfig {
+                    base: BaseSectionConfig {
+                        name: "Basic Controller Section".to_string(),
+                        description: "A basic controller section for spaceships.".to_string(),
+                        mass: 1.0,
+                    },
+                    kind: SectionKind::Controller(ControllerSectionConfig {
+                        frequency: 4.0,
+                        damping_ratio: 4.0,
+                        max_torque: 100.0,
+                        render_mesh: None,
+                    }),
+                },
+            },
+            SpaceshipSectionConfig {
+                position: Vec3::new(0.0, 0.0, 1.0),
+                rotation: Quat::IDENTITY,
+                config: SectionConfig {
+                    base: BaseSectionConfig {
+                        name: "Basic Hull Section".to_string(),
+                        description: "A basic hull section for spaceships.".to_string(),
+                        mass: 1.0,
+                    },
+                    kind: SectionKind::Hull(HullSectionConfig { render_mesh: None }),
+                },
+            },
+            SpaceshipSectionConfig {
+                position: Vec3::new(0.0, 0.0, -1.0),
+                rotation: Quat::IDENTITY,
+                config: SectionConfig {
+                    base: BaseSectionConfig {
+                        name: "Basic Hull Section".to_string(),
+                        description: "A basic hull section for spaceships.".to_string(),
+                        mass: 1.0,
+                    },
+                    kind: SectionKind::Hull(HullSectionConfig { render_mesh: None }),
+                },
+            },
+            SpaceshipSectionConfig {
+                position: Vec3::new(0.0, 0.0, 2.0),
+                rotation: Quat::IDENTITY,
+                config: SectionConfig {
+                    base: BaseSectionConfig {
+                        name: "Basic Thruster Section".to_string(),
+                        description: "A basic thruster section for spaceships.".to_string(),
+                        mass: 1.0,
+                    },
+                    kind: SectionKind::Thruster(ThrusterSectionConfig {
+                        magnitude: 1.0,
+                        render_mesh: None,
+                    }),
+                },
+            },
+            SpaceshipSectionConfig {
+                position: Vec3::new(0.0, 0.0, -2.0),
+                rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2),
+                config: SectionConfig {
+                    base: BaseSectionConfig {
+                        name: "Basic Turret Section".to_string(),
+                        description: "A basic turret section for spaceships.".to_string(),
+                        mass: 1.0,
+                    },
+                    kind: SectionKind::Turret(TurretSectionConfig {
+                        yaw_speed: std::f32::consts::PI,
+                        pitch_speed: std::f32::consts::PI,
+                        min_pitch: Some(-std::f32::consts::FRAC_PI_6),
+                        max_pitch: Some(std::f32::consts::FRAC_PI_2),
+                        render_mesh_base: None,
+                        base_offset: Vec3::new(0.0, -0.5, 0.0),
+                        render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
+                        yaw_offset: Vec3::new(0.0, 0.1, 0.0),
+                        render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
+                        pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
+                        render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
+                        barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
+                        muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
+                        fire_rate: 100.0,
+                        muzzle_speed: 100.0,
+                        projectile_lifetime: 5.0,
+                        projectile_mass: 0.1,
+                        projectile_render_mesh: None,
+                        muzzle_effect: None,
+                    }),
+                },
+            },
+        ],
+    };
+    objects.push(GameObjectConfig::Spaceship(spaceship));
+
+    let mut events = Vec::new();
+
+    events.push(ScenarioEventConfig {
+        name: EventConfig::OnStart,
+        filters: vec![],
+        actions: vec![EventActionConfig::Objective(ObjectiveActionConfig::new(
+            "destroy_spaceship",
+            "Objective: Destroy the other spaceship.",
+        ))],
+    });
+
+    events.push(ScenarioEventConfig {
+        name: EventConfig::OnDestroyed,
+        filters: vec![EventFilterConfig::Entity(EntityFilterConfig {
+            id: Some("player_spaceship".to_string()),
+            type_name: None,
+        })],
+        actions: vec![
+            EventActionConfig::DebugMessage(DebugMessageActionConfig {
+                message: "The player's spaceship was destroyed!".to_string(),
+            }),
+        ],
+    });
+
+    events.push(ScenarioEventConfig {
+        name: EventConfig::OnDestroyed,
+        filters: vec![
+            EventFilterConfig::Entity(EntityFilterConfig {
+                id: Some("other_spaceship".to_string()),
+                type_name: None,
+            }),
+        ],
+        actions: vec![
+            EventActionConfig::DebugMessage(DebugMessageActionConfig {
+                message: "Objective Complete: Destroyed the other spaceship!".to_string(),
+            }),
+            EventActionConfig::ObjectiveComplete(ObjectiveCompleteActionConfig {
+                id: "destroy_spaceship".to_string(),
+            }),
+        ],
+    });
+
     ScenarioConfig {
         id: "test_scenario".to_string(),
         name: "Test Scenario".to_string(),
@@ -143,7 +293,7 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
             cubemap: game_assets.cubemap.clone(),
             objects: objects,
         },
-        events: vec![],
+        events: events,
     }
 }
 
@@ -448,6 +598,7 @@ fn create_new_spaceship(
     let entity = commands
         .spawn((
             SpaceshipRootMarker,
+            SpaceshipEditorMarker,
             Name::new("Spaceship Prefab"),
             Transform::default(),
             RigidBody::Dynamic,
@@ -484,6 +635,7 @@ fn create_new_spaceship_with_controller(
     let entity = commands
         .spawn((
             SpaceshipRootMarker,
+            SpaceshipEditorMarker,
             Name::new("Spaceship Prefab with Controller"),
             Transform::default(),
             RigidBody::Dynamic,

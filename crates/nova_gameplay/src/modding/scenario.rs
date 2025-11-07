@@ -310,7 +310,7 @@ fn on_load_scenario(
                         commands.entity(entity).insert(PlayerSpaceshipMarker);
                     }
                     SpaceshipController::AI(_) => {
-                        todo!("AI-controlled spaceships not implemented yet")
+                        commands.entity(entity).insert(AISpaceshipMarker);
                     }
                 }
             }

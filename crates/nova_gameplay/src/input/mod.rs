@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 
+pub mod ai;
 pub mod player;
 
 pub mod prelude {
-    pub use super::{player::prelude::*, SpaceshipInputPlugin};
+    pub use super::{ai::prelude::*, player::prelude::*, SpaceshipInputPlugin};
 }
 
 pub struct SpaceshipInputPlugin;
@@ -13,5 +14,6 @@ impl Plugin for SpaceshipInputPlugin {
         debug!("SpaceshipInputPlugin: build");
 
         app.add_plugins(player::SpaceshipPlayerInputPlugin);
+        app.add_plugins(ai::SpaceshipAIInputPlugin);
     }
 }
