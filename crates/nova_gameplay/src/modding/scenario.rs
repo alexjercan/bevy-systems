@@ -13,10 +13,11 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{
-        AsteroidConfig, CurrentScenario, GameObjectConfig, GameScenarios, LoadScenario,
-        LoadScenarioById, MapConfig, ScenarioConfig, ScenarioEventConfig, ScenarioId,
-        ScenarioLoaded, ScenarioLoaderPlugin, ScenarioScopedMarker, SpaceshipConfig,
-        SpaceshipController, SpaceshipSectionConfig, UnloadScenario,
+        AIControllerConfig, AsteroidConfig, CurrentScenario, GameObjectConfig, GameScenarios,
+        LoadScenario, LoadScenarioById, MapConfig, PlayerControllerConfig, ScenarioConfig,
+        ScenarioEventConfig, ScenarioId, ScenarioLoaded, ScenarioLoaderPlugin,
+        ScenarioScopedMarker, SpaceshipConfig, SpaceshipController, SpaceshipSectionConfig,
+        UnloadScenario,
     };
 }
 
@@ -60,8 +61,19 @@ pub struct AsteroidConfig {
 #[derive(Clone, Debug)]
 pub enum SpaceshipController {
     None,
-    Player,
+    Player(PlayerControllerConfig),
+    AI(AIControllerConfig),
 }
+
+#[derive(Clone, Debug)]
+pub struct PlayerControllerConfig {
+    // TODO: Add some kind of input mapping from Section ID to input actions
+    // TODO: Add Section ID in the SpaceshipSectionConfig as String maybe
+    // pub input_mapping: HashMap<>,
+}
+
+#[derive(Clone, Debug)]
+pub struct AIControllerConfig {}
 
 #[derive(Clone, Debug)]
 pub struct SpaceshipConfig {
@@ -263,14 +275,16 @@ fn on_load_scenario(
                                 SectionKind::Thruster(thruster_config) => {
                                     section_entity
                                         .insert(thruster_section(thruster_config.clone()));
-                                    // TODO: Make the input key configurable
 
                                     match config.controller {
                                         SpaceshipController::None => {}
-                                        SpaceshipController::Player => {
+                                        SpaceshipController::Player(_) => {
+                                            // TODO: Something like
+                                            // let key = config.input_mapping.get(&section_id);
                                             section_entity
                                                 .insert(SpaceshipThrusterInputKey(KeyCode::Space));
                                         }
+                                        SpaceshipController::AI(_) => {}
                                     }
                                 }
                                 SectionKind::Turret(turret_config) => {
@@ -278,10 +292,11 @@ fn on_load_scenario(
 
                                     match config.controller {
                                         SpaceshipController::None => {}
-                                        SpaceshipController::Player => {
+                                        SpaceshipController::Player(_) => {
                                             section_entity
                                                 .insert(SpaceshipTurretInputKey(MouseButton::Left));
                                         }
+                                        SpaceshipController::AI(_) => {}
                                     }
                                 }
                             }
@@ -291,8 +306,11 @@ fn on_load_scenario(
 
                 match config.controller {
                     SpaceshipController::None => {}
-                    SpaceshipController::Player => {
+                    SpaceshipController::Player(_) => {
                         commands.entity(entity).insert(PlayerSpaceshipMarker);
+                    }
+                    SpaceshipController::AI(_) => {
+                        todo!("AI-controlled spaceships not implemented yet")
                     }
                 }
             }
