@@ -1,3 +1,4 @@
+use avian3d::prelude::*;
 use bevy::prelude::*;
 
 use crate::prelude::*;
@@ -79,14 +80,19 @@ fn on_thruster_input(
         (&mut ThrusterSectionInput, &GlobalTransform, &ChildOf),
         With<ThrusterSectionMarker>,
     >,
-    q_spaceship: Query<(Entity, &Transform), (With<SpaceshipRootMarker>, With<AISpaceshipMarker>)>,
+    q_spaceship: Query<(Entity, &Transform, &LinearVelocity), (With<SpaceshipRootMarker>, With<AISpaceshipMarker>)>,
     player: Single<&Transform, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
 ) {
     let player_transform = player.into_inner();
 
-    for (entity, spaceship_transform) in &q_spaceship {
+    for (entity, spaceship_transform, linear_velocity) in &q_spaceship {
         let to_player = player_transform.translation - spaceship_transform.translation;
         let direction_to_player = to_player.normalize();
+
+        let velocity_vector = linear_velocity.dot(direction_to_player);
+        if velocity_vector > 10.0 {
+            continue;
+        }
 
         for (mut thruster_input, thruster_transform, _) in q_thruster
             .iter_mut()

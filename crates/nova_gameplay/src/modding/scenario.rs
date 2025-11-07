@@ -145,12 +145,14 @@ fn unload_scenario(
     mut commands: Commands,
     q_scoped: Query<Entity, With<ScenarioScopedMarker>>,
     mut current_scenario: ResMut<CurrentScenario>,
+    mut world: ResMut<NovaEventWorld>,
 ) {
     for entity in q_scoped.iter() {
         commands.entity(entity).despawn();
     }
 
     **current_scenario = None;
+    world.clear();
 }
 
 fn on_load_scenario_id(
