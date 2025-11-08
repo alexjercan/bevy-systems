@@ -3,7 +3,7 @@ use nova_protocol::prelude::*;
 
 #[derive(Parser)]
 #[command(name = "nova_protocol")]
-#[command(version = "0.1.0")]
+#[command(version = APP_VERSION)]
 #[command(about = "Simple spaceship editor scene where you can build custom ships", long_about = None)]
 struct Cli {
     #[cfg(feature = "debug")]

@@ -22,6 +22,7 @@ pub mod prelude {
     pub use nova_gameplay::prelude::*;
 
     pub use super::{AppBuilder, GameStates};
+    pub use nova_info::prelude::*;
 }
 
 /// Game states for the application.

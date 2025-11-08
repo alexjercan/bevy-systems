@@ -3972,7 +3972,7 @@ dependencies = [
 
 [[package]]
 name = "nova-protocol"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "avian3d",
  "bevy",
@@ -3985,7 +3985,7 @@ dependencies = [
 
 [[package]]
 name = "nova_assets"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bevy",
  "bevy_asset_loader",
@@ -3995,7 +3995,7 @@ dependencies = [
 
 [[package]]
 name = "nova_core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "avian3d",
  "bevy",
@@ -4011,7 +4011,7 @@ dependencies = [
 
 [[package]]
 name = "nova_debug"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "avian3d",
  "bevy",
@@ -4024,7 +4024,7 @@ dependencies = [
 
 [[package]]
 name = "nova_gameplay"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "avian3d",
  "bevy",
@@ -4037,7 +4037,7 @@ dependencies = [
 
 [[package]]
 name = "nova_info"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "ntapi"
