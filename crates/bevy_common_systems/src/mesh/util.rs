@@ -52,13 +52,32 @@ impl TriangleMeshBuilder {
         normals
     }
 
+    pub fn uvs(&self) -> Vec<Vec2> {
+        let mut uvs = vec![];
+
+        for t in &self.triangles {
+            let a = t.vertices[0];
+            let b = t.vertices[1];
+            let c = t.vertices[2];
+
+            let u_axis = (b - a).normalize();
+            let v_axis = t.normal().unwrap_or(Dir3::Y).cross(u_axis).normalize();
+
+            for v in [a, b, c] {
+                let local = v - a;
+                uvs.push(Vec2::new(local.dot(u_axis), local.dot(v_axis)));
+            }
+        }
+
+        uvs
+    }
+
     pub fn fill_boundary(&mut self, boundary: &[Vec3]) -> &Self {
         if boundary.len() < 3 {
             return self;
         }
 
-        let center =
-            boundary.iter().fold(Vec3::ZERO, |acc, v| acc + v) / (boundary.len() as f32);
+        let center = boundary.iter().fold(Vec3::ZERO, |acc, v| acc + v) / (boundary.len() as f32);
 
         // TODO: optionally implement reordering logic if boundary isn't guaranteed CCW
         let reordered = boundary.to_vec();
@@ -78,13 +97,13 @@ impl TriangleMeshBuilder {
     pub fn is_empty(&self) -> bool {
         self.triangles.is_empty()
     }
-
 }
 
 impl MeshBuilder for TriangleMeshBuilder {
     fn build(&self) -> Mesh {
         let (vertices, indices) = self.vertices_and_indices();
         let normals = self.normals();
+        let uvs = self.uvs();
 
         Mesh::new(
             PrimitiveTopology::TriangleList,
@@ -92,25 +111,16 @@ impl MeshBuilder for TriangleMeshBuilder {
         )
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_POSITION,
-            vertices
-                .iter()
-                .map(|v| [v.x, v.y, v.z])
-                .collect::<Vec<_>>(),
+            vertices.iter().map(|v| [v.x, v.y, v.z]).collect::<Vec<_>>(),
         )
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_NORMAL,
-            normals
-                .iter()
-                .map(|n| [n.x, n.y, n.z])
-                .collect::<Vec<_>>(),
+            normals.iter().map(|n| [n.x, n.y, n.z]).collect::<Vec<_>>(),
         )
-        // .with_inserted_attribute(
-        //     Mesh::ATTRIBUTE_UV_0,
-        //     vertices
-        //         .iter()
-        //         .map(|v| [v.uv.x, v.uv.y])
-        //         .collect::<Vec<_>>(),
-        // )
+        .with_inserted_attribute(
+            Mesh::ATTRIBUTE_UV_0,
+            uvs.iter().map(|u| [u.x, u.y]).collect::<Vec<_>>(),
+        )
         .with_inserted_indices(Indices::U32(indices.to_vec()))
     }
 }
