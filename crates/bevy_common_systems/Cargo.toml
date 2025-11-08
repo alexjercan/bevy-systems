@@ -21,3 +21,7 @@ clap = { version = "4.5.48", features = ["derive"] }
 [features]
 debug = ["avian3d/diagnostic_ui", "bevy/track_location", "bevy-inspector-egui"]
 dev = ["debug"]
+
+[lints.clippy]
+type_complexity = "allow"
+too_many_arguments = "allow"
