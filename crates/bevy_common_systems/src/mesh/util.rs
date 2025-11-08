@@ -5,15 +5,15 @@ use bevy::{
 };
 
 pub mod prelude {
-    pub use super::MeshBuilder;
+    pub use super::TriangleMeshBuilder;
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct MeshBuilder {
+pub struct TriangleMeshBuilder {
     pub triangles: Vec<Triangle3d>,
 }
 
-impl MeshBuilder {
+impl TriangleMeshBuilder {
     pub fn add_triangle(&mut self, t: Triangle3d) {
         self.triangles.push(t);
     }
@@ -79,7 +79,10 @@ impl MeshBuilder {
         self.triangles.is_empty()
     }
 
-    pub fn build(&self) -> Mesh {
+}
+
+impl MeshBuilder for TriangleMeshBuilder {
+    fn build(&self) -> Mesh {
         let (vertices, indices) = self.vertices_and_indices();
         let normals = self.normals();
 

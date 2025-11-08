@@ -12,6 +12,7 @@ rand = { version = "0.9.2" }
 serde_json = { version = "1.0.145" }
 serde = { version = "1.0.228" }
 bevy-inspector-egui = { version = "0.34", optional = true }
+noise = { version = "0.9" }
 bevy_common_systems_macros = { path = "./bevy_common_systems_macros" }
 
 [dev-dependencies]

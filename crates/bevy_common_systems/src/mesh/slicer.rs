@@ -8,7 +8,7 @@ use bevy::{
     prelude::*,
 };
 
-use super::util::MeshBuilder;
+use super::util::TriangleMeshBuilder;
 
 fn edge_plane_intersection(a: Vec3, b: Vec3, plane_point: Vec3, plane_normal: Vec3) -> Vec3 {
     let ab = b - a;
@@ -110,8 +110,8 @@ pub fn mesh_slice(mesh: &Mesh, plane_normal: Vec3, plane_point: Vec3) -> Option<
     .collect::<Vec<_>>();
 
     // Split triangles into positive / negative side
-    let mut positive_mesh_builder = MeshBuilder::default();
-    let mut negative_mesh_builder = MeshBuilder::default();
+    let mut positive_mesh_builder = TriangleMeshBuilder::default();
+    let mut negative_mesh_builder = TriangleMeshBuilder::default();
 
     let mut boundary = vec![];
     for tri in triangles {

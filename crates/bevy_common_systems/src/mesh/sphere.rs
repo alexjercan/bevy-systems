@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
-use super::util::MeshBuilder;
+use super::util::TriangleMeshBuilder;
 
 pub fn octahedron_sphere(resolution: u32) -> Mesh {
-    let mut builder = MeshBuilder::default();
+    let mut builder = TriangleMeshBuilder::default();
 
     // Base octahedron vertices
     let up = Vec3::Y;
@@ -40,7 +40,7 @@ fn slerp(a: Vec3, b: Vec3, t: f32) -> Vec3 {
 }
 
 /// Recursively subdivide a triangle face
-fn subdivide_face(builder: &mut MeshBuilder, a: Vec3, b: Vec3, c: Vec3, depth: u32) {
+fn subdivide_face(builder: &mut TriangleMeshBuilder, a: Vec3, b: Vec3, c: Vec3, depth: u32) {
     if depth == 0 {
         builder.add_triangle(Triangle3d::new(a, b, c));
     } else {
