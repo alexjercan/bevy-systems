@@ -122,11 +122,7 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
             rng.random_range(-100.0..100.0),
         );
         let radius = rng.random_range(1.0..3.0);
-        let color = Color::srgb(
-            rng.random_range(0.0..1.0),
-            rng.random_range(0.0..1.0),
-            rng.random_range(0.0..1.0),
-        );
+        let texture = game_assets.asteroid_texture.clone();
 
         objects.push(GameObjectConfig::Asteroid(AsteroidConfig {
             id: format!("asteroid_{}", i),
@@ -134,7 +130,7 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
             position: pos,
             rotation: Quat::IDENTITY,
             radius,
-            color,
+            texture,
             health: 100.0,
         }));
     }

@@ -55,7 +55,7 @@ pub struct AsteroidConfig {
     pub position: Vec3,
     pub rotation: Quat,
     pub radius: f32,
-    pub color: Color,
+    pub texture: Handle<Image>,
     pub health: f32,
 }
 
@@ -241,6 +241,10 @@ fn on_load_scenario(
                 let mesh = apply_noise_to_mesh(&octahedron_sphere(3), rng.random());
                 let collider = Collider::trimesh_from_mesh(&mesh)
                     .unwrap_or(Collider::sphere(1.0));
+                let material = StandardMaterial {
+                    base_color_texture: Some(config.texture.clone()),
+                    ..Default::default()
+                };
 
                 commands.spawn((
                     ScenarioScopedMarker,
@@ -257,7 +261,7 @@ fn on_load_scenario(
                         Transform::from_scale(Vec3::splat(config.radius)),
                         collider,
                         Mesh3d(meshes.add(mesh)),
-                        MeshMaterial3d(materials.add(config.color)),
+                        MeshMaterial3d(materials.add(material)),
                         Visibility::Inherited,
                     )],
                 ));
