@@ -241,12 +241,16 @@ fn on_load_scenario(
                     EntityId::new(config.id.clone()),
                     EntityTypeName::new("asteroid"),
                     Transform::from_translation(config.position).with_rotation(config.rotation),
-                    Mesh3d(meshes.add(Sphere::new(config.radius))),
-                    MeshMaterial3d(materials.add(config.color)),
                     Collider::sphere(config.radius),
                     RigidBody::Dynamic,
                     Health::new(config.health),
                     ExplodableEntityMarker,
+                    children![(
+                        Name::new("Asteroid Mesh"),
+                        Transform::from_scale(Vec3::splat(config.radius)),
+                        Mesh3d(meshes.add(octahedron_sphere(3))),
+                        MeshMaterial3d(materials.add(config.color)),
+                    )],
                 ));
             }
             GameObjectConfig::Spaceship(config) => {

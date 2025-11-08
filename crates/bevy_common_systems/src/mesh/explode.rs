@@ -44,7 +44,7 @@ pub struct ExplodeMeshPlugin;
 
 impl Plugin for ExplodeMeshPlugin {
     fn build(&self, app: &mut App) {
-        debug!("ExplodeOnDestroyPlugin: build");
+        debug!("ExplodeMeshPlugin: build");
 
         // TODO: How can I implement this using observers only?
         app.add_systems(Update, setup_explode_mesh_children);

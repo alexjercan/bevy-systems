@@ -15,3 +15,6 @@ bevy_common_systems = { path = "../bevy_common_systems" }
 
 [lints]
 workspace = true
+
+[features]
+debug = ["bevy/track_location", "bevy_common_systems/debug"]

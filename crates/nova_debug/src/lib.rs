@@ -1,10 +1,9 @@
 //! A Bevy plugin that adds various debugging tools.
 
 use bevy::prelude::*;
+use bevy_common_systems::prelude::*;
 
-pub mod inspector;
 pub mod sections;
-pub mod wireframe;
 
 pub mod prelude {
     pub use super::{debugdump, DebugPlugin};
@@ -27,8 +26,8 @@ impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(DebugEnabled(true));
 
-        app.add_plugins(inspector::InpsectorDebugPlugin);
-        app.add_plugins(wireframe::WireframeDebugPlugin);
+        app.add_plugins(InpsectorDebugPlugin);
+        app.add_plugins(WireframeDebugPlugin);
         app.add_plugins(sections::SectionsDebugPlugin);
 
         app.add_systems(Update, toggle_debug_mode);

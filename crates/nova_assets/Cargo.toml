@@ -14,4 +14,4 @@ nova_gameplay = { path = "../nova_gameplay" }
 workspace = true
 
 [features]
-debug = []
+debug = ["bevy/track_location", "nova_gameplay/debug"]

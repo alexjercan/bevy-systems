@@ -90,7 +90,7 @@ fn on_thruster_input(
         let direction_to_player = to_player.normalize();
 
         let velocity_vector = linear_velocity.dot(direction_to_player);
-        if velocity_vector > 10.0 {
+        if velocity_vector > 1.0 {
             continue;
         }
 

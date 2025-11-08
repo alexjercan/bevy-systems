@@ -755,8 +755,10 @@ version = "0.0.1"
 dependencies = [
  "avian3d",
  "bevy",
+ "bevy-inspector-egui",
  "bevy_common_systems_macros",
  "bevy_enhanced_input",
+ "clap",
  "rand",
  "serde",
  "serde_json",
@@ -4001,6 +4003,7 @@ dependencies = [
  "avian3d",
  "bevy",
  "bevy-inspector-egui",
+ "bevy_common_systems",
  "bevy_mod_debugdump",
  "itertools 0.14.0",
  "nova_gameplay",

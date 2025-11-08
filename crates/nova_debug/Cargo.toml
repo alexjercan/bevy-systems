@@ -6,14 +6,12 @@ description = "Debugging utilities for the Nova Protocol game"
 
 [dependencies]
 avian3d = { version = "0.4", features = ["diagnostic_ui"] }
-bevy = { version = "0.17.2" }
+bevy = { version = "0.17.2", features = ["track_location"] }
 itertools = { version = "0.14.0" }
 bevy-inspector-egui = { version = "0.34" }
 bevy_mod_debugdump = { version = "0.14" }
-nova_gameplay = { path = "../nova_gameplay" }
+nova_gameplay = { path = "../nova_gameplay", features = ["debug"] }
+bevy_common_systems = { path = "../bevy_common_systems", features = ["debug"] }
 
 [lints]
 workspace = true
-
-[features]
-debug = []
