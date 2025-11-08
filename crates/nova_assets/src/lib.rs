@@ -54,6 +54,8 @@ impl Plugin for GameAssetsPlugin {
 pub struct GameAssets {
     #[asset(path = "textures/cubemap.png")]
     pub cubemap: Handle<Image>,
+    #[asset(path = "textures/asteroid.png")]
+    pub asteroid_texture: Handle<Image>,
     #[asset(path = "gltf/hull-01.glb#Scene0")]
     pub hull_01: Handle<Scene>,
     #[asset(path = "gltf/turret-yaw-01.glb#Scene0")]

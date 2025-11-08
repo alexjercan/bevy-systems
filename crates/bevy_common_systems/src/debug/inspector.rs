@@ -6,18 +6,27 @@ use bevy_inspector_egui::{
     egui, DefaultInspectorConfigPlugin,
 };
 
+/// The keycode to toggle debug mode.
+pub const DEBUG_TOGGLE_KEYCODE: KeyCode = KeyCode::F11;
+
+/// Resource with debug toggle state.
+#[derive(Resource, Default, Clone, Debug, Deref, DerefMut, PartialEq, Eq, Hash)]
+pub struct DebugEnabled(pub bool);
+
 /// A plugin that adds an inspector UI for debugging.
 pub struct InpsectorDebugPlugin;
 
 impl Plugin for InpsectorDebugPlugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(DebugEnabled(true));
+
         app
             // Bevy egui inspector
             .add_plugins(EguiPlugin::default())
             .add_plugins(DefaultInspectorConfigPlugin)
             .add_systems(
                 EguiPrimaryContextPass,
-                inspector_ui.run_if(resource_equals(super::DebugEnabled(true))),
+                inspector_ui.run_if(resource_equals(DebugEnabled(true))),
             );
 
         app.insert_resource(bevy_egui::EguiGlobalSettings {
@@ -40,7 +49,7 @@ impl Plugin for InpsectorDebugPlugin {
             PhysicsDiagnosticsUiPlugin,
         ));
 
-        app.add_systems(Update, (update_physics_gizmos, update_physics_ui));
+        app.add_systems(Update, (enable_physics_gizmos, enable_physics_ui, toggle_debug_mode));
     }
 }
 
@@ -76,7 +85,7 @@ fn on_add_camera(add: On<Add, Camera>, mut commands: Commands) {
     commands.entity(entity).insert(PrimaryEguiContext);
 }
 
-fn update_physics_gizmos(debug: Res<super::DebugEnabled>, mut store: ResMut<GizmoConfigStore>) {
+fn enable_physics_gizmos(mut store: ResMut<GizmoConfigStore>, debug: Res<DebugEnabled>) {
     if debug.is_changed() {
         store
             .config_mut::<avian3d::prelude::PhysicsGizmos>()
@@ -85,11 +94,14 @@ fn update_physics_gizmos(debug: Res<super::DebugEnabled>, mut store: ResMut<Gizm
     }
 }
 
-fn update_physics_ui(
-    debug: Res<super::DebugEnabled>,
-    mut settings: ResMut<PhysicsDiagnosticsUiSettings>,
-) {
+fn enable_physics_ui(mut settings: ResMut<PhysicsDiagnosticsUiSettings>, debug: Res<DebugEnabled>) {
     if debug.is_changed() {
         settings.enabled = **debug;
+    }
+}
+
+fn toggle_debug_mode(mut debug: ResMut<DebugEnabled>, keyboard: Res<ButtonInput<KeyCode>>) {
+    if keyboard.just_pressed(DEBUG_TOGGLE_KEYCODE) {
+        **debug = !**debug;
     }
 }

@@ -2,6 +2,7 @@ use avian3d::prelude::*;
 use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_common_systems::prelude::*;
 use bevy_enhanced_input::prelude::*;
+use rand::Rng;
 
 use super::{
     actions::EventActionConfig,
@@ -54,7 +55,7 @@ pub struct AsteroidConfig {
     pub position: Vec3,
     pub rotation: Quat,
     pub radius: f32,
-    pub color: Color,
+    pub texture: Handle<Image>,
     pub health: f32,
 }
 
@@ -180,6 +181,8 @@ fn on_load_scenario(
         commands.entity(entity).despawn();
     }
 
+    let mut rng = rand::rng();
+
     let scenario = (**load).clone();
     **current_scenario = Some(scenario.clone());
     info!("Setting up scenario: {}", scenario.name);
@@ -235,18 +238,32 @@ fn on_load_scenario(
     for object in scenario.map.objects.iter() {
         match object {
             GameObjectConfig::Asteroid(config) => {
+                let mesh = apply_noise_to_mesh(&octahedron_sphere(3), rng.random());
+                let collider = Collider::trimesh_from_mesh(&mesh)
+                    .unwrap_or(Collider::sphere(1.0));
+                let material = StandardMaterial {
+                    base_color_texture: Some(config.texture.clone()),
+                    ..Default::default()
+                };
+
                 commands.spawn((
                     ScenarioScopedMarker,
                     Name::new(config.name.clone()),
                     EntityId::new(config.id.clone()),
                     EntityTypeName::new("asteroid"),
                     Transform::from_translation(config.position).with_rotation(config.rotation),
-                    Mesh3d(meshes.add(Sphere::new(config.radius))),
-                    MeshMaterial3d(materials.add(config.color)),
-                    Collider::sphere(config.radius),
                     RigidBody::Dynamic,
                     Health::new(config.health),
                     ExplodableEntityMarker,
+                    Visibility::Visible,
+                    children![(
+                        Name::new("Asteroid Mesh"),
+                        Transform::from_scale(Vec3::splat(config.radius)),
+                        collider,
+                        Mesh3d(meshes.add(mesh)),
+                        MeshMaterial3d(materials.add(material)),
+                        Visibility::Inherited,
+                    )],
                 ));
             }
             GameObjectConfig::Spaceship(config) => {
