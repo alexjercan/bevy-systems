@@ -4,7 +4,7 @@ use bevy::{
     app::Plugins,
     log::{Level, LogPlugin},
     prelude::*,
-    window::{CursorGrabMode, CursorOptions, PresentMode, PrimaryWindow},
+    window::PresentMode,
 };
 use nova_assets::prelude::*;
 #[cfg(feature = "debug")]
@@ -110,18 +110,6 @@ impl AppBuilder {
             ),
         );
 
-        if cfg!(not(feature = "debug")) {
-            // TODO: implement this in a proper way for debug mode
-            self.app.add_systems(
-                OnEnter(GameStates::Playing),
-                |primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>| {
-                    let mut primary_cursor_options = primary_cursor_options.into_inner();
-                    primary_cursor_options.grab_mode = CursorGrabMode::Locked;
-                    primary_cursor_options.visible = false;
-                },
-            );
-        }
-
         self.app
     }
 }
@@ -195,9 +183,7 @@ fn setup_status_ui(mut commands: Commands, game_assets: Res<GameAssets>) {
     }),));
     commands.spawn((status_bar_item(StatusBarItemConfig {
         icon: None,
-        value_fn: status_version_value_fn(
-            std::env::var("APP_VERSION").unwrap_or_else(|_| "unknown".to_string()),
-        ),
+        value_fn: status_version_value_fn(nova_info::APP_VERSION),
         color_fn: status_version_color_fn(),
         prefix: "v".to_string(),
         suffix: "".to_string(),

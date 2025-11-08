@@ -31,10 +31,19 @@ pub fn core_plugin(app: &mut App) {
     );
 
     app.add_systems(
+        OnEnter(ExampleStates::Scenario),
+        (
+            setup_grab_cursor_scenario,
+            |mut selection: ResMut<SectionChoice>| {
+                *selection = SectionChoice::None;
+            },
+        ),
+    );
+    app.add_systems(
         OnEnter(ExampleStates::Editor),
         (
             setup_editor_scene,
-            setup_grab_cursor,
+            setup_grab_cursor_editor,
             |mut selection: ResMut<SectionChoice>| {
                 *selection = SectionChoice::None;
             },
@@ -64,7 +73,10 @@ pub fn core_plugin(app: &mut App) {
         .add_observer(on_move_spaceship_section)
         .add_observer(on_out_spaceship_section);
 
-    app.add_systems(Update, lock_on_left_click);
+    app.add_systems(
+        Update,
+        lock_on_left_click.run_if(in_state(ExampleStates::Editor)),
+    );
     app.add_systems(
         Update,
         switch_scene_editor.run_if(in_state(ExampleStates::Scenario)),
@@ -416,6 +428,25 @@ fn setup_editor_scene(mut commands: Commands, game_assets: Res<GameAssets>) {
     ));
 }
 
+pub fn setup_grab_cursor_scenario(
+    primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>,
+) {
+    if cfg!(not(feature = "debug")) {
+        // TODO: implement this in a proper way for debug mode
+        let mut primary_cursor_options = primary_cursor_options.into_inner();
+        primary_cursor_options.grab_mode = CursorGrabMode::Locked;
+        primary_cursor_options.visible = false;
+    }
+}
+
+pub fn setup_grab_cursor_editor(
+    primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>,
+) {
+    let mut primary_cursor_options = primary_cursor_options.into_inner();
+    primary_cursor_options.grab_mode = CursorGrabMode::None;
+    primary_cursor_options.visible = true;
+}
+
 fn lock_on_left_click(
     primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>,
     mouse: Res<ButtonInput<MouseButton>>,
@@ -568,12 +599,6 @@ fn button(text: &str) -> impl Bundle {
             TextShadow::default(),
         )],
     )
-}
-
-pub fn setup_grab_cursor(primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>) {
-    let mut primary_cursor_options = primary_cursor_options.into_inner();
-    primary_cursor_options.grab_mode = CursorGrabMode::None;
-    primary_cursor_options.visible = true;
 }
 
 fn create_new_spaceship(

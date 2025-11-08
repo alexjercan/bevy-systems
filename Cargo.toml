@@ -1,8 +1,8 @@
 [package]
 name = "nova-protocol"
-version = "0.1.0"
+version = { workspace = true }
 authors = ["jercan_alex27@yahoo.com"]
-edition = "2021"
+edition = { workspace = true }
 license = "MIT"
 homepage = "https://github.com/alexjercan/nova-protocol"
 description = "A 3D space shooter game made with Bevy"
@@ -70,6 +70,10 @@ dev = ["debug"]
 type_complexity = "allow"
 too_many_arguments = "allow"
 
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+
 [workspace]
 members = [
   "crates/bevy_common_systems",
@@ -77,5 +81,6 @@ members = [
   "crates/nova_core",
   "crates/nova_debug",
   "crates/nova_gameplay",
+  "crates/nova_info",
 ]
 resolver = "2"

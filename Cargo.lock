@@ -4005,6 +4005,7 @@ dependencies = [
  "nova_assets",
  "nova_debug",
  "nova_gameplay",
+ "nova_info",
  "rand 0.9.2",
 ]
 
@@ -4033,6 +4034,10 @@ dependencies = [
  "rand 0.9.2",
  "serde",
 ]
+
+[[package]]
+name = "nova_info"
+version = "0.1.0"
 
 [[package]]
 name = "ntapi"

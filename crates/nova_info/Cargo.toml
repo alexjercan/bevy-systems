@@ -1,0 +1,11 @@
+[package]
+name = "nova_info"
+version = { workspace = true }
+edition = { workspace = true }
+description = "Build info utilities for the Nova Protocol game"
+
+[lints]
+workspace = true
+
+[features]
+debug = []
