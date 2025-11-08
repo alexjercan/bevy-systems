@@ -139,9 +139,9 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         id: "other_spaceship".to_string(),
         name: "Other Spaceship".to_string(),
         position: Vec3::new(
-            rng.random_range(-50.0..50.0),
+            rng.random_range(-100.0..100.0),
             rng.random_range(-10.0..10.0),
-            rng.random_range(-50.0..50.0),
+            rng.random_range(-200.0..-100.0),
         ),
         rotation: Quat::IDENTITY,
         health: 100.0,
