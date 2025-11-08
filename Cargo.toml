@@ -1,8 +1,8 @@
 [package]
 name = "nova-protocol"
 version = { workspace = true }
-authors = ["jercan_alex27@yahoo.com"]
 edition = { workspace = true }
+authors = ["jercan_alex27@yahoo.com"]
 license = "MIT"
 homepage = "https://github.com/alexjercan/nova-protocol"
 description = "A 3D space shooter game made with Bevy"
