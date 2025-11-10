@@ -11,6 +11,10 @@ use nova_assets::prelude::*;
 use nova_debug::DebugPlugin;
 pub use nova_gameplay;
 use nova_gameplay::prelude::*;
+use nova_scenario::prelude::*;
+pub use nova_scenario;
+pub use nova_events;
+pub use nova_info;
 
 mod core;
 
@@ -21,6 +25,8 @@ pub mod prelude {
     pub use nova_debug::prelude::*;
     pub use nova_gameplay::prelude::*;
     pub use nova_info::prelude::*;
+    pub use nova_scenario::prelude::*;
+    pub use nova_events::prelude::*;
 
     pub use super::{AppBuilder, GameStates};
 }
@@ -84,6 +90,9 @@ impl AppBuilder {
             .add_plugins(bevy_enhanced_input::EnhancedInputPlugin);
         self.app.add_plugins(GameAssetsPlugin);
         self.app.add_plugins(NovaGameplayPlugin {
+            render: self.render,
+        });
+        self.app.add_plugins(NovaScenarioPlugin {
             render: self.render,
         });
 

@@ -1,14 +1,16 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
+use nova_events::prelude::*;
+use nova_gameplay::prelude::*;
 
 use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{
         BaseScenarioObjectConfig, DebugMessageActionConfig, EventActionConfig,
-        NextScenarioActionConfig, ObjectiveActionConfig, ObjectiveCompleteActionConfig,
-        ScenarioObjectConfig, ScenarioObjectKind, VariableSetActionConfig,
+        NextScenarioActionConfig, ObjectiveCompleteActionConfig, ScenarioObjectConfig,
+        ScenarioObjectKind, VariableSetActionConfig,
     };
 }
 
@@ -90,21 +92,6 @@ pub struct NextScenarioActionConfig {
 impl EventAction<NovaEventWorld> for NextScenarioActionConfig {
     fn action(&self, world: &mut NovaEventWorld, _: &GameEventInfo) {
         world.next_scenario = Some(self.clone());
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct ObjectiveActionConfig {
-    pub id: String,
-    pub message: String,
-}
-
-impl ObjectiveActionConfig {
-    pub fn new(id: &str, message: &str) -> Self {
-        Self {
-            id: id.to_string(),
-            message: message.to_string(),
-        }
     }
 }
 

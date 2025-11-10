@@ -1,12 +1,27 @@
 use bevy::prelude::*;
 
-use crate::prelude::{ObjectiveActionConfig, SpaceshipSystems};
+use crate::prelude::SpaceshipSystems;
 
 pub mod prelude {
     pub use super::{
         objectives_hud, GameObjectivesHud, ObjectiveHudMarker, ObjectiveRootHudConfig,
-        ObjectivesHudPlugin,
+        ObjectivesHudPlugin, ObjectiveRootHudMarker, ObjectiveActionConfig,
     };
+}
+
+#[derive(Clone, Debug)]
+pub struct ObjectiveActionConfig {
+    pub id: String,
+    pub message: String,
+}
+
+impl ObjectiveActionConfig {
+    pub fn new(id: &str, message: &str) -> Self {
+        Self {
+            id: id.to_string(),
+            message: message.to_string(),
+        }
+    }
 }
 
 #[derive(Resource, Clone, Debug, Default)]

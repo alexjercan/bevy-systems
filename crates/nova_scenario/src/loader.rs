@@ -1,13 +1,9 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_common_systems::prelude::*;
 use bevy_enhanced_input::prelude::*;
+use nova_events::prelude::*;
+use nova_gameplay::prelude::*;
 
-use super::{
-    actions::EventActionConfig,
-    events::{OnStartEvent, OnStartEventInfo},
-    filters::EventFilterConfig,
-    world::NovaEventWorld,
-};
 use crate::prelude::*;
 
 pub mod prelude {

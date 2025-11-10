@@ -6,7 +6,6 @@ pub mod camera_controller;
 pub mod damage;
 pub mod hud;
 pub mod input;
-pub mod scenario;
 pub mod plugin;
 pub mod sections;
 
@@ -21,7 +20,6 @@ pub mod prelude {
         damage::prelude::*,
         hud::prelude::*,
         input::prelude::*,
-        scenario::prelude::*,
         plugin::{NovaGameplayPlugin, SpaceshipSystems},
         sections::prelude::*,
     };

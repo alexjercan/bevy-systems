@@ -2,11 +2,9 @@ use std::collections::VecDeque;
 
 use bevy::{ecs::world::CommandQueue, platform::collections::HashMap, prelude::*};
 use bevy_common_systems::prelude::EventWorld;
+use nova_gameplay::prelude::*;
 
-use crate::prelude::{
-    GameObjectivesHud, LoadScenarioById, NextScenarioActionConfig, ObjectiveActionConfig,
-    VariableLiteral,
-};
+use crate::prelude::*;
 
 #[derive(Resource, Default)]
 pub struct NovaEventWorld {

@@ -8,32 +8,13 @@ pub mod world;
 
 pub mod prelude {
     pub use super::{
-        actions::prelude::*, events::prelude::*, filters::prelude::*, loader::prelude::*,
-        objects::prelude::*, variables::prelude::*, world::NovaEventWorld, EntityId,
-        EntityTypeName, NovaScenarioPlugin,
+        actions::prelude::*, filters::prelude::*, loader::prelude::*, objects::prelude::*,
+        variables::prelude::*, world::NovaEventWorld, events::prelude::*, NovaScenarioPlugin,
     };
 }
 
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
-
-#[derive(Component, Debug, Clone, Default, Deref, DerefMut, Reflect)]
-pub struct EntityId(pub String);
-
-impl EntityId {
-    pub fn new<S: Into<String>>(s: S) -> Self {
-        EntityId(s.into())
-    }
-}
-
-#[derive(Component, Debug, Clone, Default, Deref, DerefMut, Reflect)]
-pub struct EntityTypeName(pub String);
-
-impl EntityTypeName {
-    pub fn new<S: Into<String>>(s: S) -> Self {
-        EntityTypeName(s.into())
-    }
-}
 
 /// A plugin that handles Game Events.
 pub struct NovaScenarioPlugin {

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::world::NovaEventWorld;
+use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{

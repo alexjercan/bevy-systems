@@ -1,5 +1,6 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use nova_gameplay::prelude::*;
+use nova_scenario::prelude::*;
 use rand::prelude::*;
 
 pub(crate) fn register_scenario(mut commands: Commands, game_assets: Res<super::GameAssets>) {

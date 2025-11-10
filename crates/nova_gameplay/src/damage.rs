@@ -7,8 +7,7 @@ pub mod prelude {
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
-
-use crate::prelude::*;
+use nova_events::prelude::*;
 
 const DAMAGE_MODIFIER: f32 = 1.00;
 

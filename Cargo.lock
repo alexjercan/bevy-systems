@@ -4020,6 +4020,7 @@ dependencies = [
  "bevy",
  "bevy_asset_loader",
  "nova_gameplay",
+ "nova_scenario",
  "rand 0.9.2",
 ]
 
@@ -4034,8 +4035,10 @@ dependencies = [
  "itertools 0.14.0",
  "nova_assets",
  "nova_debug",
+ "nova_events",
  "nova_gameplay",
  "nova_info",
+ "nova_scenario",
  "rand 0.9.2",
 ]
 
@@ -4053,6 +4056,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nova_events"
+version = "0.2.0"
+dependencies = [
+ "bevy",
+ "bevy_common_systems",
+ "serde",
+]
+
+[[package]]
 name = "nova_gameplay"
 version = "0.2.0"
 dependencies = [
@@ -4062,6 +4074,7 @@ dependencies = [
  "bevy_enhanced_input",
  "bevy_hanabi",
  "bevy_rand",
+ "nova_events",
  "rand 0.9.2",
  "serde",
 ]
@@ -4069,6 +4082,20 @@ dependencies = [
 [[package]]
 name = "nova_info"
 version = "0.2.0"
+
+[[package]]
+name = "nova_scenario"
+version = "0.2.0"
+dependencies = [
+ "avian3d",
+ "bevy",
+ "bevy_common_systems",
+ "bevy_enhanced_input",
+ "bevy_rand",
+ "nova_events",
+ "nova_gameplay",
+ "rand 0.9.2",
+]
 
 [[package]]
 name = "ntapi"

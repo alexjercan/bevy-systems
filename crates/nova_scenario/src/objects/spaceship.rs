@@ -1,19 +1,14 @@
 use bevy::prelude::*;
-
-use crate::prelude::*;
+use nova_events::prelude::*;
+use nova_gameplay::prelude::*;
 
 pub mod prelude {
     pub use super::{
         spaceship_scenario_object, AIControllerConfig, PlayerControllerConfig, SpaceshipConfig,
         SpaceshipController, SpaceshipPlugin, SpaceshipSectionConfig, SpaceshipSectionsConfig,
-        SPACESHIP_TYPE_NAME, SpaceshipRootMarker
+        SPACESHIP_TYPE_NAME,
     };
 }
-
-/// This will be the root component for the entire spaceship. All other sections will be children
-/// of this entity.
-#[derive(Component, Clone, Debug, Default, Reflect)]
-pub struct SpaceshipRootMarker;
 
 pub const SPACESHIP_TYPE_NAME: &str = "spaceship";
 

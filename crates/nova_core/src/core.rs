@@ -7,6 +7,8 @@ use bevy::{
     ui_widgets::{observe, Activate, Button},
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
+use nova_events::prelude::*;
+use nova_scenario::prelude::*;
 use rand::prelude::*;
 
 use crate::prelude::*;

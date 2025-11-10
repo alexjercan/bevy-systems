@@ -3,8 +3,7 @@ use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 use bevy_rand::prelude::*;
 use rand::RngCore;
-
-use crate::prelude::*;
+use nova_events::prelude::*;
 
 pub mod prelude {
     pub use super::{
