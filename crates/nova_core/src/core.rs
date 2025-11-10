@@ -262,7 +262,7 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
             filters: vec![],
             actions: objects
                 .into_iter()
-                .map(|o| EventActionConfig::SpawnScenarioObject(o))
+                .map(EventActionConfig::SpawnScenarioObject)
                 .collect::<_>(),
         },
         ScenarioEventConfig {

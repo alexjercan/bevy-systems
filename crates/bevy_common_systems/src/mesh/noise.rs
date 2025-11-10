@@ -1,5 +1,9 @@
-use bevy::{mesh::{Indices, VertexAttributeValues}, prelude::*};
+use bevy::{
+    mesh::{Indices, VertexAttributeValues},
+    prelude::*,
+};
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
+
 use super::util::TriangleMeshBuilder;
 
 // TODO: Refactor this so we can have customizable parameters
@@ -13,7 +17,10 @@ pub fn apply_noise_to_mesh(mesh: &Mesh, seed: u32) -> Mesh {
     };
 
     let planet = PlanetHeight::default().with_seed(seed);
-    let height_values = positions.iter().map(|&p| planet.get_point(p)).collect::<Vec<_>>();
+    let height_values = positions
+        .iter()
+        .map(|&p| planet.get_point(p))
+        .collect::<Vec<_>>();
 
     let positions = positions
         .iter()

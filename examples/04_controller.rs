@@ -80,16 +80,14 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         kind: ScenarioObjectKind::Spaceship(spaceship),
     });
 
-    let events = vec![
-        ScenarioEventConfig {
-            name: EventConfig::OnStart,
-            filters: vec![],
-            actions: objects
-                .into_iter()
-                .map(|o| EventActionConfig::SpawnScenarioObject(o))
-                .collect::<_>(),
-        },
-    ];
+    let events = vec![ScenarioEventConfig {
+        name: EventConfig::OnStart,
+        filters: vec![],
+        actions: objects
+            .into_iter()
+            .map(EventActionConfig::SpawnScenarioObject)
+            .collect::<_>(),
+    }];
 
     ScenarioConfig {
         id: "test_scenario".to_string(),

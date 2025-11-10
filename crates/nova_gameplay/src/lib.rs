@@ -2,6 +2,7 @@
 //!
 //! Nova Protocol specific systems and components.
 
+pub mod asteroid;
 pub mod camera_controller;
 pub mod components;
 pub mod damage;
@@ -10,7 +11,6 @@ pub mod input;
 pub mod modding;
 pub mod plugin;
 pub mod sections;
-pub mod asteroid;
 pub mod spaceship;
 
 pub use bevy_common_systems;
@@ -20,6 +20,7 @@ pub mod prelude {
     pub use bevy_common_systems::prelude::*;
 
     pub use super::{
+        asteroid::prelude::*,
         camera_controller::prelude::*,
         components::prelude::*,
         damage::prelude::*,
@@ -28,7 +29,6 @@ pub mod prelude {
         modding::prelude::*,
         plugin::{NovaGameplayPlugin, SpaceshipSystems},
         sections::prelude::*,
-        asteroid::prelude::*,
         spaceship::prelude::*,
     };
 }

@@ -20,9 +20,9 @@ pub mod prelude {
     #[cfg(feature = "debug")]
     pub use nova_debug::prelude::*;
     pub use nova_gameplay::prelude::*;
+    pub use nova_info::prelude::*;
 
     pub use super::{AppBuilder, GameStates};
-    pub use nova_info::prelude::*;
 }
 
 /// Game states for the application.

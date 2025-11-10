@@ -49,7 +49,10 @@ impl Plugin for InpsectorDebugPlugin {
             PhysicsDiagnosticsUiPlugin,
         ));
 
-        app.add_systems(Update, (enable_physics_gizmos, enable_physics_ui, toggle_debug_mode));
+        app.add_systems(
+            Update,
+            (enable_physics_gizmos, enable_physics_ui, toggle_debug_mode),
+        );
     }
 }
 
