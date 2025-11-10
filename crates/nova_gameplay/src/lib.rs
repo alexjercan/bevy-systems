@@ -10,6 +10,7 @@ pub mod input;
 pub mod modding;
 pub mod plugin;
 pub mod sections;
+pub mod asteroid;
 
 pub use bevy_common_systems;
 
@@ -26,5 +27,6 @@ pub mod prelude {
         modding::prelude::*,
         plugin::{NovaGameplayPlugin, SpaceshipSystems},
         sections::prelude::*,
+        asteroid::prelude::*,
     };
 }

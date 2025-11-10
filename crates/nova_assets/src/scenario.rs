@@ -237,6 +237,14 @@ pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
         ScenarioEventConfig {
             name: EventConfig::OnStart,
             filters: vec![],
+            actions: objects
+                .into_iter()
+                .map(|o| EventActionConfig::GameObjectSpawn(o))
+                .collect::<_>(),
+        },
+        ScenarioEventConfig {
+            name: EventConfig::OnStart,
+            filters: vec![],
             actions: vec![EventActionConfig::Objective(ObjectiveActionConfig::new(
                 "destroy_asteroids",
                 "Objective: Destroy 5 asteroids!",
@@ -359,10 +367,7 @@ pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
         id: "asteroid_field".to_string(),
         name: "Asteroid Field".to_string(),
         description: "A dense asteroid field.".to_string(),
-        map: MapConfig {
-            cubemap: game_assets.cubemap.clone(),
-            objects,
-        },
+        cubemap: game_assets.cubemap.clone(),
         events,
     }
 }
@@ -372,10 +377,7 @@ pub fn asteroid_next(game_assets: &super::GameAssets) -> ScenarioConfig {
         id: "asteroid_next".to_string(),
         name: "Asteroid Field - Next".to_string(),
         description: "The next scenario after the asteroid field.".to_string(),
-        map: MapConfig {
-            cubemap: game_assets.cubemap.clone(),
-            objects: vec![],
-        },
+        cubemap: game_assets.cubemap.clone(),
         events: vec![],
     }
 }

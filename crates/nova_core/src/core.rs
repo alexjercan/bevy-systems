@@ -255,6 +255,14 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         ScenarioEventConfig {
             name: EventConfig::OnStart,
             filters: vec![],
+            actions: objects
+                .into_iter()
+                .map(|o| EventActionConfig::GameObjectSpawn(o))
+                .collect::<_>(),
+        },
+        ScenarioEventConfig {
+            name: EventConfig::OnStart,
+            filters: vec![],
             actions: vec![EventActionConfig::Objective(ObjectiveActionConfig::new(
                 "destroy_spaceship",
                 "Objective: Destroy the other spaceship.",
@@ -291,10 +299,7 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         id: "test_scenario".to_string(),
         name: "Test Scenario".to_string(),
         description: "A test scenario.".to_string(),
-        map: MapConfig {
-            cubemap: game_assets.cubemap.clone(),
-            objects,
-        },
+        cubemap: game_assets.cubemap.clone(),
         events,
     }
 }

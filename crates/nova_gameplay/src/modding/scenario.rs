@@ -1,8 +1,6 @@
-use avian3d::prelude::*;
 use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_common_systems::prelude::*;
 use bevy_enhanced_input::prelude::*;
-use rand::Rng;
 
 use super::{
     actions::EventActionConfig,
@@ -14,11 +12,9 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{
-        AIControllerConfig, AsteroidConfig, CurrentScenario, GameObjectConfig, GameScenarios,
-        LoadScenario, LoadScenarioById, MapConfig, PlayerControllerConfig, ScenarioConfig,
+        CurrentScenario, GameScenarios, LoadScenario, LoadScenarioById, ScenarioConfig,
         ScenarioEventConfig, ScenarioId, ScenarioLoaded, ScenarioLoaderPlugin,
-        ScenarioScopedMarker, SpaceshipConfig, SpaceshipController, SpaceshipSectionConfig,
-        UnloadScenario,
+        ScenarioScopedMarker, UnloadScenario,
     };
 }
 
@@ -32,68 +28,8 @@ pub struct ScenarioConfig {
     pub id: String,
     pub name: String,
     pub description: String,
-    pub map: MapConfig,
-    pub events: Vec<ScenarioEventConfig>,
-}
-
-#[derive(Clone, Debug)]
-pub struct MapConfig {
     pub cubemap: Handle<Image>,
-    pub objects: Vec<GameObjectConfig>,
-}
-
-#[derive(Clone, Debug)]
-pub enum GameObjectConfig {
-    Asteroid(AsteroidConfig),
-    Spaceship(SpaceshipConfig),
-}
-
-#[derive(Clone, Debug)]
-pub struct AsteroidConfig {
-    pub id: String,
-    pub name: String,
-    pub position: Vec3,
-    pub rotation: Quat,
-    pub radius: f32,
-    pub texture: Handle<Image>,
-    pub health: f32,
-}
-
-#[derive(Clone, Debug)]
-pub enum SpaceshipController {
-    None,
-    Player(PlayerControllerConfig),
-    AI(AIControllerConfig),
-}
-
-#[derive(Clone, Debug)]
-pub struct PlayerControllerConfig {
-    // TODO: Add some kind of input mapping from Section ID to input actions
-    // TODO: Add Section ID in the SpaceshipSectionConfig as String maybe
-    // pub input_mapping: HashMap<>,
-}
-
-#[derive(Clone, Debug)]
-pub struct AIControllerConfig {}
-
-#[derive(Clone, Debug)]
-pub struct SpaceshipConfig {
-    pub id: String,
-    pub name: String,
-    pub position: Vec3,
-    pub rotation: Quat,
-    pub health: f32,
-    pub controller: SpaceshipController,
-    pub sections: Vec<SpaceshipSectionConfig>,
-}
-
-#[derive(Clone, Debug)]
-pub struct SpaceshipSectionConfig {
-    pub position: Vec3,
-    pub rotation: Quat,
-    // NOTE: Maybe in the future this will be a Handle and in the .cfg file it will be represented
-    // by an ID.
-    pub config: SectionConfig,
+    pub events: Vec<ScenarioEventConfig>,
 }
 
 #[derive(Clone, Debug)]
@@ -169,8 +105,6 @@ fn on_load_scenario_id(
 fn on_load_scenario(
     load: On<LoadScenario>,
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut current_scenario: ResMut<CurrentScenario>,
     q_scoped: Query<Entity, With<ScenarioScopedMarker>>,
 ) {
@@ -180,8 +114,6 @@ fn on_load_scenario(
     for entity in q_scoped.iter() {
         commands.entity(entity).despawn();
     }
-
-    let mut rng = rand::rng();
 
     let scenario = (**load).clone();
     **current_scenario = Some(scenario.clone());
@@ -196,7 +128,7 @@ fn on_load_scenario(
         WASDCameraController,
         Transform::from_xyz(0.0, 10.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
         SkyboxConfig {
-            cubemap: scenario.map.cubemap.clone(),
+            cubemap: scenario.cubemap.clone(),
             brightness: 1000.0,
         },
     ));
@@ -231,116 +163,6 @@ fn on_load_scenario(
         ),
     ));
 
-    // Fire onstart event
-    commands.fire::<OnStartEvent>(OnStartEventInfo);
-
-    // Spawn all objects in the scenario
-    for object in scenario.map.objects.iter() {
-        match object {
-            GameObjectConfig::Asteroid(config) => {
-                let mesh = apply_noise_to_mesh(&octahedron_sphere(3), rng.random());
-                let collider = Collider::trimesh_from_mesh(&mesh)
-                    .unwrap_or(Collider::sphere(1.0));
-                let material = StandardMaterial {
-                    base_color_texture: Some(config.texture.clone()),
-                    ..Default::default()
-                };
-
-                commands.spawn((
-                    ScenarioScopedMarker,
-                    Name::new(config.name.clone()),
-                    EntityId::new(config.id.clone()),
-                    EntityTypeName::new("asteroid"),
-                    Transform::from_translation(config.position).with_rotation(config.rotation),
-                    RigidBody::Dynamic,
-                    Health::new(config.health),
-                    ExplodableEntityMarker,
-                    Visibility::Visible,
-                    children![(
-                        Name::new("Asteroid Mesh"),
-                        Transform::from_scale(Vec3::splat(config.radius)),
-                        collider,
-                        Mesh3d(meshes.add(mesh)),
-                        MeshMaterial3d(materials.add(material)),
-                        Visibility::Inherited,
-                    )],
-                ));
-            }
-            GameObjectConfig::Spaceship(config) => {
-                let entity = commands
-                    .spawn((
-                        ScenarioScopedMarker,
-                        SpaceshipRootMarker,
-                        Name::new(config.name.clone()),
-                        EntityId::new(config.id.clone()),
-                        EntityTypeName::new("spaceship"),
-                        Transform::from_translation(config.position).with_rotation(config.rotation),
-                        RigidBody::Dynamic,
-                        Visibility::Visible,
-                        Health::new(config.health),
-                        ExplodableEntityMarker,
-                    ))
-                    .with_children(|parent| {
-                        for section in config.sections.iter() {
-                            let mut section_entity = parent.spawn((
-                                base_section(section.config.base.clone()),
-                                Transform::from_translation(section.position)
-                                    .with_rotation(section.rotation),
-                            ));
-
-                            match &section.config.kind {
-                                SectionKind::Hull(hull_config) => {
-                                    section_entity.insert(hull_section(hull_config.clone()));
-                                }
-                                SectionKind::Controller(controller_config) => {
-                                    section_entity
-                                        .insert(controller_section(controller_config.clone()));
-                                }
-                                SectionKind::Thruster(thruster_config) => {
-                                    section_entity
-                                        .insert(thruster_section(thruster_config.clone()));
-
-                                    match config.controller {
-                                        SpaceshipController::None => {}
-                                        SpaceshipController::Player(_) => {
-                                            // TODO: Something like
-                                            // let key = config.input_mapping.get(&section_id);
-                                            section_entity
-                                                .insert(SpaceshipThrusterInputKey(KeyCode::Space));
-                                        }
-                                        SpaceshipController::AI(_) => {}
-                                    }
-                                }
-                                SectionKind::Turret(turret_config) => {
-                                    section_entity.insert(turret_section(turret_config.clone()));
-
-                                    match config.controller {
-                                        SpaceshipController::None => {}
-                                        SpaceshipController::Player(_) => {
-                                            section_entity
-                                                .insert(SpaceshipTurretInputKey(MouseButton::Left));
-                                        }
-                                        SpaceshipController::AI(_) => {}
-                                    }
-                                }
-                            }
-                        }
-                    })
-                    .id();
-
-                match config.controller {
-                    SpaceshipController::None => {}
-                    SpaceshipController::Player(_) => {
-                        commands.entity(entity).insert(PlayerSpaceshipMarker);
-                    }
-                    SpaceshipController::AI(_) => {
-                        commands.entity(entity).insert(AISpaceshipMarker);
-                    }
-                }
-            }
-        }
-    }
-
     // Setup scenario events
     for event in scenario.events.iter() {
         let mut event_handler = EventHandler::<NovaEventWorld>::from(event.name);
@@ -358,6 +180,9 @@ fn on_load_scenario(
     }
 
     commands.trigger(ScenarioLoaded(scenario));
+
+    // Fire onstart event
+    commands.fire::<OnStartEvent>(OnStartEventInfo);
 }
 
 fn on_add_entity(
@@ -420,7 +245,7 @@ fn on_player_spaceship_spawned(
         SpaceshipCameraControllerMarker,
         *transform,
         SkyboxConfig {
-            cubemap: scenario.map.cubemap.clone(),
+            cubemap: scenario.cubemap.clone(),
             brightness: 1000.0,
         },
     ));
@@ -454,7 +279,7 @@ fn on_player_spaceship_destroyed(
         WASDCameraController,
         *transform,
         SkyboxConfig {
-            cubemap: scenario.map.cubemap.clone(),
+            cubemap: scenario.cubemap.clone(),
             brightness: 1000.0,
         },
     ));

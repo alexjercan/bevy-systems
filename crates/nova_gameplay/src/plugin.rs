@@ -1,5 +1,6 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
+use bevy_rand::prelude::*;
 
 use crate::{bevy_common_systems, prelude::*};
 
@@ -26,6 +27,9 @@ impl Plugin for NovaGameplayPlugin {
         app.add_plugins(PhysicsPlugins::default().with_collision_hooks::<TurretProjectileHooks>());
         app.add_plugins(PhysicsPickingPlugin);
         app.insert_resource(Gravity::ZERO);
+
+        // Random number generator
+        app.add_plugins(EntropyPlugin::<WyRand>::default());
 
         // FIXME: For now we disable particle effects on wasm because it's not working
         #[cfg(not(target_family = "wasm"))]
@@ -62,6 +66,9 @@ impl Plugin for NovaGameplayPlugin {
         // Core Plugins for simulation
         app.add_plugins(crate::input::SpaceshipInputPlugin);
         app.add_plugins(crate::sections::SpaceshipSectionPlugin {
+            render: self.render,
+        });
+        app.add_plugins(crate::asteroid::AsteroidPlugin {
             render: self.render,
         });
         app.add_plugins(crate::hud::NovaHudPlugin);
