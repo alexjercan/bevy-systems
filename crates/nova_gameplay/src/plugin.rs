@@ -9,7 +9,6 @@ use crate::{bevy_common_systems, prelude::*};
 pub enum SpaceshipSystems {
     First,
     Input,
-    Sections,
     Hud,
     Camera,
     Last,
@@ -86,7 +85,7 @@ impl Plugin for NovaGameplayPlugin {
             (
                 SpaceshipSystems::First,
                 SpaceshipSystems::Input,
-                SpaceshipSystems::Sections,
+                SpaceshipSectionSystems,
                 SpaceshipSystems::Hud,
                 SpaceshipSystems::Camera,
                 SpaceshipSystems::Last,
@@ -99,7 +98,7 @@ impl Plugin for NovaGameplayPlugin {
             (
                 SpaceshipSystems::First,
                 SpaceshipSystems::Input,
-                SpaceshipSystems::Sections,
+                SpaceshipSectionSystems,
                 SpaceshipSystems::Hud,
                 SpaceshipSystems::Camera,
                 SpaceshipSystems::Last,

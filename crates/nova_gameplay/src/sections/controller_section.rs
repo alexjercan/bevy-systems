@@ -3,7 +3,7 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-use crate::prelude::{SectionRenderOf, SpaceshipRootMarker, SpaceshipSystems};
+use crate::prelude::{SectionRenderOf, SpaceshipRootMarker};
 
 pub mod prelude {
     pub use super::{
@@ -88,7 +88,7 @@ impl Plugin for ControllerSectionPlugin {
 
         app.add_systems(
             FixedUpdate,
-            update_controller_root_torque.in_set(SpaceshipSystems::Sections),
+            update_controller_root_torque.in_set(super::SpaceshipSectionSystems),
         );
 
         if self.render {

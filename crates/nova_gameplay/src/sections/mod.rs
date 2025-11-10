@@ -12,8 +12,12 @@ pub mod prelude {
     pub use super::{
         base_section::prelude::*, controller_section::prelude::*, hull_section::prelude::*,
         thruster_section::prelude::*, turret_section::prelude::*, SpaceshipSectionPlugin,
+        SpaceshipSectionSystems,
     };
 }
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SpaceshipSectionSystems;
 
 /// A plugin that adds all the spaceship sections and their related systems.
 #[derive(Default, Clone, Debug)]

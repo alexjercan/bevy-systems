@@ -221,7 +221,7 @@ impl Plugin for TurretSectionPlugin {
                 sync_turret_rotator_yaw_system,
                 sync_turret_rotator_pitch_system,
             )
-                .in_set(SpaceshipSystems::Sections),
+                .in_set(super::SpaceshipSectionSystems),
         );
 
         app.add_systems(
@@ -231,7 +231,7 @@ impl Plugin for TurretSectionPlugin {
                 update_turret_target_pitch_system,
             )
                 .after(TransformSystems::Propagate)
-                .in_set(SpaceshipSystems::Sections),
+                .in_set(super::SpaceshipSectionSystems)
         );
     }
 }

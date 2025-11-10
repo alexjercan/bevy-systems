@@ -8,7 +8,7 @@ use bevy::{
     shader::ShaderRef,
 };
 
-use crate::prelude::{SectionRenderOf, SpaceshipRootMarker, SpaceshipSystems};
+use crate::prelude::{SectionRenderOf, SpaceshipRootMarker};
 
 pub mod prelude {
     pub use super::{
@@ -86,11 +86,11 @@ impl Plugin for ThrusterSectionPlugin {
 
         app.add_systems(
             Update,
-            thruster_shader_update_system.in_set(SpaceshipSystems::Sections),
+            thruster_shader_update_system.in_set(super::SpaceshipSectionSystems),
         );
         app.add_systems(
             FixedUpdate,
-            thruster_impulse_system.in_set(SpaceshipSystems::Sections),
+            thruster_impulse_system.in_set(super::SpaceshipSectionSystems),
         );
     }
 }
