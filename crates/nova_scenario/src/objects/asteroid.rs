@@ -2,8 +2,8 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 use bevy_rand::prelude::*;
-use rand::RngCore;
 use nova_events::prelude::*;
+use rand::RngCore;
 
 pub mod prelude {
     pub use super::{

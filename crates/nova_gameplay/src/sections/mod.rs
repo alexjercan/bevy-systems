@@ -11,8 +11,8 @@ pub mod turret_section;
 pub mod prelude {
     pub use super::{
         base_section::prelude::*, controller_section::prelude::*, hull_section::prelude::*,
-        thruster_section::prelude::*, turret_section::prelude::*, SpaceshipSectionPlugin,
-        SpaceshipSectionSystems, SpaceshipRootMarker,
+        thruster_section::prelude::*, turret_section::prelude::*, SpaceshipRootMarker,
+        SpaceshipSectionPlugin, SpaceshipSectionSystems,
     };
 }
 

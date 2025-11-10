@@ -231,7 +231,7 @@ impl Plugin for TurretSectionPlugin {
                 update_turret_target_pitch_system,
             )
                 .after(TransformSystems::Propagate)
-                .in_set(super::SpaceshipSectionSystems)
+                .in_set(super::SpaceshipSectionSystems),
         );
     }
 }

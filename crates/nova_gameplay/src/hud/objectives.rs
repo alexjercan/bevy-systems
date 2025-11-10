@@ -4,8 +4,8 @@ use crate::prelude::SpaceshipSystems;
 
 pub mod prelude {
     pub use super::{
-        objectives_hud, GameObjectivesHud, ObjectiveHudMarker, ObjectiveRootHudConfig,
-        ObjectivesHudPlugin, ObjectiveRootHudMarker, ObjectiveActionConfig,
+        objectives_hud, GameObjectivesHud, ObjectiveActionConfig, ObjectiveHudMarker,
+        ObjectiveRootHudConfig, ObjectiveRootHudMarker, ObjectivesHudPlugin,
     };
 }
 

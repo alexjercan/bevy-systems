@@ -8,8 +8,8 @@ pub mod world;
 
 pub mod prelude {
     pub use super::{
-        actions::prelude::*, filters::prelude::*, loader::prelude::*, objects::prelude::*,
-        variables::prelude::*, world::NovaEventWorld, events::prelude::*, NovaScenarioPlugin,
+        actions::prelude::*, events::prelude::*, filters::prelude::*, loader::prelude::*,
+        objects::prelude::*, variables::prelude::*, world::NovaEventWorld, NovaScenarioPlugin,
     };
 }
 

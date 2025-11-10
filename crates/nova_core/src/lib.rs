@@ -9,12 +9,12 @@ use bevy::{
 use nova_assets::prelude::*;
 #[cfg(feature = "debug")]
 use nova_debug::DebugPlugin;
+pub use nova_events;
 pub use nova_gameplay;
 use nova_gameplay::prelude::*;
-use nova_scenario::prelude::*;
-pub use nova_scenario;
-pub use nova_events;
 pub use nova_info;
+pub use nova_scenario;
+use nova_scenario::prelude::*;
 
 mod core;
 
@@ -23,10 +23,10 @@ pub mod prelude {
     pub use nova_assets::prelude::*;
     #[cfg(feature = "debug")]
     pub use nova_debug::prelude::*;
+    pub use nova_events::prelude::*;
     pub use nova_gameplay::prelude::*;
     pub use nova_info::prelude::*;
     pub use nova_scenario::prelude::*;
-    pub use nova_events::prelude::*;
 
     pub use super::{AppBuilder, GameStates};
 }
