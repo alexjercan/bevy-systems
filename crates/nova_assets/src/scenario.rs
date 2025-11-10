@@ -22,7 +22,7 @@ pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
         let radius = rng.random_range(1.0..3.0);
         let texture = game_assets.asteroid_texture.clone();
 
-        objects.push(GameObjectConfig::Asteroid(AsteroidConfig {
+        objects.push(ScenarioObjectConfig::Asteroid(AsteroidConfig {
             id: format!("asteroid_{}", i),
             name: format!("Asteroid {}", i),
             position: pos,
@@ -131,7 +131,7 @@ pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
             },
         ],
     };
-    objects.push(GameObjectConfig::Spaceship(spaceship));
+    objects.push(ScenarioObjectConfig::Spaceship(spaceship));
 
     let spaceship = SpaceshipConfig {
         id: "other_spaceship".to_string(),
@@ -231,7 +231,7 @@ pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
             },
         ],
     };
-    objects.push(GameObjectConfig::Spaceship(spaceship));
+    objects.push(ScenarioObjectConfig::Spaceship(spaceship));
 
     let events = vec![
         ScenarioEventConfig {
@@ -239,7 +239,7 @@ pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
             filters: vec![],
             actions: objects
                 .into_iter()
-                .map(|o| EventActionConfig::GameObjectSpawn(o))
+                .map(|o| EventActionConfig::SpawnScenarioObject(o))
                 .collect::<_>(),
         },
         ScenarioEventConfig {

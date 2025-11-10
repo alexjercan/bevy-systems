@@ -7,7 +7,7 @@ use crate::prelude::*;
 pub mod prelude {
     pub use super::{
         AIControllerConfig, AsteroidConfig, DebugMessageActionConfig, EventActionConfig,
-        GameObjectConfig, NextScenarioActionConfig, ObjectiveActionConfig,
+        ScenarioObjectConfig, NextScenarioActionConfig, ObjectiveActionConfig,
         ObjectiveCompleteActionConfig, PlayerControllerConfig, SpaceshipConfig,
         SpaceshipController, SpaceshipSectionConfig, VariableSetActionConfig,
     };
@@ -19,7 +19,7 @@ pub enum EventActionConfig {
     VariableSet(VariableSetActionConfig),
     Objective(ObjectiveActionConfig),
     ObjectiveComplete(ObjectiveCompleteActionConfig),
-    GameObjectSpawn(GameObjectConfig),
+    SpawnScenarioObject(ScenarioObjectConfig),
     NextScenario(NextScenarioActionConfig),
 }
 
@@ -38,7 +38,7 @@ impl EventAction<NovaEventWorld> for EventActionConfig {
             EventActionConfig::ObjectiveComplete(config) => {
                 config.action(world, info);
             }
-            EventActionConfig::GameObjectSpawn(config) => {
+            EventActionConfig::SpawnScenarioObject(config) => {
                 config.action(world, info);
             }
             EventActionConfig::NextScenario(config) => {
@@ -129,16 +129,16 @@ impl EventAction<NovaEventWorld> for ObjectiveCompleteActionConfig {
 // TODO: make this into a struct with base options like health, id, name, etc.
 // and then specifi Kind which is the asteroid or spaceship or whatever else I add
 #[derive(Clone, Debug)]
-pub enum GameObjectConfig {
+pub enum ScenarioObjectConfig {
     Asteroid(AsteroidConfig),
     Spaceship(SpaceshipConfig),
 }
 
-impl EventAction<NovaEventWorld> for GameObjectConfig {
+impl EventAction<NovaEventWorld> for ScenarioObjectConfig {
     fn action(&self, world: &mut NovaEventWorld, info: &GameEventInfo) {
         match self {
-            GameObjectConfig::Asteroid(config) => config.action(world, info),
-            GameObjectConfig::Spaceship(config) => config.action(world, info),
+            ScenarioObjectConfig::Asteroid(config) => config.action(world, info),
+            ScenarioObjectConfig::Spaceship(config) => config.action(world, info),
         }
     }
 }

@@ -89,7 +89,7 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         let radius = rng.random_range(1.0..3.0);
         let texture = game_assets.asteroid_texture.clone();
 
-        objects.push(GameObjectConfig::Asteroid(AsteroidConfig {
+        objects.push(ScenarioObjectConfig::Asteroid(AsteroidConfig {
             id: format!("asteroid_{}", i),
             name: format!("Asteroid {}", i),
             position: pos,
