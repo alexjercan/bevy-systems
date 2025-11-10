@@ -136,27 +136,19 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         let radius = rng.random_range(1.0..3.0);
         let texture = game_assets.asteroid_texture.clone();
 
-        objects.push(ScenarioObjectConfig::Asteroid(AsteroidConfig {
-            id: format!("asteroid_{}", i),
-            name: format!("Asteroid {}", i),
-            position: pos,
-            rotation: Quat::IDENTITY,
-            radius,
-            texture,
-            health: 100.0,
-        }));
+        objects.push(ScenarioObjectConfig {
+            base: BaseScenarioObjectConfig {
+                id: format!("asteroid_{}", i),
+                name: format!("Asteroid {}", i),
+                position: pos,
+                rotation: Quat::IDENTITY,
+                health: 100.0,
+            },
+            kind: ScenarioObjectKind::Asteroid(AsteroidConfig { radius, texture }),
+        });
     }
 
     let spaceship = SpaceshipConfig {
-        id: "other_spaceship".to_string(),
-        name: "Other Spaceship".to_string(),
-        position: Vec3::new(
-            rng.random_range(-100.0..100.0),
-            rng.random_range(-10.0..10.0),
-            rng.random_range(-200.0..-100.0),
-        ),
-        rotation: Quat::IDENTITY,
-        health: 100.0,
         controller: SpaceshipController::AI(AIControllerConfig {}),
         sections: vec![
             SpaceshipSectionConfig {
@@ -249,7 +241,20 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
             },
         ],
     };
-    objects.push(ScenarioObjectConfig::Spaceship(spaceship));
+    objects.push(ScenarioObjectConfig {
+        base: BaseScenarioObjectConfig {
+            id: "other_spaceship".to_string(),
+            name: "Other Spaceship".to_string(),
+            position: Vec3::new(
+                rng.random_range(-100.0..100.0),
+                rng.random_range(-10.0..10.0),
+                rng.random_range(-200.0..-100.0),
+            ),
+            rotation: Quat::IDENTITY,
+            health: 100.0,
+        },
+        kind: ScenarioObjectKind::Spaceship(spaceship),
+    });
 
     let events = vec![
         ScenarioEventConfig {

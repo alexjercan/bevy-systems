@@ -6,10 +6,10 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{
-        AIControllerConfig, AsteroidConfig, DebugMessageActionConfig, EventActionConfig,
-        ScenarioObjectConfig, NextScenarioActionConfig, ObjectiveActionConfig,
-        ObjectiveCompleteActionConfig, PlayerControllerConfig, SpaceshipConfig,
-        SpaceshipController, SpaceshipSectionConfig, VariableSetActionConfig,
+        AIControllerConfig, DebugMessageActionConfig, EventActionConfig, NextScenarioActionConfig,
+        ObjectiveActionConfig, ObjectiveCompleteActionConfig, PlayerControllerConfig,
+        ScenarioObjectConfig, SpaceshipConfig, SpaceshipController, SpaceshipSectionConfig,
+        VariableSetActionConfig, BaseScenarioObjectConfig, ScenarioObjectKind,
     };
 }
 
@@ -126,56 +126,38 @@ impl EventAction<NovaEventWorld> for ObjectiveCompleteActionConfig {
     }
 }
 
-// TODO: make this into a struct with base options like health, id, name, etc.
-// and then specifi Kind which is the asteroid or spaceship or whatever else I add
 #[derive(Clone, Debug)]
-pub enum ScenarioObjectConfig {
-    Asteroid(AsteroidConfig),
-    Spaceship(SpaceshipConfig),
-}
-
-impl EventAction<NovaEventWorld> for ScenarioObjectConfig {
-    fn action(&self, world: &mut NovaEventWorld, info: &GameEventInfo) {
-        match self {
-            ScenarioObjectConfig::Asteroid(config) => config.action(world, info),
-            ScenarioObjectConfig::Spaceship(config) => config.action(world, info),
-        }
-    }
+pub struct ScenarioObjectConfig {
+    pub base: BaseScenarioObjectConfig,
+    pub kind: ScenarioObjectKind,
 }
 
 #[derive(Clone, Debug)]
-pub struct AsteroidConfig {
+pub struct BaseScenarioObjectConfig {
     pub id: String,
     pub name: String,
     pub position: Vec3,
     pub rotation: Quat,
-    pub radius: f32,
-    pub texture: Handle<Image>,
     pub health: f32,
 }
 
-impl EventAction<NovaEventWorld> for AsteroidConfig {
-    fn action(&self, world: &mut NovaEventWorld, _info: &GameEventInfo) {
-        let config = self.clone();
+pub fn base_scenario_object(config: &BaseScenarioObjectConfig) -> impl Bundle {
+    (
+        ScenarioScopedMarker,
+        Name::new(config.name.clone()),
+        EntityId::new(config.id.clone()),
+        Transform::from_translation(config.position).with_rotation(config.rotation),
+        RigidBody::Dynamic,
+        Visibility::Visible,
+        Health::new(config.health),
+        ExplodableEntityMarker,
+    )
+}
 
-        world.push_command(move |commands| {
-            commands.spawn((
-                ScenarioScopedMarker,
-                Name::new(config.name.clone()),
-                EntityId::new(config.id.clone()),
-                EntityTypeName::new("asteroid"),
-                Transform::from_translation(config.position).with_rotation(config.rotation),
-                RigidBody::Dynamic,
-                Health::new(config.health),
-                ExplodableEntityMarker,
-                Visibility::Visible,
-                asteroid_game_object(AsteroidConfig1 {
-                    radius: config.radius,
-                    texture: config.texture.clone(),
-                }),
-            ));
-        });
-    }
+#[derive(Clone, Debug)]
+pub enum ScenarioObjectKind {
+    Asteroid(AsteroidConfig),
+    Spaceship(SpaceshipConfig),
 }
 
 #[derive(Clone, Debug)]
@@ -206,87 +188,85 @@ pub struct SpaceshipSectionConfig {
 
 #[derive(Clone, Debug)]
 pub struct SpaceshipConfig {
-    pub id: String,
-    pub name: String,
-    pub position: Vec3,
-    pub rotation: Quat,
-    pub health: f32,
     pub controller: SpaceshipController,
     pub sections: Vec<SpaceshipSectionConfig>,
 }
 
-impl EventAction<NovaEventWorld> for SpaceshipConfig {
+impl EventAction<NovaEventWorld> for ScenarioObjectConfig {
     fn action(&self, world: &mut NovaEventWorld, _info: &GameEventInfo) {
         let config = self.clone();
 
         world.push_command(move |commands| {
-            let entity = commands
-                .spawn((
-                    ScenarioScopedMarker,
-                    SpaceshipRootMarker,
-                    Name::new(config.name.clone()),
-                    EntityId::new(config.id.clone()),
-                    EntityTypeName::new("spaceship"),
-                    Transform::from_translation(config.position).with_rotation(config.rotation),
-                    RigidBody::Dynamic,
-                    Visibility::Visible,
-                    Health::new(config.health),
-                    ExplodableEntityMarker,
-                ))
-                .with_children(|parent| {
-                    for section in config.sections.iter() {
-                        let mut section_entity = parent.spawn((
-                            base_section(section.config.base.clone()),
-                            Transform::from_translation(section.position)
-                                .with_rotation(section.rotation),
-                        ));
+            let mut entity_commands = commands.spawn(base_scenario_object(&config.base));
 
-                        match &section.config.kind {
-                            SectionKind::Hull(hull_config) => {
-                                section_entity.insert(hull_section(hull_config.clone()));
-                            }
-                            SectionKind::Controller(controller_config) => {
-                                section_entity
-                                    .insert(controller_section(controller_config.clone()));
-                            }
-                            SectionKind::Thruster(thruster_config) => {
-                                section_entity.insert(thruster_section(thruster_config.clone()));
+            match &config.kind {
+                ScenarioObjectKind::Asteroid(config) => {
+                    entity_commands.insert(asteroid_game_object(config.clone()));
+                }
+                ScenarioObjectKind::Spaceship(config) => {
+                    // Spaceship specific components will be added in the SpaceshipConfig action
+                    let entity = entity_commands
+                        .insert((SpaceshipRootMarker, EntityTypeName::new("spaceship")))
+                        .with_children(|parent| {
+                            for section in config.sections.iter() {
+                                let mut section_entity = parent.spawn((
+                                    base_section(section.config.base.clone()),
+                                    Transform::from_translation(section.position)
+                                        .with_rotation(section.rotation),
+                                ));
 
-                                match config.controller {
-                                    SpaceshipController::None => {}
-                                    SpaceshipController::Player(_) => {
-                                        // TODO: Something like
-                                        // let key = config.input_mapping.get(&section_id);
-                                        section_entity
-                                            .insert(SpaceshipThrusterInputKey(KeyCode::Space));
+                                match &section.config.kind {
+                                    SectionKind::Hull(hull_config) => {
+                                        section_entity.insert(hull_section(hull_config.clone()));
                                     }
-                                    SpaceshipController::AI(_) => {}
+                                    SectionKind::Controller(controller_config) => {
+                                        section_entity
+                                            .insert(controller_section(controller_config.clone()));
+                                    }
+                                    SectionKind::Thruster(thruster_config) => {
+                                        section_entity
+                                            .insert(thruster_section(thruster_config.clone()));
+
+                                        match config.controller {
+                                            SpaceshipController::None => {}
+                                            SpaceshipController::Player(_) => {
+                                                // TODO: Something like
+                                                // let key = config.input_mapping.get(&section_id);
+                                                section_entity.insert(SpaceshipThrusterInputKey(
+                                                    KeyCode::Space,
+                                                ));
+                                            }
+                                            SpaceshipController::AI(_) => {}
+                                        }
+                                    }
+                                    SectionKind::Turret(turret_config) => {
+                                        section_entity
+                                            .insert(turret_section(turret_config.clone()));
+
+                                        match config.controller {
+                                            SpaceshipController::None => {}
+                                            SpaceshipController::Player(_) => {
+                                                section_entity.insert(SpaceshipTurretInputKey(
+                                                    MouseButton::Left,
+                                                ));
+                                            }
+                                            SpaceshipController::AI(_) => {}
+                                        }
+                                    }
                                 }
                             }
-                            SectionKind::Turret(turret_config) => {
-                                section_entity.insert(turret_section(turret_config.clone()));
+                        })
+                        .id();
 
-                                match config.controller {
-                                    SpaceshipController::None => {}
-                                    SpaceshipController::Player(_) => {
-                                        section_entity
-                                            .insert(SpaceshipTurretInputKey(MouseButton::Left));
-                                    }
-                                    SpaceshipController::AI(_) => {}
-                                }
-                            }
+                    match config.controller {
+                        SpaceshipController::None => {}
+                        SpaceshipController::Player(_) => {
+                            commands.entity(entity).insert(PlayerSpaceshipMarker);
+                        }
+                        SpaceshipController::AI(_) => {
+                            commands.entity(entity).insert(AISpaceshipMarker);
                         }
                     }
-                })
-                .id();
-
-            match config.controller {
-                SpaceshipController::None => {}
-                SpaceshipController::Player(_) => {
-                    commands.entity(entity).insert(PlayerSpaceshipMarker);
-                }
-                SpaceshipController::AI(_) => {
-                    commands.entity(entity).insert(AISpaceshipMarker);
                 }
             }
         });
