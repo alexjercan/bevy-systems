@@ -4,7 +4,7 @@ use bevy_common_systems::prelude::*;
 use bevy_rand::prelude::*;
 use rand::RngCore;
 
-use crate::components::EntityTypeName;
+use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{

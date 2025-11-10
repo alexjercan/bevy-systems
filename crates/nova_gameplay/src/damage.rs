@@ -8,10 +8,7 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
-use crate::{
-    modding::prelude::{OnDestroyedEvent, OnDestroyedEventInfo},
-    prelude::{EntityId, EntityTypeName},
-};
+use crate::prelude::*;
 
 const DAMAGE_MODIFIER: f32 = 1.00;
 
