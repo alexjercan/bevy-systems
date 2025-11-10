@@ -4,14 +4,16 @@ use bevy_common_systems::prelude::*;
 use bevy_rand::prelude::*;
 use rand::RngCore;
 
-use crate::prelude::*;
+use crate::components::EntityTypeName;
 
 pub mod prelude {
     pub use super::{
-        asteroid_game_object, AsteroidConfig, AsteroidMarker, AsteroidPlugin, AsteroidRadius,
-        AsteroidRenderMesh, AsteroidTexture,
+        asteroid_scenario_object, AsteroidConfig, AsteroidMarker, AsteroidPlugin, AsteroidRadius,
+        AsteroidRenderMesh, AsteroidTexture, ASTEROID_TYPE_NAME,
     };
 }
+
+pub const ASTEROID_TYPE_NAME: &str = "asteroid";
 
 #[derive(Clone, Debug)]
 pub struct AsteroidConfig {
@@ -19,12 +21,12 @@ pub struct AsteroidConfig {
     pub texture: Handle<Image>,
 }
 
-pub fn asteroid_game_object(config: AsteroidConfig) -> impl Bundle {
-    debug!("asteroid: config {:?}", config);
+pub fn asteroid_scenario_object(config: AsteroidConfig) -> impl Bundle {
+    debug!("asteroid_scenario_object: config {:?}", config);
 
     (
         AsteroidMarker,
-        EntityTypeName::new("asteroid"),
+        EntityTypeName::new(ASTEROID_TYPE_NAME),
         AsteroidTexture(config.texture),
         AsteroidRadius(config.radius),
     )

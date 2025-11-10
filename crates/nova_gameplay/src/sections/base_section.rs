@@ -25,7 +25,7 @@ pub struct BaseSectionConfig {
     pub mass: f32,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Reflect)]
 #[allow(clippy::large_enum_variant)]
 pub enum SectionKind {
     Hull(HullSectionConfig),
@@ -34,7 +34,7 @@ pub enum SectionKind {
     Turret(TurretSectionConfig),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Reflect)]
 pub struct SectionConfig {
     pub base: BaseSectionConfig,
     // TODO: I will probably want to box this later to reduce the size of the struct.

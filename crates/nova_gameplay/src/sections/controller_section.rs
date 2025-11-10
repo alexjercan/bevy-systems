@@ -14,7 +14,7 @@ pub mod prelude {
 }
 
 /// Configuration for a controller section.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Reflect)]
 pub struct ControllerSectionConfig {
     /// The frequency of the PD controller in Hz.
     pub frequency: f32,

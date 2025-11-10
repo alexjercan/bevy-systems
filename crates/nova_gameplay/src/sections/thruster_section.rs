@@ -20,7 +20,7 @@ pub mod prelude {
 const THRUSTER_SECTION_DEFAULT_MAGNITUDE: f32 = 1.0;
 
 /// Configuration for a thruster section of a spaceship.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Reflect)]
 pub struct ThrusterSectionConfig {
     /// The magnitude of the force produced by this thruster section.
     pub magnitude: f32,

@@ -71,6 +71,7 @@ impl Plugin for NovaGameplayPlugin {
         app.add_plugins(crate::asteroid::AsteroidPlugin {
             render: self.render,
         });
+        app.add_plugins(crate::spaceship::SpaceshipPlugin);
         app.add_plugins(crate::hud::NovaHudPlugin);
         app.add_plugins(crate::camera_controller::SpaceshipCameraControllerPlugin);
         app.add_plugins(crate::damage::DamagePlugin);

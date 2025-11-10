@@ -6,10 +6,9 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{
-        AIControllerConfig, DebugMessageActionConfig, EventActionConfig, NextScenarioActionConfig,
-        ObjectiveActionConfig, ObjectiveCompleteActionConfig, PlayerControllerConfig,
-        ScenarioObjectConfig, SpaceshipConfig, SpaceshipController, SpaceshipSectionConfig,
-        VariableSetActionConfig, BaseScenarioObjectConfig, ScenarioObjectKind,
+        BaseScenarioObjectConfig, DebugMessageActionConfig, EventActionConfig,
+        NextScenarioActionConfig, ObjectiveActionConfig, ObjectiveCompleteActionConfig,
+        ScenarioObjectConfig, ScenarioObjectKind, VariableSetActionConfig,
     };
 }
 
@@ -160,38 +159,6 @@ pub enum ScenarioObjectKind {
     Spaceship(SpaceshipConfig),
 }
 
-#[derive(Clone, Debug)]
-pub enum SpaceshipController {
-    None,
-    Player(PlayerControllerConfig),
-    AI(AIControllerConfig),
-}
-
-#[derive(Clone, Debug)]
-pub struct PlayerControllerConfig {
-    // TODO: Add some kind of input mapping from Section ID to input actions
-    // TODO: Add Section ID in the SpaceshipSectionConfig as String maybe
-    // pub input_mapping: HashMap<>,
-}
-
-#[derive(Clone, Debug)]
-pub struct AIControllerConfig {}
-
-#[derive(Clone, Debug)]
-pub struct SpaceshipSectionConfig {
-    pub position: Vec3,
-    pub rotation: Quat,
-    // NOTE: Maybe in the future this will be a Handle and in the .cfg file it will be represented
-    // by an ID.
-    pub config: SectionConfig,
-}
-
-#[derive(Clone, Debug)]
-pub struct SpaceshipConfig {
-    pub controller: SpaceshipController,
-    pub sections: Vec<SpaceshipSectionConfig>,
-}
-
 impl EventAction<NovaEventWorld> for ScenarioObjectConfig {
     fn action(&self, world: &mut NovaEventWorld, _info: &GameEventInfo) {
         let config = self.clone();
@@ -201,72 +168,10 @@ impl EventAction<NovaEventWorld> for ScenarioObjectConfig {
 
             match &config.kind {
                 ScenarioObjectKind::Asteroid(config) => {
-                    entity_commands.insert(asteroid_game_object(config.clone()));
+                    entity_commands.insert(asteroid_scenario_object(config.clone()));
                 }
                 ScenarioObjectKind::Spaceship(config) => {
-                    // Spaceship specific components will be added in the SpaceshipConfig action
-                    let entity = entity_commands
-                        .insert((SpaceshipRootMarker, EntityTypeName::new("spaceship")))
-                        .with_children(|parent| {
-                            for section in config.sections.iter() {
-                                let mut section_entity = parent.spawn((
-                                    base_section(section.config.base.clone()),
-                                    Transform::from_translation(section.position)
-                                        .with_rotation(section.rotation),
-                                ));
-
-                                match &section.config.kind {
-                                    SectionKind::Hull(hull_config) => {
-                                        section_entity.insert(hull_section(hull_config.clone()));
-                                    }
-                                    SectionKind::Controller(controller_config) => {
-                                        section_entity
-                                            .insert(controller_section(controller_config.clone()));
-                                    }
-                                    SectionKind::Thruster(thruster_config) => {
-                                        section_entity
-                                            .insert(thruster_section(thruster_config.clone()));
-
-                                        match config.controller {
-                                            SpaceshipController::None => {}
-                                            SpaceshipController::Player(_) => {
-                                                // TODO: Something like
-                                                // let key = config.input_mapping.get(&section_id);
-                                                section_entity.insert(SpaceshipThrusterInputKey(
-                                                    KeyCode::Space,
-                                                ));
-                                            }
-                                            SpaceshipController::AI(_) => {}
-                                        }
-                                    }
-                                    SectionKind::Turret(turret_config) => {
-                                        section_entity
-                                            .insert(turret_section(turret_config.clone()));
-
-                                        match config.controller {
-                                            SpaceshipController::None => {}
-                                            SpaceshipController::Player(_) => {
-                                                section_entity.insert(SpaceshipTurretInputKey(
-                                                    MouseButton::Left,
-                                                ));
-                                            }
-                                            SpaceshipController::AI(_) => {}
-                                        }
-                                    }
-                                }
-                            }
-                        })
-                        .id();
-
-                    match config.controller {
-                        SpaceshipController::None => {}
-                        SpaceshipController::Player(_) => {
-                            commands.entity(entity).insert(PlayerSpaceshipMarker);
-                        }
-                        SpaceshipController::AI(_) => {
-                            commands.entity(entity).insert(AISpaceshipMarker);
-                        }
-                    }
+                    entity_commands.insert(spaceship_scenario_object(config.clone()));
                 }
             }
         });
