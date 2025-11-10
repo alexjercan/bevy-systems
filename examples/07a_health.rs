@@ -89,25 +89,34 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         let radius = rng.random_range(1.0..3.0);
         let texture = game_assets.asteroid_texture.clone();
 
-        objects.push(ScenarioObjectConfig::Asteroid(AsteroidConfig {
-            id: format!("asteroid_{}", i),
-            name: format!("Asteroid {}", i),
-            position: pos,
-            rotation: Quat::IDENTITY,
-            radius,
-            texture,
-            health: 100.0,
-        }));
+        objects.push(ScenarioObjectConfig {
+            base: BaseScenarioObjectConfig {
+                id: format!("asteroid_{}", i),
+                name: format!("Asteroid {}", i),
+                position: pos,
+                rotation: Quat::IDENTITY,
+                health: 100.0,
+            },
+            kind: ScenarioObjectKind::Asteroid(AsteroidConfig { radius, texture }),
+        });
     }
+
+    let events = vec![
+        ScenarioEventConfig {
+            name: EventConfig::OnStart,
+            filters: vec![],
+            actions: objects
+                .into_iter()
+                .map(|o| EventActionConfig::SpawnScenarioObject(o))
+                .collect::<_>(),
+        },
+    ];
 
     ScenarioConfig {
         id: "test_scenario".to_string(),
         name: "Test Scenario".to_string(),
         description: "A test scenario.".to_string(),
-        map: MapConfig {
-            cubemap: game_assets.cubemap.clone(),
-            objects,
-        },
-        events: vec![],
+        cubemap: game_assets.cubemap.clone(),
+        events,
     }
 }

@@ -118,7 +118,7 @@ fn make_spaceship_player(
             PlayerSpaceshipMarker,
             Name::new("Player Spaceship".to_string()),
             EntityId::new("player_spaceship"),
-            EntityTypeName::new("spaceship"),
+            EntityTypeName::new(SPACESHIP_TYPE_NAME),
         ));
     }
 }
