@@ -9,8 +9,12 @@ pub mod velocity;
 pub mod prelude {
     pub use super::{
         health::prelude::*, objectives::prelude::*, velocity::prelude::*, NovaHudPlugin,
+        NovaHudSystems,
     };
 }
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NovaHudSystems;
 
 #[derive(Default)]
 pub struct NovaHudPlugin;

@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 
 /// A Bevy plugin that makes entities explode into pieces when they are destroyed.
-use avian3d::prelude::*;
 use bevy::prelude::*;
 use rand::Rng;
 
@@ -9,33 +8,50 @@ use super::slicer::mesh_slice;
 
 pub mod prelude {
     pub use super::{
-        ExplodableEntityMarker, ExplodableMesh, ExplodeMesh, ExplodeMeshPlugin, FragmentMeshMarker,
+        ExplodableEntityMarker, ExplodableFragments, ExplodableMesh, ExplodeMesh,
+        ExplodeMeshPlugin,
     };
 }
 
 const MAX_ITERATIONS: usize = 10;
 
-#[derive(Component, Clone, Debug, Reflect)]
-pub struct FragmentMeshMarker;
-
+/// Marker component for entities that can explode. This should be added to the root entity of the
+/// object. The ExplodeMesh plugin will search for all Mesh3d components in the entity and its
+/// children, and it will build an ExplodableMesh component containing those meshes.
 #[derive(Component, Clone, Debug, Default, Reflect)]
 pub struct ExplodableEntityMarker;
 
+/// Component that holds the list of mesh entities that can be exploded.
 #[derive(Component, Clone, Debug, Default, Deref, DerefMut, Reflect)]
 pub struct ExplodableMesh(pub Vec<Entity>);
 
-#[derive(Component, Clone, Debug, Reflect)]
-#[require(ExplodableMesh)]
+/// A fragment of an explodable mesh.
+#[derive(Clone, Debug, Reflect)]
+pub struct ExplodableFragment {
+    pub origin: Entity,
+    pub mesh: Handle<Mesh>,
+    pub direction: Dir3,
+}
+
+/// The collection of generated fragments from an exploded mesh. This will be added to the entity
+/// after the ExplodeMesh event is processed.
+#[derive(Component, Clone, Debug, Default, Deref, DerefMut, Reflect)]
+pub struct ExplodableFragments(pub Vec<ExplodableFragment>);
+
+/// Event that triggers the explosion of a mesh into fragments.
+#[derive(Event, Clone, Debug, Reflect)]
 pub struct ExplodeMesh {
+    /// The entity to explode.
+    pub entity: Entity,
+    /// The number of fragments to create.
     pub fragment_count: usize,
-    pub force_multiplier_range: (f32, f32),
 }
 
 impl Default for ExplodeMesh {
     fn default() -> Self {
         Self {
+            entity: Entity::PLACEHOLDER,
             fragment_count: 4,
-            force_multiplier_range: (2.0, 5.0),
         }
     }
 }
@@ -53,28 +69,18 @@ impl Plugin for ExplodeMeshPlugin {
 }
 
 fn handle_explosion(
-    add: On<Add, ExplodeMesh>,
+    explode: On<ExplodeMesh>,
     mut commands: Commands,
-    q_explode: Query<(&ExplodeMesh, &ExplodableMesh)>,
-    mut q_mesh: Query<(
-        &GlobalTransform,
-        &Mesh3d,
-        &MeshMaterial3d<StandardMaterial>,
-        &mut Visibility,
-    )>,
+    q_explode: Query<&ExplodableMesh, With<ExplodableEntityMarker>>,
+    q_mesh: Query<&Mesh3d>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    let entity = add.entity;
+    let entity = explode.entity;
     trace!("handle_explosion: entity {:?}", entity);
 
-    let Ok((
-        &ExplodeMesh {
-            fragment_count,
-            force_multiplier_range,
-        },
-        explode,
-    )) = q_explode.get(entity)
-    else {
+    let fragment_count = explode.fragment_count;
+
+    let Ok(mesh_entities) = q_explode.get(entity) else {
         warn!(
             "handle_explosion: entity {:?} not found in q_explode.",
             entity,
@@ -82,9 +88,9 @@ fn handle_explosion(
         return;
     };
 
-    for mesh_entity in &**explode {
-        let Ok((transform, mesh3d, material3d, mut visibility)) = q_mesh.get_mut(*mesh_entity)
-        else {
+    let mut fragment_meshes = Vec::new();
+    for mesh_entity in &**mesh_entities {
+        let Ok(mesh3d) = q_mesh.get(*mesh_entity) else {
             warn!(
                 "explode_mesh: mesh_entity {:?} not found in q_mesh.",
                 entity,
@@ -103,8 +109,6 @@ fn handle_explosion(
             fragment_count
         );
 
-        *visibility = Visibility::Hidden;
-
         let Some(fragments) =
             slice_mesh_into_fragments(&mesh.clone(), fragment_count, MAX_ITERATIONS)
         else {
@@ -116,27 +120,17 @@ fn handle_explosion(
         };
 
         for (mesh, normal) in fragments {
-            let transform = transform.compute_transform();
-            let offset = normal * 0.5;
-            let transform = transform.with_translation(transform.translation + offset);
-
-            commands.spawn((
-                Name::new("Explosion Fragment"),
-                FragmentMeshMarker,
-                Mesh3d(meshes.add(mesh.clone())),
-                material3d.clone(),
-                transform,
-                Visibility::Visible,
-                RigidBody::Dynamic,
-                Collider::convex_hull_from_mesh(&mesh).unwrap_or(Collider::sphere(0.5)),
-                LinearVelocity(
-                    normal
-                        * rand::rng()
-                            .random_range(force_multiplier_range.0..force_multiplier_range.1),
-                ),
-            ));
+            fragment_meshes.push(ExplodableFragment {
+                origin: *mesh_entity,
+                mesh: meshes.add(mesh.clone()),
+                direction: Dir3::new_unchecked(normal.normalize()),
+            });
         }
     }
+
+    commands
+        .entity(entity)
+        .insert(ExplodableFragments(fragment_meshes));
 }
 
 fn slice_mesh_into_fragments(
@@ -185,7 +179,8 @@ fn slice_mesh_into_fragments(
 
 fn setup_explode_mesh_children(
     mut commands: Commands,
-    q_mesh: Query<Entity, With<Mesh3d>>,
+    // NOTE: We only handle StandardMaterial for now
+    q_mesh: Query<Entity, (With<Mesh3d>, With<MeshMaterial3d<StandardMaterial>>)>,
     q_children: Query<&Children>,
     q_explode: Query<
         (Entity, Option<&Children>),

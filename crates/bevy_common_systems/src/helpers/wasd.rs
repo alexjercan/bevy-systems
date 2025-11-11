@@ -32,6 +32,8 @@ impl Plugin for WASDCameraControllerPlugin {
         app.add_input_context::<WASDCameraInputMarker>();
 
         app.add_observer(setup_wasd_camera);
+        app.add_observer(destroy_wasd_camera);
+
         app.add_observer(on_wasd_input);
         app.add_observer(on_wasd_input_completed);
         app.add_observer(on_mouse_input);
@@ -118,6 +120,19 @@ fn setup_wasd_camera(insert: On<Insert, WASDCameraController>, mut commands: Com
             ]
         ),
     ));
+}
+
+fn destroy_wasd_camera(remove: On<Remove, WASDCameraController>, mut commands: Commands) {
+    let entity = remove.entity;
+    trace!("destroy_wasd_camera: entity {:?}", entity);
+
+    // NOTE: use try_remove in case this get's despawned and remove is called after
+    commands.entity(entity).try_remove::<(
+        Actions<WASDCameraInputMarker>,
+        WASDCamera,
+        WASDCameraLookEnabled,
+        WASDCameraInputMarker,
+    )>();
 }
 
 fn on_wasd_input(fire: On<Fire<WASDCameraInputMove>>, mut q_input: Query<&mut WASDCameraInput>) {

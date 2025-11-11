@@ -1,3 +1,4 @@
+/// Scenario loader plugin and related types
 use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_common_systems::prelude::*;
 use bevy_enhanced_input::prelude::*;
@@ -8,48 +9,66 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{
-        CurrentScenario, GameScenarios, LoadScenario, LoadScenarioById, ScenarioConfig,
-        ScenarioEventConfig, ScenarioId, ScenarioLoaded, ScenarioLoaderPlugin,
-        ScenarioScopedMarker, UnloadScenario,
+        CurrentScenario, GameScenarios, LoadScenario, ScenarioConfig, ScenarioEventConfig,
+        ScenarioId, ScenarioLoaded, ScenarioLoaderPlugin, ScenarioScopedMarker, UnloadScenario,
     };
 }
 
+/// Type alias for Scenario ID
 pub type ScenarioId = String;
 
+/// The collection of available game scenarios
 #[derive(Resource, Clone, Debug, Deref, DerefMut, Default)]
 pub struct GameScenarios(pub HashMap<ScenarioId, ScenarioConfig>);
 
+/// Configuration for a game scenario
 #[derive(Clone, Debug)]
 pub struct ScenarioConfig {
-    pub id: String,
+    /// Unique identifier for the scenario
+    pub id: ScenarioId,
+    /// The display name of the scenario
     pub name: String,
+    /// A brief description of the scenario
     pub description: String,
+    /// The cubemap image used for the scenario's skybox
+    /// TODO: Maybe allow to change the cubemap via events
     pub cubemap: Handle<Image>,
+    /// Events associated with the scenario
     pub events: Vec<ScenarioEventConfig>,
 }
 
+/// Configuration for a scenario event
 #[derive(Clone, Debug)]
 pub struct ScenarioEventConfig {
+    /// The name of the event to listen for
     pub name: EventConfig,
+    /// Filters to apply to the event
     pub filters: Vec<EventFilterConfig>,
+    /// Actions to perform when the event is triggered
     pub actions: Vec<EventActionConfig>,
 }
 
-#[derive(Event, Clone, Debug, Deref, DerefMut, Default, Reflect)]
-pub struct LoadScenarioById(pub ScenarioId);
-
+/// Load a scenario given the configuration (this can be read from the GameScenarios resource).
+/// e.g we could display all the scenario names in a menu and load the selected one.
 #[derive(Event, Clone, Debug, Deref, DerefMut)]
 pub struct LoadScenario(pub ScenarioConfig);
 
+/// Unload the current scenario. This event guarantees that all scenario-scoped entities are
+/// removed from the world.
 #[derive(Event, Clone, Debug)]
 pub struct UnloadScenario;
 
-#[derive(Event, Clone, Debug, Deref, DerefMut)]
-pub struct ScenarioLoaded(pub ScenarioConfig);
+/// Event that is triggered once a scenario has been successfully loaded.
+/// TODO: Maybe we want to add status and other info here later.
+#[derive(Event, Clone, Debug)]
+pub struct ScenarioLoaded;
 
+/// The current loaded scenario, if any. This will contain the scenario configuration.
 #[derive(Resource, Clone, Debug, Deref, DerefMut, Default)]
 pub struct CurrentScenario(pub Option<ScenarioConfig>);
 
+/// Marker that indicates that an entity is scoped to the current scenario.
+/// When a scenario is unloaded, all entities with this marker will be despawned.
 #[derive(Component, Debug, Clone, Reflect)]
 pub struct ScenarioScopedMarker;
 
@@ -60,12 +79,12 @@ impl Plugin for ScenarioLoaderPlugin {
         debug!("ScenarioLoaderPlugin: build");
 
         app.init_resource::<CurrentScenario>();
-        app.add_observer(on_load_scenario_id);
         app.add_observer(on_load_scenario);
         app.add_observer(on_player_spaceship_spawned);
         app.add_observer(on_player_spaceship_destroyed);
 
-        app.add_observer(on_add_entity);
+        app.add_observer(on_add_entity_with::<MeshFragmentMarker>);
+        app.add_observer(on_add_entity_with::<TurretBulletProjectileMarker>);
 
         app.add_input_context::<ScenarioInputMarker>();
         app.add_observer(on_next_input);
@@ -80,22 +99,11 @@ fn unload_scenario(
     mut current_scenario: ResMut<CurrentScenario>,
     mut world: ResMut<NovaEventWorld>,
 ) {
+    world.clear();
+    **current_scenario = None;
     for entity in q_scoped.iter() {
         commands.entity(entity).despawn();
     }
-
-    **current_scenario = None;
-    world.clear();
-}
-
-fn on_load_scenario_id(
-    load: On<LoadScenarioById>,
-    mut commands: Commands,
-    scenarios: Res<GameScenarios>,
-) {
-    let scenario_index = (**load).clone();
-    let scenario = scenarios.get(&scenario_index).expect("No scenario found");
-    commands.trigger(LoadScenario(scenario.clone()));
 }
 
 fn on_load_scenario(
@@ -103,23 +111,24 @@ fn on_load_scenario(
     mut commands: Commands,
     mut current_scenario: ResMut<CurrentScenario>,
     q_scoped: Query<Entity, With<ScenarioScopedMarker>>,
+    mut world: ResMut<NovaEventWorld>,
 ) {
-    // NOTE: Clean up any existing scenario-scoped entities
     // TODO: Maybe in the future we want to filter more specifically in case we keep other
     // scenario-scoped entities around (e.g the player spaceship or similar)
+    world.clear();
     for entity in q_scoped.iter() {
         commands.entity(entity).despawn();
     }
 
     let scenario = (**load).clone();
     **current_scenario = Some(scenario.clone());
-    info!("Setting up scenario: {}", scenario.name);
+    debug!("on_load_scenario: scenario {:?}", scenario.name);
 
     // Setup Scenario Camera
     commands.spawn((
         ScenarioScopedMarker,
-        Name::new("Scenario Camera"),
         ScenarioCameraMarker,
+        Name::new("Scenario Camera"),
         Camera3d::default(),
         WASDCameraController,
         Transform::from_xyz(0.0, 10.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
@@ -175,20 +184,21 @@ fn on_load_scenario(
         ));
     }
 
-    commands.trigger(ScenarioLoaded(scenario));
+    // Trigger ScenarioLoaded event
+    commands.trigger(ScenarioLoaded);
 
     // Fire onstart event
     commands.fire::<OnStartEvent>(OnStartEventInfo);
 }
 
-fn on_add_entity(
-    add: On<Add, Name>,
+fn on_add_entity_with<T: Component>(
+    add: On<Add, T>,
     mut commands: Commands,
     current_scenario: Res<CurrentScenario>,
 ) {
     if let Some(scenario) = &**current_scenario {
         trace!(
-            "on_add_entity: Added entity {:?} in scenario {:?}",
+            "on_add_entity_with: Added entity {:?} in scenario {:?}",
             add.entity,
             scenario.name
         );
@@ -219,39 +229,22 @@ struct ScenarioCameraMarker;
 fn on_player_spaceship_spawned(
     add: On<Add, PlayerSpaceshipMarker>,
     mut commands: Commands,
-    current_scenario: Res<CurrentScenario>,
-    camera: Single<(Entity, &Transform), With<ScenarioCameraMarker>>,
+    camera: Single<Entity, With<ScenarioCameraMarker>>,
 ) {
     trace!("on_player_spaceship_spawned: {:?}", add.entity);
 
-    let Some(scenario) = &**current_scenario else {
-        warn!("on_player_spaceship_spawned: no scenario loaded");
-        return;
-    };
-    let (camera, transform) = camera.into_inner();
+    let camera = camera.into_inner();
 
-    // Replace the existing scenario camera with a chase camera
-    commands.entity(camera).despawn();
-    commands.spawn((
-        ScenarioScopedMarker,
-        Name::new("Scenario Camera"),
-        ScenarioCameraMarker,
-        Camera3d::default(),
-        ChaseCamera::default(),
-        SpaceshipCameraControllerMarker,
-        *transform,
-        SkyboxConfig {
-            cubemap: scenario.cubemap.clone(),
-            brightness: 1000.0,
-        },
-    ));
+    commands
+        .entity(camera)
+        .remove::<WASDCameraController>()
+        .insert(SpaceshipCameraControllerMarker);
 }
 
 fn on_player_spaceship_destroyed(
     add: On<Add, DestroyedMarker>,
     mut commands: Commands,
-    current_scenario: Res<CurrentScenario>,
-    camera: Single<(Entity, &Transform), With<SpaceshipCameraControllerMarker>>,
+    camera: Single<Entity, With<SpaceshipCameraControllerMarker>>,
     spaceship: Single<Entity, With<PlayerSpaceshipMarker>>,
 ) {
     trace!("on_player_spaceship_destroyed: {:?}", add.entity);
@@ -259,24 +252,10 @@ fn on_player_spaceship_destroyed(
         return;
     }
 
-    let Some(scenario) = &**current_scenario else {
-        warn!("on_player_spaceship_despawned: no scenario loaded");
-        return;
-    };
-    let (camera, transform) = camera.into_inner();
+    let camera = camera.into_inner();
 
-    // Replace the chase camera with the scenario camera
-    commands.entity(camera).despawn();
-    commands.spawn((
-        ScenarioScopedMarker,
-        Name::new("Scenario Camera"),
-        ScenarioCameraMarker,
-        Camera3d::default(),
-        WASDCameraController,
-        *transform,
-        SkyboxConfig {
-            cubemap: scenario.cubemap.clone(),
-            brightness: 1000.0,
-        },
-    ));
+    commands
+        .entity(camera)
+        .remove::<SpaceshipCameraControllerMarker>()
+        .insert(WASDCameraController);
 }

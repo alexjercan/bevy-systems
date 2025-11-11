@@ -7,8 +7,6 @@ use bevy::{
 };
 use bevy_common_systems::prelude::*;
 
-use crate::prelude::SpaceshipSystems;
-
 pub mod prelude {
     pub use super::{
         velocity_hud, VelocityHudConfig, VelocityHudIndicatorMarker, VelocityHudMarker,
@@ -76,7 +74,7 @@ impl Plugin for VelocityHudPlugin {
                 sync_orbit_state,
                 direction_shader_update_system,
             )
-                .in_set(SpaceshipSystems::Hud),
+                .in_set(super::NovaHudSystems),
         );
     }
 }

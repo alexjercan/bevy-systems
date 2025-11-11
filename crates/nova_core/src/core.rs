@@ -86,7 +86,7 @@ pub fn core_plugin(app: &mut App) {
 
     app.configure_sets(
         Update,
-        SpaceshipSystems::Input.run_if(in_state(ExampleStates::Scenario)),
+        SpaceshipInputSystems.run_if(in_state(ExampleStates::Scenario)),
     );
 }
 

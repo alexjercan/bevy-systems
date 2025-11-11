@@ -6,12 +6,15 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{
-        SpaceshipCameraControlMode, SpaceshipCameraControllerMarker,
+        NovaCameraSystems, SpaceshipCameraControlMode, SpaceshipCameraControllerMarker,
         SpaceshipCameraControllerPlugin, SpaceshipCameraFreeLookInputMarker,
         SpaceshipCameraInputMarker, SpaceshipCameraNormalInputMarker,
         SpaceshipCameraTurretInputMarker, SpaceshipRotationInputActiveMarker,
     };
 }
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NovaCameraSystems;
 
 pub struct SpaceshipCameraControllerPlugin;
 
@@ -23,6 +26,8 @@ impl Plugin for SpaceshipCameraControllerPlugin {
         app.add_input_context::<PlayerInputMarker>();
 
         app.add_observer(insert_camera_controller);
+        app.add_observer(destroy_camera_controller);
+
         app.add_observer(insert_camera_freelook);
         app.add_observer(insert_camera_turret);
         app.add_observer(insert_player_input);
@@ -36,8 +41,7 @@ impl Plugin for SpaceshipCameraControllerPlugin {
 
         app.add_systems(
             Update,
-            (update_chase_camera_input, sync_spaceship_control_mode)
-                .in_set(SpaceshipSystems::Camera),
+            (update_chase_camera_input, sync_spaceship_control_mode).in_set(NovaCameraSystems),
         );
     }
 }
@@ -80,7 +84,7 @@ pub struct SpaceshipRotationInputActiveMarker;
 fn insert_camera_controller(
     add: On<Add, SpaceshipCameraControllerMarker>,
     mut commands: Commands,
-    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
+    q_camera: Query<Entity, With<SpaceshipCameraControllerMarker>>,
 ) {
     let entity = add.entity;
     trace!("insert_camera_controller: entity {:?}", entity);
@@ -93,14 +97,43 @@ fn insert_camera_controller(
         return;
     };
 
-    commands.entity(camera).with_children(|parent| {
-        parent.spawn((
-            SpaceshipCameraInputMarker,
-            SpaceshipCameraNormalInputMarker,
-            SpaceshipRotationInputActiveMarker,
-            PointRotation::default(),
-        ));
-    });
+    commands
+        .entity(camera)
+        .insert(ChaseCamera::default())
+        .with_children(|parent| {
+            parent.spawn((
+                SpaceshipCameraInputMarker,
+                SpaceshipCameraNormalInputMarker,
+                SpaceshipRotationInputActiveMarker,
+                PointRotation::default(),
+            ));
+        });
+}
+
+fn destroy_camera_controller(
+    remove: On<Remove, SpaceshipCameraControllerMarker>,
+    mut commands: Commands,
+    q_camera: Query<&Children, With<ChaseCamera>>,
+) {
+    let entity = remove.entity;
+    trace!("destroy_camera_controller: entity {:?}", entity);
+
+    let Ok(children) = q_camera.get(entity) else {
+        warn!(
+            "destroy_camera_controller: entity {:?} not found in q_camera",
+            entity
+        );
+        return;
+    };
+
+    for child in children.iter() {
+        commands.entity(child).despawn();
+    }
+
+    // NOTE: use try_remove in case this get's despawned and remove is called after
+    commands
+        .entity(entity)
+        .try_remove::<(ChaseCamera, SpaceshipCameraControllerMarker)>();
 }
 
 fn insert_camera_freelook(

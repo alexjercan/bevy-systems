@@ -35,8 +35,18 @@ impl EventWorld for NovaEventWorld {
         // If the next scenario is set, switch
         if let Some(next_scenario) = &world.resource::<Self>().next_scenario {
             if !next_scenario.linger {
-                world.trigger(LoadScenarioById(next_scenario.scenario_id.clone()));
-                world.resource_mut::<Self>().clear();
+                let scenarios = world.resource::<GameScenarios>();
+                let scenario = scenarios.get(&next_scenario.scenario_id);
+
+                if let Some(next_scenario) = scenario {
+                    world.trigger(LoadScenario(next_scenario.clone()));
+                } else {
+                    warn!(
+                        "Next scenario id '{}' not found in scenarios!",
+                        next_scenario.scenario_id
+                    );
+                    world.trigger(UnloadScenario);
+                }
             }
         }
 

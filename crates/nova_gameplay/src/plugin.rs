@@ -8,9 +8,6 @@ use crate::{bevy_common_systems, prelude::*};
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SpaceshipSystems {
     First,
-    Input,
-    Hud,
-    Camera,
     Last,
 }
 
@@ -81,10 +78,10 @@ impl Plugin for NovaGameplayPlugin {
             Update,
             (
                 SpaceshipSystems::First,
-                SpaceshipSystems::Input,
+                SpaceshipInputSystems,
                 SpaceshipSectionSystems,
-                SpaceshipSystems::Hud,
-                SpaceshipSystems::Camera,
+                NovaHudSystems,
+                NovaCameraSystems,
                 SpaceshipSystems::Last,
             )
                 .chain(),
@@ -94,10 +91,10 @@ impl Plugin for NovaGameplayPlugin {
             FixedUpdate,
             (
                 SpaceshipSystems::First,
-                SpaceshipSystems::Input,
+                SpaceshipInputSystems,
                 SpaceshipSectionSystems,
-                SpaceshipSystems::Hud,
-                SpaceshipSystems::Camera,
+                NovaHudSystems,
+                NovaCameraSystems,
                 SpaceshipSystems::Last,
             )
                 .chain(),

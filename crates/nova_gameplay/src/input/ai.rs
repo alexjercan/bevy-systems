@@ -21,7 +21,7 @@ impl Plugin for SpaceshipAIInputPlugin {
                 update_turret_target_input,
                 on_projectile_input,
             )
-                .in_set(SpaceshipSystems::Input),
+                .in_set(super::SpaceshipInputSystems),
         );
     }
 }

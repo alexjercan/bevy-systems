@@ -62,6 +62,7 @@ impl Plugin for WASDCameraPlugin {
         debug!("WASDCameraPlugin: build");
 
         app.add_observer(initialize_wasd_camera);
+        app.add_observer(destroy_wasd_camera);
 
         // NOTE: I am using PostUpdate here to ensure that the camera updates after the input was
         // set by the user or other systems in the Update stage. Then the new transform will be
@@ -108,6 +109,19 @@ fn initialize_wasd_camera(
             pitch,
         },
     ));
+}
+
+fn destroy_wasd_camera(
+    remove: On<Remove, WASDCamera>,
+    mut commands: Commands,
+) {
+    let entity = remove.entity;
+    trace!("destroy_wasd_camera: entity {:?}", entity);
+
+    // NOTE: use try_remove in case this get's despawned and remove is called after
+    commands
+        .entity(entity)
+        .try_remove::<(WASDCameraInput, WASDCameraTarget, WASDCameraState)>();
 }
 
 fn update_target(mut q_camera: Query<(&WASDCamera, &WASDCameraInput, &mut WASDCameraTarget)>) {

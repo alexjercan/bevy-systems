@@ -1,7 +1,5 @@
 use bevy::prelude::*;
 
-use crate::prelude::SpaceshipSystems;
-
 pub mod prelude {
     pub use super::{
         objectives_hud, GameObjectivesHud, ObjectiveActionConfig, ObjectiveHudMarker,
@@ -67,7 +65,7 @@ impl Plugin for ObjectivesHudPlugin {
             Update,
             update_text_hud
                 .run_if(resource_changed::<GameObjectivesHud>)
-                .in_set(SpaceshipSystems::Hud),
+                .in_set(super::NovaHudSystems),
         );
     }
 }
