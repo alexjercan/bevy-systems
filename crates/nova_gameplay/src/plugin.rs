@@ -53,7 +53,7 @@ impl Plugin for NovaGameplayPlugin {
         app.add_plugins(bevy_common_systems::prelude::DespawnEntityPlugin);
         app.add_plugins(bevy_common_systems::prelude::ExplodeMeshPlugin);
         // Core Mechanics
-        app.add_plugins(bevy_common_systems::prelude::CollisionDamagePlugin);
+        app.add_plugins(bevy_common_systems::prelude::CollisionImpactPlugin);
         app.add_plugins(bevy_common_systems::prelude::HealthPlugin);
 
         // UI Plugins

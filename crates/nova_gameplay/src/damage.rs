@@ -55,14 +55,14 @@ fn on_rigidbody_spawn(
 
     // NOTE: Add collision damage for all rigid bodies with Health component
     debug!(
-        "on_rigidbody_spawn: adding CollisionDamageMarker to entity {:?}",
+        "on_rigidbody_spawn: adding CollisionImpactMarker to entity {:?}",
         entity
     );
-    commands.entity(entity).insert(CollisionDamageMarker);
+    commands.entity(entity).insert(CollisionImpactMarker);
 }
 
 fn on_collision_hit_to_damage(
-    hit: On<CollisionDamageEvent>,
+    hit: On<CollisionImpactEvent>,
     mut commands: Commands,
     q_mass: Query<&ComputedMass>,
 ) {

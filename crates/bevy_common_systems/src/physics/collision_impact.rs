@@ -1,22 +1,20 @@
-//! A Bevy plugin that applies damage to entities upon collision.
-//!
-//! TODO: Rename this from collision_damage to collision_impact or something like that
+//! A Bevy plugin that find impact to entities upon collision.
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
 pub mod prelude {
     pub use super::{
-        CollisionDamageEvent, CollisionDamageMarker, CollisionDamagePlugin, CollisionDamageSystems,
+        CollisionImpactEvent, CollisionImpactMarker, CollisionImpactPlugin, CollisionImpactSystems,
     };
 }
 
 #[derive(Component, Clone, Debug, Reflect)]
-pub struct CollisionDamageMarker;
+pub struct CollisionImpactMarker;
 
 /// Event to signal that an entity has taken collision damage.
 #[derive(Event, Clone, Debug)]
-pub struct CollisionDamageEvent {
+pub struct CollisionImpactEvent {
     /// The entity that took damage.
     pub entity: Entity,
     /// The entity that was hit.
@@ -30,22 +28,22 @@ pub struct CollisionDamageEvent {
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub enum CollisionDamageSystems {
+pub enum CollisionImpactSystems {
     Sync,
 }
 
-pub struct CollisionDamagePlugin;
+pub struct CollisionImpactPlugin;
 
-impl Plugin for CollisionDamagePlugin {
+impl Plugin for CollisionImpactPlugin {
     fn build(&self, app: &mut App) {
-        debug!("CollisionDamagePlugin: build");
+        debug!("CollisionImpactPlugin: build");
 
         app.add_observer(insert_collision_events);
         app.add_observer(on_collision_event);
     }
 }
 
-fn insert_collision_events(add: On<Add, CollisionDamageMarker>, mut commands: Commands) {
+fn insert_collision_events(add: On<Add, CollisionImpactMarker>, mut commands: Commands) {
     let entity = add.entity;
     trace!("insert_collision_events: entity {:?}", entity);
 
@@ -74,7 +72,7 @@ fn on_collision_event(
     };
     let relative_velocity = **velocity1 - **velocity2;
 
-    commands.trigger(CollisionDamageEvent {
+    commands.trigger(CollisionImpactEvent {
         entity: body,
         other,
         // hit_point: collision.contact_point,
