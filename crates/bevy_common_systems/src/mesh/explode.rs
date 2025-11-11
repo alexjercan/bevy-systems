@@ -8,8 +8,7 @@ use super::slicer::mesh_slice;
 
 pub mod prelude {
     pub use super::{
-        ExplodableEntityMarker, ExplodableFragments, ExplodableMesh, ExplodeMesh,
-        ExplodeMeshPlugin,
+        ExplodableEntityMarker, ExplodableFragments, ExplodableMesh, ExplodeMesh, ExplodeMeshPlugin,
     };
 }
 

@@ -111,10 +111,7 @@ fn initialize_wasd_camera(
     ));
 }
 
-fn destroy_wasd_camera(
-    remove: On<Remove, WASDCamera>,
-    mut commands: Commands,
-) {
+fn destroy_wasd_camera(remove: On<Remove, WASDCamera>, mut commands: Commands) {
     let entity = remove.entity;
     trace!("destroy_wasd_camera: entity {:?}", entity);
 
