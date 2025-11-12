@@ -20,6 +20,7 @@ pub struct SectionRenderOf(pub Entity);
 
 #[derive(Component, Clone, Debug, Default, Reflect)]
 pub struct BaseSectionConfig {
+    pub id: String,
     pub name: String,
     pub description: String,
     pub mass: f32,
@@ -43,6 +44,12 @@ pub struct SectionConfig {
 
 #[derive(Resource, Clone, Debug, Deref, DerefMut, Default)]
 pub struct GameSections(pub Vec<SectionConfig>);
+
+impl GameSections {
+    pub fn get_section(&self, id: &str) -> Option<&SectionConfig> {
+        self.iter().find(|section| section.base.id == id)
+    }
+}
 
 pub fn base_section(config: BaseSectionConfig) -> impl Bundle {
     debug!("base_section: config {:?}", config);

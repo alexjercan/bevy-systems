@@ -3,14 +3,24 @@ use nova_gameplay::prelude::*;
 use nova_scenario::prelude::*;
 use rand::prelude::*;
 
-pub(crate) fn register_scenario(mut commands: Commands, game_assets: Res<super::GameAssets>) {
+pub(crate) fn register_scenario(
+    mut commands: Commands,
+    game_assets: Res<super::GameAssets>,
+    sections: Res<GameSections>,
+) {
     commands.insert_resource(GameScenarios(HashMap::from([
-        ("asteroid_field".to_string(), asteroid_field(&game_assets)),
-        ("asteroid_next".to_string(), asteroid_next(&game_assets)),
+        (
+            "asteroid_field".to_string(),
+            asteroid_field(&game_assets, &sections),
+        ),
+        (
+            "asteroid_next".to_string(),
+            asteroid_next(&game_assets, &sections),
+        ),
     ])));
 }
 
-pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
+pub fn asteroid_field(game_assets: &super::GameAssets, sections: &GameSections) -> ScenarioConfig {
     let mut rng = rand::rng();
 
     let mut objects = Vec::new();
@@ -36,95 +46,54 @@ pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
     }
 
     let spaceship = SpaceshipConfig {
-        controller: SpaceshipController::Player(PlayerControllerConfig {}),
+        controller: SpaceshipController::Player(PlayerControllerConfig {
+            input_mapping: HashMap::from([("thruster".to_string(), KeyCode::Space)]),
+        }),
         sections: vec![
             SpaceshipSectionConfig {
+                id: "controller".to_string(),
                 position: Vec3::ZERO,
                 rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Controller Section".to_string(),
-                        description: "A basic controller section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Controller(ControllerSectionConfig {
-                        frequency: 4.0,
-                        damping_ratio: 4.0,
-                        max_torque: 100.0,
-                        render_mesh: None,
-                    }),
-                },
+                config: sections
+                    .get_section("basic_controller_section")
+                    .unwrap()
+                    .clone(),
             },
             SpaceshipSectionConfig {
+                id: "hull_front".to_string(),
                 position: Vec3::new(0.0, 0.0, 1.0),
                 rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Hull Section".to_string(),
-                        description: "A basic hull section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Hull(HullSectionConfig { render_mesh: None }),
-                },
+                config: sections
+                    .get_section("reinforced_hull_section")
+                    .unwrap()
+                    .clone(),
             },
             SpaceshipSectionConfig {
+                id: "hull_back".to_string(),
                 position: Vec3::new(0.0, 0.0, -1.0),
                 rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Hull Section".to_string(),
-                        description: "A basic hull section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Hull(HullSectionConfig { render_mesh: None }),
-                },
+                config: sections
+                    .get_section("reinforced_hull_section")
+                    .unwrap()
+                    .clone(),
             },
             SpaceshipSectionConfig {
+                id: "thruster".to_string(),
                 position: Vec3::new(0.0, 0.0, 2.0),
                 rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Thruster Section".to_string(),
-                        description: "A basic thruster section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Thruster(ThrusterSectionConfig {
-                        magnitude: 1.0,
-                        render_mesh: None,
-                    }),
-                },
+                config: sections
+                    .get_section("basic_thruster_section")
+                    .unwrap()
+                    .clone(),
             },
             SpaceshipSectionConfig {
+                id: "turret".to_string(),
                 position: Vec3::new(0.0, 0.0, -2.0),
                 rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2),
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Turret Section".to_string(),
-                        description: "A basic turret section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Turret(TurretSectionConfig {
-                        yaw_speed: std::f32::consts::PI,
-                        pitch_speed: std::f32::consts::PI,
-                        min_pitch: Some(-std::f32::consts::FRAC_PI_6),
-                        max_pitch: Some(std::f32::consts::FRAC_PI_2),
-                        render_mesh_base: None,
-                        base_offset: Vec3::new(0.0, -0.5, 0.0),
-                        render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
-                        yaw_offset: Vec3::new(0.0, 0.1, 0.0),
-                        render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
-                        pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
-                        render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
-                        barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
-                        muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
-                        fire_rate: 100.0,
-                        muzzle_speed: 100.0,
-                        projectile_lifetime: 5.0,
-                        projectile_mass: 0.1,
-                        projectile_render_mesh: None,
-                        muzzle_effect: None,
-                    }),
-                },
+                config: sections
+                    .get_section("better_turret_section")
+                    .unwrap()
+                    .clone(),
             },
         ],
     };
@@ -143,92 +112,49 @@ pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
         controller: SpaceshipController::None,
         sections: vec![
             SpaceshipSectionConfig {
+                id: "controller".to_string(),
                 position: Vec3::ZERO,
                 rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Controller Section".to_string(),
-                        description: "A basic controller section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Controller(ControllerSectionConfig {
-                        frequency: 4.0,
-                        damping_ratio: 4.0,
-                        max_torque: 100.0,
-                        render_mesh: None,
-                    }),
-                },
+                config: sections
+                    .get_section("basic_controller_section")
+                    .unwrap()
+                    .clone(),
             },
             SpaceshipSectionConfig {
+                id: "hull_front".to_string(),
                 position: Vec3::new(0.0, 0.0, 1.0),
                 rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Hull Section".to_string(),
-                        description: "A basic hull section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Hull(HullSectionConfig { render_mesh: None }),
-                },
+                config: sections
+                    .get_section("reinforced_hull_section")
+                    .unwrap()
+                    .clone(),
             },
             SpaceshipSectionConfig {
+                id: "hull_back".to_string(),
                 position: Vec3::new(0.0, 0.0, -1.0),
                 rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Hull Section".to_string(),
-                        description: "A basic hull section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Hull(HullSectionConfig { render_mesh: None }),
-                },
+                config: sections
+                    .get_section("reinforced_hull_section")
+                    .unwrap()
+                    .clone(),
             },
             SpaceshipSectionConfig {
+                id: "thruster".to_string(),
                 position: Vec3::new(0.0, 0.0, 2.0),
                 rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Thruster Section".to_string(),
-                        description: "A basic thruster section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Thruster(ThrusterSectionConfig {
-                        magnitude: 1.0,
-                        render_mesh: None,
-                    }),
-                },
+                config: sections
+                    .get_section("basic_thruster_section")
+                    .unwrap()
+                    .clone(),
             },
             SpaceshipSectionConfig {
+                id: "turret".to_string(),
                 position: Vec3::new(0.0, 0.0, -2.0),
                 rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2),
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Turret Section".to_string(),
-                        description: "A basic turret section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Turret(TurretSectionConfig {
-                        yaw_speed: std::f32::consts::PI,
-                        pitch_speed: std::f32::consts::PI,
-                        min_pitch: Some(-std::f32::consts::FRAC_PI_6),
-                        max_pitch: Some(std::f32::consts::FRAC_PI_2),
-                        render_mesh_base: None,
-                        base_offset: Vec3::new(0.0, -0.5, 0.0),
-                        render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
-                        yaw_offset: Vec3::new(0.0, 0.1, 0.0),
-                        render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
-                        pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
-                        render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
-                        barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
-                        muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
-                        fire_rate: 100.0,
-                        muzzle_speed: 100.0,
-                        projectile_lifetime: 5.0,
-                        projectile_mass: 0.1,
-                        projectile_render_mesh: None,
-                        muzzle_effect: None,
-                    }),
-                },
+                config: sections
+                    .get_section("better_turret_section")
+                    .unwrap()
+                    .clone(),
             },
         ],
     };
@@ -382,7 +308,7 @@ pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
     }
 }
 
-pub fn asteroid_next(game_assets: &super::GameAssets) -> ScenarioConfig {
+pub fn asteroid_next(game_assets: &super::GameAssets, _sections: &GameSections) -> ScenarioConfig {
     ScenarioConfig {
         id: "asteroid_next".to_string(),
         name: "Asteroid Field - Next".to_string(),

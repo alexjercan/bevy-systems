@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{platform::collections::HashMap, prelude::*};
 use nova_events::prelude::*;
 use nova_gameplay::prelude::*;
 
@@ -19,18 +19,19 @@ pub enum SpaceshipController {
     AI(AIControllerConfig),
 }
 
-#[derive(Clone, Debug, Reflect)]
+#[derive(Clone, Debug, Default, Reflect)]
 pub struct PlayerControllerConfig {
-    // TODO: Add some kind of input mapping from Section ID to input actions
-    // TODO: Add Section ID in the SpaceshipSectionConfig as String maybe
-    // pub input_mapping: HashMap<>,
+    pub input_mapping: HashMap<SectionId, KeyCode>,
 }
 
 #[derive(Clone, Debug, Reflect)]
 pub struct AIControllerConfig {}
 
+pub type SectionId = String;
+
 #[derive(Clone, Debug, Reflect)]
 pub struct SpaceshipSectionConfig {
+    pub id: SectionId,
     pub position: Vec3,
     pub rotation: Quat,
     // NOTE: Maybe in the future this will be a Handle and in the .cfg file it will be represented
@@ -87,6 +88,8 @@ fn insert_spaceship_sections(
     commands.entity(entity).with_children(|parent| {
         for section in sections_config.iter() {
             let mut section_entity = parent.spawn((
+                EntityId::new(section.id.clone()),
+                EntityTypeName::new(section.config.base.id.clone()),
                 base_section(section.config.base.clone()),
                 Transform::from_translation(section.position).with_rotation(section.rotation),
             ));
@@ -103,10 +106,10 @@ fn insert_spaceship_sections(
 
                     match controller_config {
                         SpaceshipController::None => {}
-                        SpaceshipController::Player(_) => {
-                            // TODO: Something like
-                            // let key = config.input_mapping.get(&section_id);
-                            section_entity.insert(SpaceshipThrusterInputKey(KeyCode::Space));
+                        SpaceshipController::Player(config) => {
+                            if let Some(key) = config.input_mapping.get(&section.id) {
+                                section_entity.insert(SpaceshipThrusterInputKey(*key));
+                            };
                         }
                         SpaceshipController::AI(_) => {}
                     }
