@@ -78,10 +78,11 @@ impl Plugin for ScenarioLoaderPlugin {
     fn build(&self, app: &mut App) {
         debug!("ScenarioLoaderPlugin: build");
 
-        app.init_resource::<CurrentScenario>();
-        app.add_observer(on_load_scenario);
         app.add_observer(on_player_spaceship_spawned);
         app.add_observer(on_player_spaceship_destroyed);
+
+        app.init_resource::<CurrentScenario>();
+        app.add_observer(on_load_scenario);
 
         app.add_observer(on_add_entity_with::<MeshFragmentMarker>);
         app.add_observer(on_add_entity_with::<TurretBulletProjectileMarker>);

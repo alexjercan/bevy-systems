@@ -26,11 +26,10 @@ impl Plugin for SpaceshipCameraControllerPlugin {
         app.add_input_context::<PlayerInputMarker>();
 
         app.add_observer(insert_camera_controller);
-        app.add_observer(destroy_camera_controller);
-
         app.add_observer(insert_camera_freelook);
         app.add_observer(insert_camera_turret);
         app.add_observer(insert_player_input);
+        app.add_observer(destroy_camera_controller);
 
         app.add_observer(on_rotation_input);
         app.add_observer(on_rotation_input_completed);
@@ -108,32 +107,6 @@ fn insert_camera_controller(
                 PointRotation::default(),
             ));
         });
-}
-
-fn destroy_camera_controller(
-    remove: On<Remove, SpaceshipCameraControllerMarker>,
-    mut commands: Commands,
-    q_camera: Query<&Children, With<ChaseCamera>>,
-) {
-    let entity = remove.entity;
-    trace!("destroy_camera_controller: entity {:?}", entity);
-
-    let Ok(children) = q_camera.get(entity) else {
-        warn!(
-            "destroy_camera_controller: entity {:?} not found in q_camera",
-            entity
-        );
-        return;
-    };
-
-    for child in children.iter() {
-        commands.entity(child).despawn();
-    }
-
-    // NOTE: use try_remove in case this get's despawned and remove is called after
-    commands
-        .entity(entity)
-        .try_remove::<(ChaseCamera, SpaceshipCameraControllerMarker)>();
 }
 
 fn insert_camera_freelook(
@@ -233,6 +206,32 @@ fn insert_player_input(
             ),
         ));
     });
+}
+
+fn destroy_camera_controller(
+    remove: On<Remove, SpaceshipCameraControllerMarker>,
+    mut commands: Commands,
+    q_camera: Query<&Children, With<ChaseCamera>>,
+) {
+    let entity = remove.entity;
+    trace!("destroy_camera_controller: entity {:?}", entity);
+
+    let Ok(children) = q_camera.get(entity) else {
+        warn!(
+            "destroy_camera_controller: entity {:?} not found in q_camera",
+            entity
+        );
+        return;
+    };
+
+    for child in children.iter() {
+        commands.entity(child).try_despawn();
+    }
+
+    // NOTE: use try_remove in case this get's despawned and remove is called after
+    commands
+        .entity(entity)
+        .try_remove::<(ChaseCamera, SpaceshipCameraControllerMarker)>();
 }
 
 fn update_chase_camera_input(
