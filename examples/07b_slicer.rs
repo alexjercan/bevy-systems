@@ -20,7 +20,7 @@ fn custom_plugin(app: &mut App) {
     app.add_systems(OnEnter(GameStates::Playing), setup_scenario);
 
     app.add_observer(on_click_damage_health);
-    app.add_observer(on_fragment_added);
+    // app.add_observer(on_fragment_added);
 }
 
 fn setup_scenario(mut commands: Commands, game_assets: Res<GameAssets>) {
@@ -47,17 +47,17 @@ fn on_click_damage_health(
     }
 }
 
-fn on_fragment_added(
-    add: On<Add, FragmentMeshMarker>,
-    mut commands: Commands,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    commands.entity(add.entity).insert((
-        ExplodableEntityMarker,
-        MeshMaterial3d(materials.add(Color::srgb(rand::random(), rand::random(), rand::random()))),
-        Health::new(10.0),
-    ));
-}
+// fn on_fragment_added(
+//     add: On<Add, FragmentMeshMarker>,
+//     mut commands: Commands,
+//     mut materials: ResMut<Assets<StandardMaterial>>,
+// ) {
+//     commands.entity(add.entity).insert((
+//         ExplodableEntityMarker,
+//         MeshMaterial3d(materials.add(Color::srgb(rand::random(), rand::random(), rand::random()))),
+//         Health::new(10.0),
+//     ));
+// }
 
 pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
     let mut rng = rand::rng();

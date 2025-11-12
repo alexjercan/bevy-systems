@@ -166,7 +166,7 @@ fn handle_entity_explosion(
             mesh_material.clone(),
             transform,
             RigidBody::Dynamic,
-            Collider::convex_hull_from_mesh(&mesh).unwrap_or(Collider::sphere(0.5)),
+            Collider::convex_hull_from_mesh(mesh).unwrap_or(Collider::sphere(0.5)),
             LinearVelocity(velocity),
         ));
     }

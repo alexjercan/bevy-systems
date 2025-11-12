@@ -20,11 +20,15 @@ fn custom_plugin(app: &mut App) {
     app.add_systems(OnEnter(GameStates::Playing), setup_scenario);
 }
 
-fn setup_scenario(mut commands: Commands, game_assets: Res<GameAssets>) {
-    commands.trigger(LoadScenario(test_scenario(&game_assets)));
+fn setup_scenario(
+    mut commands: Commands,
+    game_assets: Res<GameAssets>,
+    sections: Res<GameSections>,
+) {
+    commands.trigger(LoadScenario(test_scenario(&game_assets, sections)));
 }
 
-pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
+pub fn test_scenario(game_assets: &GameAssets, sections: Res<GameSections>) -> ScenarioConfig {
     let mut rng = rand::rng();
 
     let mut objects = Vec::new();
@@ -52,19 +56,13 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
     let spaceship = SpaceshipConfig {
         controller: SpaceshipController::None,
         sections: vec![SpaceshipSectionConfig {
-            position: Vec3::new(0.0, 0.0, 0.0),
+            id: "thruster".to_string(),
+            position: Vec3::ZERO,
             rotation: Quat::IDENTITY,
-            config: SectionConfig {
-                base: BaseSectionConfig {
-                    name: "Basic Thruster Section".to_string(),
-                    description: "A basic thruster section for spaceships.".to_string(),
-                    mass: 1.0,
-                },
-                kind: SectionKind::Thruster(ThrusterSectionConfig {
-                    magnitude: 1.0,
-                    render_mesh: None,
-                }),
-            },
+            config: sections
+                .get_section("basic_thruster_section")
+                .unwrap()
+                .clone(),
         }],
     };
     objects.push(ScenarioObjectConfig {
