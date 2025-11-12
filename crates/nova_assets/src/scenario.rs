@@ -309,11 +309,24 @@ pub fn asteroid_field(game_assets: &super::GameAssets, sections: &GameSections) 
 }
 
 pub fn asteroid_next(game_assets: &super::GameAssets, _sections: &GameSections) -> ScenarioConfig {
+    let events = vec![
+        ScenarioEventConfig {
+            name: EventConfig::OnStart,
+            filters: vec![],
+            actions: vec![
+                EventActionConfig::NextScenario(NextScenarioActionConfig {
+                    scenario_id: "asteroid_field".to_string(),
+                    linger: true,
+                }),
+            ],
+        },
+    ];
+
     ScenarioConfig {
         id: "asteroid_next".to_string(),
         name: "Asteroid Field - Next".to_string(),
         description: "The next scenario after the asteroid field.".to_string(),
         cubemap: game_assets.cubemap.clone(),
-        events: vec![],
+        events,
     }
 }
