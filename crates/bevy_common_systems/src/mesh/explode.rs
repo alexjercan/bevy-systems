@@ -4,10 +4,10 @@ use std::collections::VecDeque;
 use bevy::prelude::*;
 use rand::Rng;
 
-use super::slicer::mesh_slice;
+use super::util::TriangleMeshBuilder;
 
 pub mod prelude {
-    pub use super::{ExplodeFragments, ExplodeMesh, ExplodableEntity, ExplodeMeshPlugin};
+    pub use super::{ExplodableEntity, ExplodeFragments, ExplodeMesh, ExplodeMeshPlugin};
 }
 
 const MAX_ITERATIONS: usize = 10;
@@ -37,9 +37,7 @@ pub struct ExplodeMesh {
 
 impl Default for ExplodeMesh {
     fn default() -> Self {
-        Self {
-            fragment_count: 4,
-        }
+        Self { fragment_count: 4 }
     }
 }
 
@@ -99,7 +97,10 @@ fn handle_explosion(
     let mut fragment_meshes = Vec::new();
     for (mesh_entity, mesh3d) in mesh_entities.into_iter() {
         let Some(mesh) = meshes.get(&**mesh3d) else {
-            warn!("handle_explosion: mesh_entity {:?} has no mesh data.", mesh_entity);
+            warn!(
+                "handle_explosion: mesh_entity {:?} has no mesh data.",
+                mesh_entity
+            );
             return;
         };
 
@@ -109,9 +110,7 @@ fn handle_explosion(
             fragment_count
         );
 
-        let Some(fragments) =
-            explode_mesh(&mesh.clone(), fragment_count, MAX_ITERATIONS)
-        else {
+        let Some(fragments) = explode_mesh(&mesh.clone(), fragment_count, MAX_ITERATIONS) else {
             warn!(
                 "explode_mesh: entity {:?} failed to slice mesh into fragments.",
                 entity
@@ -152,7 +151,8 @@ fn explode_mesh(
                 Vec3::new(r * theta.cos(), r * theta.sin(), u).normalize()
             };
 
-            let Some((pos, neg)) = mesh_slice(&mesh, plane_normal, plane_point) else {
+            let Some((pos, neg)) = TriangleMeshBuilder::from(mesh).slice(plane_normal, plane_point)
+            else {
                 warn!(
                     "slice_mesh_into_fragments: could not slice mesh with plane normal {:?} at point {:?}.",
                     plane_normal, plane_point
@@ -160,8 +160,8 @@ fn explode_mesh(
                 continue;
             };
 
-            fragments.push((pos, plane_normal));
-            fragments.push((neg, -plane_normal));
+            fragments.push((pos.build(), plane_normal));
+            fragments.push((neg.build(), -plane_normal));
         }
 
         if fragments.len() >= fragment_count {
