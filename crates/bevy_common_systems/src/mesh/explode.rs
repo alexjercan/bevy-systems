@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 use bevy::prelude::*;
 use rand::Rng;
 
-use super::util::TriangleMeshBuilder;
+use super::builder::TriangleMeshBuilder;
 
 pub mod prelude {
     pub use super::{ExplodableEntity, ExplodeFragments, ExplodeMesh, ExplodeMeshPlugin};
