@@ -736,13 +736,28 @@ fn on_click_spaceship_section(
                 SectionKind::Turret(turret) => {
                     let rotation = Quat::from_rotation_arc(Vec3::Y, normal.normalize());
 
+                    let key_bind = keyboard.map(|k| {
+                        k.get_pressed()
+                            .next()
+                            .map_or(MouseButton::Left.into(), |k| Binding::from(*k))
+                    });
+                    let pad_bind = gamepad.map(|b| {
+                        b.get_pressed()
+                            .next()
+                            .map_or(GamepadButton::RightTrigger2.into(), |b| Binding::from(*b))
+                    });
+                    let binds = vec![key_bind, pad_bind]
+                        .into_iter()
+                        .flatten()
+                        .collect::<Vec<Binding>>();
+
                     let mut turret_entity = Entity::PLACEHOLDER;
                     commands.entity(spaceship).with_children(|parent| {
                         turret_entity = parent
                             .spawn((
                                 base_section(section.base.clone()),
                                 turret_section(turret.clone()),
-                                SpaceshipTurretInputKey(MouseButton::Left),
+                                SpaceshipTurretInputBinding(binds.clone()),
                                 Transform {
                                     translation: position,
                                     rotation,
@@ -761,6 +776,7 @@ fn on_click_spaceship_section(
                             config: section.clone(),
                         },
                     );
+                    player_config.inputs.insert(turret_entity, binds);
                 }
             }
         }

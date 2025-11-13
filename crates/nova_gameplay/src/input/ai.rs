@@ -152,8 +152,14 @@ fn update_turret_target_input(
 }
 
 fn on_projectile_input(
-    mut commands: Commands,
-    q_turret: Query<(Entity, &TurretSectionMuzzleEntity, &ChildOf), With<TurretSectionMarker>>,
+    mut q_turret: Query<
+        (
+            &TurretSectionMuzzleEntity,
+            &mut TurretSectionInput,
+            &ChildOf,
+        ),
+        With<TurretSectionMarker>,
+    >,
     q_muzzle: Query<&GlobalTransform, With<TurretSectionBarrelMuzzleMarker>>,
     q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<AISpaceshipMarker>)>,
     player: Single<&Transform, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
@@ -161,8 +167,8 @@ fn on_projectile_input(
     let player_transform = player.into_inner();
 
     for entity in &q_spaceship {
-        for (turret, muzzle, _) in q_turret
-            .iter()
+        for (muzzle, mut input, _) in q_turret
+            .iter_mut()
             .filter(|(_, _, ChildOf(c_parent))| *c_parent == entity)
         {
             let Ok(muzzle_transform) = q_muzzle.get(**muzzle) else {
@@ -178,9 +184,7 @@ fn on_projectile_input(
             let forward = muzzle_transform.forward();
 
             let alignment = forward.dot(direction_to_player);
-            if alignment > 0.95 {
-                commands.trigger(TurretShoot { entity: turret });
-            }
+            **input = alignment > 0.95;
         }
     }
 }

@@ -7,13 +7,12 @@ use crate::prelude::*;
 pub mod prelude {
     pub use super::{
         PlayerSpaceshipMarker, SpaceshipPlayerInputPlugin, SpaceshipThrusterInputBinding,
-        SpaceshipTurretInputKey,
+        SpaceshipTurretInputBinding,
     };
 }
 
 pub struct SpaceshipPlayerInputPlugin;
 
-// TODO: Add some input for the thrusters and shooting, etc. here
 impl Plugin for SpaceshipPlayerInputPlugin {
     fn build(&self, app: &mut App) {
         debug!("SpaceshipPlayerInputPlugin: build");
@@ -23,12 +22,16 @@ impl Plugin for SpaceshipPlayerInputPlugin {
         app.add_observer(on_thruster_input);
         app.add_observer(on_thruster_input_completed);
 
+        app.add_input_context::<TurretInputMarker>();
+        app.add_observer(on_turret_input_binding);
+        app.add_observer(on_projectile_input);
+        app.add_observer(on_projectile_input_completed);
+
         app.add_systems(
             Update,
             (
                 update_controller_target_rotation_torque,
                 update_turret_target_input,
-                on_projectile_input,
             )
                 .in_set(super::SpaceshipInputSystems),
         );
@@ -108,7 +111,7 @@ fn update_turret_target_input(
 pub struct SpaceshipThrusterInputBinding(pub Vec<Binding>);
 
 #[derive(Component, Debug, Clone)]
-struct ThrusterInputMarker(Entity);
+struct ThrusterInputMarker;
 
 #[derive(InputAction)]
 #[action_output(bool)]
@@ -131,7 +134,7 @@ fn on_thruster_input_binding(
     };
 
     commands.entity(entity).insert((
-        ThrusterInputMarker(entity),
+        ThrusterInputMarker,
         actions!(
             ThrusterInputMarker[(
                 Name::new("Input: Thruster"),
@@ -172,10 +175,6 @@ fn on_thruster_input_completed(
     trace!("on_thruster_input_completed: entity {:?}", entity);
 
     let Ok(mut q_input) = q_input.get_mut(entity) else {
-        error!(
-            "on_thruster_input_completed: entity {:?} not found in q_input",
-            entity
-        );
         return;
     };
 
@@ -183,16 +182,75 @@ fn on_thruster_input_completed(
 }
 
 #[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]
-pub struct SpaceshipTurretInputKey(pub MouseButton);
+pub struct SpaceshipTurretInputBinding(pub Vec<Binding>);
+
+#[derive(Component, Debug, Clone)]
+struct TurretInputMarker;
+
+#[derive(InputAction)]
+#[action_output(bool)]
+struct TurretInput;
+
+fn on_turret_input_binding(
+    add: On<Add, SpaceshipTurretInputBinding>,
+    mut commands: Commands,
+    q_binding: Query<&SpaceshipTurretInputBinding>,
+) {
+    let entity = add.entity;
+    trace!("on_turret_input_binding: entity {:?}", entity);
+
+    let Ok(binding) = q_binding.get(entity) else {
+        error!(
+            "on_turret_input_binding: entity {:?} not found in q_binding",
+            entity
+        );
+        return;
+    };
+
+    commands.entity(entity).insert((
+        TurretInputMarker,
+        actions!(
+            TurretInputMarker[(
+                Name::new("Input: Turret"),
+                Action::<TurretInput>::new(),
+                ActionSettings {
+                    consume_input: false,
+                    ..default()
+                },
+                Bindings::spawn(binding.0.clone()),
+            )]
+        ),
+    ));
+}
 
 fn on_projectile_input(
-    mut commands: Commands,
-    mouse: Res<ButtonInput<MouseButton>>,
-    q_turret: Query<(Entity, &SpaceshipTurretInputKey), With<TurretSectionMarker>>,
+    fire: On<Start<TurretInput>>,
+    mut q_turret: Query<&mut TurretSectionInput, With<TurretInputMarker>>,
 ) {
-    for (turret, key) in &q_turret {
-        if mouse.pressed(**key) {
-            commands.trigger(TurretShoot { entity: turret });
-        }
-    }
+    let entity = fire.event().context;
+    trace!("on_projectile_input: entity {:?}", entity);
+
+    let Ok(mut q_turret) = q_turret.get_mut(entity) else {
+        error!(
+            "on_projectile_input: entity {:?} not found in q_turret",
+            entity
+        );
+        return;
+    };
+
+    **q_turret = true;
+}
+
+fn on_projectile_input_completed(
+    fire: On<Complete<TurretInput>>,
+    mut q_turret: Query<&mut TurretSectionInput, With<TurretInputMarker>>,
+) {
+    let entity = fire.event().context;
+    trace!("on_projectile_input_completed: entity {:?}", entity);
+
+    let Ok(mut q_turret) = q_turret.get_mut(entity) else {
+        return;
+    };
+
+    **q_turret = false;
 }

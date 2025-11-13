@@ -121,8 +121,11 @@ fn insert_spaceship_sections(
 
                     match controller_config {
                         SpaceshipController::None => {}
-                        SpaceshipController::Player(_) => {
-                            section_entity.insert(SpaceshipTurretInputKey(MouseButton::Left));
+                        SpaceshipController::Player(config) => {
+                            if let Some(bindings) = config.input_mapping.get(&section.id) {
+                                section_entity
+                                    .insert(SpaceshipTurretInputBinding(bindings.clone()));
+                            }
                         }
                         SpaceshipController::AI(_) => {}
                     }

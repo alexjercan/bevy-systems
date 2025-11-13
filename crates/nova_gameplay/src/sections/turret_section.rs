@@ -17,8 +17,9 @@ use crate::prelude::*;
 pub mod prelude {
     pub use super::{
         turret_section, TurretBulletProjectileMarker, TurretProjectileHooks,
-        TurretSectionBarrelMuzzleMarker, TurretSectionConfig, TurretSectionMarker,
-        TurretSectionMuzzleEntity, TurretSectionPlugin, TurretSectionTargetInput, TurretShoot,
+        TurretSectionBarrelMuzzleMarker, TurretSectionConfig, TurretSectionInput,
+        TurretSectionMarker, TurretSectionMuzzleEntity, TurretSectionPlugin,
+        TurretSectionTargetInput,
     };
 }
 
@@ -99,15 +100,13 @@ pub fn turret_section(config: TurretSectionConfig) -> impl Bundle {
         TurretSectionMarker,
         TurretSectionTargetInput(None),
         TurretSectionConfigHelper(config),
+        TurretSectionInput(false),
     )
 }
 
-/// Event to request the turret to shoot a projectile.
-#[derive(Event, Debug, Clone)]
-pub struct TurretShoot {
-    /// The turret that will shoot the projectile.
-    pub entity: Entity,
-}
+/// Input to request the turret to shoot a projectile.
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+pub struct TurretSectionInput(pub bool);
 
 /// Marker component for turret sections.
 #[derive(Component, Clone, Debug, Reflect)]
@@ -212,14 +211,13 @@ impl Plugin for TurretSectionPlugin {
             app.add_observer(on_projectile_marker_effect);
         }
 
-        app.add_observer(on_shoot_spawn_projectile);
-
         app.add_systems(
             Update,
             (
                 update_barrel_fire_state,
                 sync_turret_rotator_yaw_system,
                 sync_turret_rotator_pitch_system,
+                shoot_spawn_projectile,
             )
                 .in_set(super::SpaceshipSectionSystems),
         );
@@ -559,8 +557,7 @@ fn sync_turret_rotator_pitch_system(
     }
 }
 
-fn on_shoot_spawn_projectile(
-    shoot: On<TurretShoot>,
+fn shoot_spawn_projectile(
     mut commands: Commands,
     q_spaceship: Query<
         (&LinearVelocity, &AngularVelocity, &ComputedCenterOfMass),
@@ -568,9 +565,11 @@ fn on_shoot_spawn_projectile(
     >,
     q_turret: Query<
         (
+            Entity,
             &TurretSectionMuzzleEntity,
             &ChildOf,
             &TurretSectionConfigHelper,
+            &TurretSectionInput,
         ),
         With<TurretSectionMarker>,
     >,
@@ -579,79 +578,76 @@ fn on_shoot_spawn_projectile(
     // And it should be fine, since it will not be called frequently.
     transform_helper: TransformHelper,
 ) {
-    let turret = shoot.entity;
-    let Ok((muzzle, ChildOf(spaceship), config)) = q_turret.get(turret) else {
-        error!(
-            "on_shoot_spawn_projectile: entity {:?} not found in q_turret",
-            turret
-        );
-        return;
-    };
+    for (turret, muzzle, ChildOf(spaceship), config, input) in &q_turret {
+        if !**input {
+            continue;
+        }
 
-    let Ok((lin_vel, ang_vel, center)) = q_spaceship.get(*spaceship) else {
-        error!(
-            "on_shoot_spawn_projectile: entity {:?} not found in q_spaceship",
-            spaceship
-        );
-        return;
-    };
+        let Ok((lin_vel, ang_vel, center)) = q_spaceship.get(*spaceship) else {
+            error!(
+                "on_shoot_spawn_projectile: entity {:?} not found in q_spaceship",
+                spaceship
+            );
+            return;
+        };
 
-    let Ok(mut fire_state) = q_muzzle.get_mut(**muzzle) else {
-        error!(
-            "on_shoot_spawn_projectile: entity {:?} not found in q_muzzle",
-            **muzzle
-        );
-        return;
-    };
+        let Ok(mut fire_state) = q_muzzle.get_mut(**muzzle) else {
+            error!(
+                "on_shoot_spawn_projectile: entity {:?} not found in q_muzzle",
+                **muzzle
+            );
+            return;
+        };
 
-    if !fire_state.is_finished() {
-        return;
+        if !fire_state.is_finished() {
+            return;
+        }
+
+        let Ok(muzzle_transform) = transform_helper.compute_global_transform(**muzzle) else {
+            error!(
+                "on_shoot_spawn_projectile: entity {:?} global transform not found",
+                **muzzle
+            );
+            return;
+        };
+
+        let muzzle_direction = muzzle_transform.forward();
+        let projectile_position = muzzle_transform.translation();
+        let projectile_rotation = muzzle_transform.rotation();
+        let radius_vector = projectile_position - **center;
+        let _inertia_vel = ang_vel.cross(radius_vector) + **lin_vel;
+        // FIXME: Currently we are only using the linear velocity as inertia
+        let inertia_vel = **lin_vel;
+
+        let muzzle_exit_velocity = muzzle_direction * config.muzzle_speed;
+        let linear_velocity = muzzle_exit_velocity + inertia_vel;
+
+        let projectile_transform = Transform {
+            translation: projectile_position + muzzle_exit_velocity * 0.01,
+            rotation: projectile_rotation,
+            ..Default::default()
+        };
+
+        commands.spawn((
+            Name::new("Projectile"),
+            TurretBulletProjectileMarker,
+            TurretBulletProjectileOwner(*spaceship),
+            projectile_transform,
+            RigidBody::Dynamic,
+            LinearVelocity(linear_velocity),
+            Collider::sphere(0.05),
+            ActiveCollisionHooks::FILTER_PAIRS,
+            Mass(config.projectile_mass),
+            TurretSectionPartOf(turret),
+            TurretSectionMuzzleEntity(**muzzle),
+            BulletProjectileRenderMesh(config.projectile_render_mesh.clone()),
+            TempEntity(config.projectile_lifetime),
+            Visibility::Visible,
+        ));
+
+        // Reset the fire state timer
+        fire_state.reset();
     }
-
-    let Ok(muzzle_transform) = transform_helper.compute_global_transform(**muzzle) else {
-        error!(
-            "on_shoot_spawn_projectile: entity {:?} global transform not found",
-            **muzzle
-        );
-        return;
-    };
-
-    let muzzle_direction = muzzle_transform.forward();
-    let projectile_position = muzzle_transform.translation();
-    let projectile_rotation = muzzle_transform.rotation();
-    let radius_vector = projectile_position - **center;
-    let _inertia_vel = ang_vel.cross(radius_vector) + **lin_vel;
-    // FIXME: Currently we are only using the linear velocity as inertia
-    let inertia_vel = **lin_vel;
-
-    let muzzle_exit_velocity = muzzle_direction * config.muzzle_speed;
-    let linear_velocity = muzzle_exit_velocity + inertia_vel;
-
-    let projectile_transform = Transform {
-        translation: projectile_position + muzzle_exit_velocity * 0.01,
-        rotation: projectile_rotation,
-        ..Default::default()
-    };
-
-    commands.spawn((
-        Name::new("Projectile"),
-        TurretBulletProjectileMarker,
-        TurretBulletProjectileOwner(*spaceship),
-        projectile_transform,
-        RigidBody::Dynamic,
-        LinearVelocity(linear_velocity),
-        Collider::sphere(0.05),
-        ActiveCollisionHooks::FILTER_PAIRS,
-        Mass(config.projectile_mass),
-        TurretSectionPartOf(turret),
-        TurretSectionMuzzleEntity(**muzzle),
-        BulletProjectileRenderMesh(config.projectile_render_mesh.clone()),
-        TempEntity(config.projectile_lifetime),
-        Visibility::Visible,
-    ));
-
-    // Reset the fire state timer
-    fire_state.reset();
 }
 
 fn on_projectile_marker_effect(

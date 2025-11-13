@@ -47,10 +47,19 @@ pub fn asteroid_field(game_assets: &super::GameAssets, sections: &GameSections) 
 
     let spaceship = SpaceshipConfig {
         controller: SpaceshipController::Player(PlayerControllerConfig {
-            input_mapping: HashMap::from([(
-                "thruster".to_string(),
-                vec![KeyCode::Space.into(), GamepadButton::RightTrigger.into()],
-            )]),
+            input_mapping: HashMap::from([
+                (
+                    "thruster".to_string(),
+                    vec![KeyCode::Space.into(), GamepadButton::RightTrigger.into()],
+                ),
+                (
+                    "turret".to_string(),
+                    vec![
+                        MouseButton::Left.into(),
+                        GamepadButton::RightTrigger2.into(),
+                    ],
+                ),
+            ]),
         }),
         sections: vec![
             SpaceshipSectionConfig {
