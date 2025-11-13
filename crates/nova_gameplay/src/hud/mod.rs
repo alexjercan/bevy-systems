@@ -68,10 +68,8 @@ fn remove_hud_velocity(
     debug!("remove_hud_velocity: entity {:?}", entity);
 
     for (hud_entity, target) in &q_hud {
-        if let Some(target_entity) = **target {
-            if target_entity == entity {
-                commands.entity(hud_entity).despawn();
-            }
+        if **target == entity {
+            commands.entity(hud_entity).despawn();
         }
     }
 }
