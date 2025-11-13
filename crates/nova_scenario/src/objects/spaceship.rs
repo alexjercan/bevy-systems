@@ -39,7 +39,7 @@ pub struct SpaceshipSectionConfig {
     pub config: SectionConfig,
 }
 
-#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+#[derive(Component, Clone, Debug, Default, Deref, DerefMut, Reflect)]
 pub struct SpaceshipSectionsConfig(pub Vec<SpaceshipSectionConfig>);
 
 #[derive(Clone, Debug)]

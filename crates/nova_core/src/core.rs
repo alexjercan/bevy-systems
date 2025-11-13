@@ -477,6 +477,8 @@ fn create_new_spaceship(
             DespawnOnExit(ExampleStates::Editor),
             SpaceshipRootMarker,
             Name::new("Spaceship Prefab"),
+            SpaceshipSectionsConfig::default(),
+            SpaceshipController::None,
             Transform::default(),
             Visibility::Visible,
         ))
@@ -534,6 +536,8 @@ fn create_new_spaceship_with_controller(
             DespawnOnExit(ExampleStates::Editor),
             SpaceshipRootMarker,
             Name::new("Spaceship Prefab with Controller"),
+            SpaceshipSectionsConfig::default(),
+            SpaceshipController::None,
             Transform::default(),
             Visibility::Visible,
         ))
