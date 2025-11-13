@@ -25,6 +25,14 @@ pub fn direction_to_spherical(direction: Vec3) -> (f32, f32) {
     (theta, phi)
 }
 
+/// Linearly interpolate along the great circle (spherical interpolation)
+pub fn slerp(a: Vec3, b: Vec3, t: f32) -> Vec3 {
+    let dot = a.dot(b).clamp(-1.0, 1.0);
+    let theta = dot.acos() * t;
+    let relative = (b - a * dot).normalize();
+    (a * theta.cos() + relative * theta.sin()).normalize()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

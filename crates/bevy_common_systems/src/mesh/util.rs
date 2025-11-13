@@ -3,6 +3,8 @@ use bevy::{
     mesh::{Indices, PrimitiveTopology},
     prelude::*,
 };
+use noise::NoiseFn;
+use crate::meth::prelude::*;
 
 pub mod prelude {
     pub use super::TriangleMeshBuilder;
@@ -14,8 +16,71 @@ pub struct TriangleMeshBuilder {
 }
 
 impl TriangleMeshBuilder {
-    pub fn add_triangle(&mut self, t: Triangle3d) {
+    pub fn new_empty() -> Self {
+        Self {
+            triangles: Vec::new(),
+        }
+    }
+
+    pub fn new_octahedron(resolution: u32) -> Self {
+        let mut builder = TriangleMeshBuilder::default();
+
+        let up = Vec3::Y;
+        let down = -Vec3::Y;
+        let left = -Vec3::X;
+        let right = Vec3::X;
+        let forward = Vec3::Z;
+        let back = -Vec3::Z;
+
+        let faces = [
+            (up, back, left),
+            (up, right, back),
+            (up, forward, right),
+            (up, left, forward),
+            (down, left, back),
+            (down, back, right),
+            (down, right, forward),
+            (down, forward, left),
+        ];
+
+        for (a, b, c) in faces {
+            builder.subdivide_face(a, b, c, resolution);
+        }
+
+        builder
+    }
+
+    pub fn add_triangle(&mut self, t: Triangle3d) -> &mut Self {
         self.triangles.push(t);
+        self
+    }
+
+    pub fn apply_noise(&mut self, noise_fn: &impl NoiseFn<f64, 3>) -> &mut Self {
+        let (vertices, indices) = self.vertices_and_indices();
+
+        let height_values = vertices
+            .iter()
+            .map(|&p| noise_fn.get([p.x as f64, p.y as f64, p.z as f64]) as f32)
+            .collect::<Vec<_>>();
+
+        let positions = vertices
+            .iter()
+            .zip(height_values.iter())
+            .map(|(pos, height)| pos + pos.normalize() * *height)
+            .collect::<Vec<_>>();
+
+        self.triangles = indices
+            .chunks(3)
+            .map(|c| {
+                Triangle3d::new(
+                    positions[c[0] as usize],
+                    positions[c[1] as usize],
+                    positions[c[2] as usize],
+                )
+            })
+            .collect::<Vec<_>>();
+
+        self
     }
 
     pub fn vertices_and_indices(&self) -> (Vec<Vec3>, Vec<u32>) {
@@ -96,6 +161,22 @@ impl TriangleMeshBuilder {
 
     pub fn is_empty(&self) -> bool {
         self.triangles.is_empty()
+    }
+
+    fn subdivide_face(&mut self, a: Vec3, b: Vec3, c: Vec3, depth: u32) {
+        if depth == 0 {
+            self.add_triangle(Triangle3d::new(a, b, c));
+        } else {
+            let ab = slerp(a, b, 0.5);
+            let bc = slerp(b, c, 0.5);
+            let ca = slerp(c, a, 0.5);
+
+            // Recursively subdivide into 4 smaller triangles
+            self.subdivide_face(a, ab, ca, depth - 1);
+            self.subdivide_face(b, bc, ab, depth - 1);
+            self.subdivide_face(c, ca, bc, depth - 1);
+            self.subdivide_face(ab, bc, ca, depth - 1);
+        }
     }
 }
 
