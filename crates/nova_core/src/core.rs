@@ -623,8 +623,7 @@ fn on_click_spaceship_section(
         SectionChoice::None => {}
         SectionChoice::Section(ref id) => {
             let Some(section) = sections.get_section(id) else {
-                warn!("on_click_spaceship_section: Section '{}' not found.", id);
-                return;
+                panic!("on_click_spaceship_section: Section '{}' not found.", id);
             };
 
             match &section.kind {

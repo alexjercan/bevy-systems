@@ -110,7 +110,7 @@ fn update_controller_root_torque(
 ) {
     for (controller, controller_input, &ChildOf(root)) in &q_controller {
         let Ok((angular_inertia, rotation, mut forces)) = q_root.get_mut(root) else {
-            warn!(
+            error!(
                 "update_controller_root_torque: root entity {:?} not found in q_root",
                 root
             );
@@ -145,7 +145,7 @@ fn insert_controller_section_render(
     trace!("insert_controller_section_render: entity {:?}", entity);
 
     let Ok(render_mesh) = q_controller.get(entity) else {
-        warn!(
+        error!(
             "insert_controller_section_render: entity {:?} not found in q_controller",
             entity
         );

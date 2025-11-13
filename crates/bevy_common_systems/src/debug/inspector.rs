@@ -61,7 +61,7 @@ fn inspector_ui(world: &mut World) {
         .query_filtered::<&mut EguiContext, With<PrimaryEguiContext>>()
         .single(world)
     else {
-        warn!("inspector_ui: No EguiContext found");
+        error!("inspector_ui: No EguiContext found");
         return;
     };
     let mut egui_context = egui_context.clone();

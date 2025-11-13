@@ -166,7 +166,7 @@ fn on_projectile_input(
             .filter(|(_, _, ChildOf(c_parent))| *c_parent == entity)
         {
             let Ok(muzzle_transform) = q_muzzle.get(**muzzle) else {
-                warn!(
+                error!(
                     "on_projectile_input: muzzle entity {:?} not found in q_muzzle",
                     **muzzle
                 );

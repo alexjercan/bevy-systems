@@ -91,7 +91,7 @@ fn initialize_chase_camera(
     trace!("initialize_chase_camera: entity {:?}", entity);
 
     let Ok(has_state) = q_state.get(entity) else {
-        warn!(
+        error!(
             "initialize_chase_camera: entity {:?} not found in q_state",
             entity
         );

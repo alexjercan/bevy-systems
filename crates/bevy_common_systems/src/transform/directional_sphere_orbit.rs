@@ -77,13 +77,13 @@ impl Plugin for DirectionalSphereOrbitPlugin {
 fn initialize_sphere_orbit_system(
     insert: On<Insert, DirectionalSphereOrbit>,
     mut commands: Commands,
-    q_orbit: Query<&DirectionalSphereOrbit, With<DirectionalSphereOrbit>>,
+    q_orbit: Query<&DirectionalSphereOrbit>,
 ) {
     let entity = insert.entity;
     trace!("initialize_sphere_orbit_system: entity {:?}", entity);
 
     let Ok(orbit) = q_orbit.get(entity) else {
-        warn!(
+        error!(
             "initialize_sphere_orbit_system: entity {:?} not found in q_orbit",
             entity
         );

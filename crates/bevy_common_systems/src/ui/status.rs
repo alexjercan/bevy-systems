@@ -189,7 +189,7 @@ fn insert_status_bar_item(
     trace!("insert_status_bar_item: entity {:?}", entity);
 
     let Ok((icon, prefix, suffix, value_fn, color_fn)) = q_item.get(entity) else {
-        warn!(
+        error!(
             "insert_status_bar_item: entity {:?} not found in q_item",
             entity
         );

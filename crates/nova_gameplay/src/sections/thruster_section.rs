@@ -110,7 +110,7 @@ fn thruster_impulse_system(
 ) {
     for (position, rotation, &ChildOf(root), magnitude, input) in &q_thruster {
         let Ok(mut force) = q_root.get_mut(root) else {
-            warn!(
+            error!(
                 "thruster_impulse_system: entity {:?} not found in q_root",
                 root
             );
@@ -141,7 +141,7 @@ fn thruster_shader_update_system(
 ) {
     for (material, &ChildOf(parent)) in &q_render {
         let Ok(input) = q_thruster.get(parent) else {
-            warn!(
+            error!(
                 "thruster_shader_update_system: entity {:?} not found in q_thruster",
                 parent
             );
@@ -149,7 +149,7 @@ fn thruster_shader_update_system(
         };
 
         let Some(material) = materials.get_mut(&**material) else {
-            warn!(
+            error!(
                 "thruster_shader_update_system: material for entity {:?} not found",
                 parent
             );
@@ -174,7 +174,7 @@ fn insert_thruster_section_render(
     trace!("insert_thruster_section_render: entity {:?}", entity);
 
     let Ok(render_mesh) = q_thruster.get(entity) else {
-        warn!(
+        error!(
             "insert_thruster_section_render: entity {:?} not found in q_thruster",
             entity
         );

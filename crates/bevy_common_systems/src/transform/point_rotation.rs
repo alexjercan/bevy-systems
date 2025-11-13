@@ -72,7 +72,7 @@ fn initialize_point_rotation_system(
     trace!("initialize_point_rotation_system: entity {:?}", entity);
 
     let Ok(point) = q_point.get(entity) else {
-        warn!(
+        error!(
             "initialize_point_rotation_system: entity {:?} not found in q_point",
             entity
         );

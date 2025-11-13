@@ -69,7 +69,7 @@ fn insert_asteroid_collider(
     trace!("insert_asteroid_render: entity {:?}", entity);
 
     let Ok(radius) = q_asteroid.get(entity) else {
-        warn!(
+        error!(
             "insert_asteroid_render: entity {:?} not found in q_asteroid",
             entity
         );
@@ -103,7 +103,7 @@ fn insert_asteroid_render(
     trace!("insert_asteroid_render: entity {:?}", entity);
 
     let Ok((render_mesh, ChildOf(asteroid))) = q_render.get(entity) else {
-        warn!(
+        error!(
             "insert_asteroid_render: entity {:?} not found in q_render",
             entity
         );
@@ -111,7 +111,7 @@ fn insert_asteroid_render(
     };
 
     let Ok(texture) = q_asteroid.get(*asteroid) else {
-        warn!(
+        error!(
             "insert_asteroid_render: entity {:?} not found in q_asteroid",
             entity
         );

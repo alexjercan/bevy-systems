@@ -89,7 +89,7 @@ fn initialize_smooth_look_system(
     trace!("initialize_smooth_look_system: entity {:?}", entity);
 
     let Ok(look) = q_look.get(entity) else {
-        warn!(
+        error!(
             "initialize_smooth_look_system: entity {:?} not found in q_look",
             entity
         );

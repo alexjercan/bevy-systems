@@ -78,7 +78,7 @@ fn insert_spaceship_sections(
     trace!("insert_spaceship_sections: entity {:?}", entity);
 
     let Ok((sections_config, controller_config)) = q_spaceship.get(entity) else {
-        warn!(
+        error!(
             "insert_spaceship_sections: entity {:?} not found in q_spaceship",
             entity
         );

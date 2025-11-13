@@ -89,7 +89,7 @@ fn insert_camera_controller(
     trace!("insert_camera_controller: entity {:?}", entity);
 
     let Ok(camera) = q_camera.get(entity) else {
-        warn!(
+        error!(
             "insert_camera_controller: entity {:?} not found in q_camera",
             add.entity
         );
@@ -118,7 +118,7 @@ fn insert_camera_freelook(
     trace!("insert_camera_controller: entity {:?}", entity);
 
     let Ok(camera) = q_camera.get(entity) else {
-        warn!(
+        error!(
             "insert_camera_controller: entity {:?} not found in q_camera",
             entity
         );
@@ -143,7 +143,7 @@ fn insert_camera_turret(
     trace!("insert_camera_turret: entity {:?}", entity);
 
     let Ok(camera) = q_camera.get(entity) else {
-        warn!(
+        error!(
             "insert_camera_turret: entity {:?} not found in q_camera",
             entity
         );
@@ -168,7 +168,7 @@ fn insert_player_input(
     trace!("insert_camera_turret: entity {:?}", entity);
 
     let Ok(camera) = q_camera.get(entity) else {
-        warn!(
+        error!(
             "insert_player_input: entity {:?} not found in q_camera",
             entity
         );
@@ -217,7 +217,7 @@ fn destroy_camera_controller(
     trace!("destroy_camera_controller: entity {:?}", entity);
 
     let Ok(children) = q_camera.get(entity) else {
-        warn!(
+        error!(
             "destroy_camera_controller: entity {:?} not found in q_camera",
             entity
         );
@@ -228,7 +228,6 @@ fn destroy_camera_controller(
         commands.entity(child).try_despawn();
     }
 
-    // NOTE: use try_remove in case this get's despawned and remove is called after
     commands
         .entity(entity)
         .try_remove::<(ChaseCamera, SpaceshipCameraController)>();
@@ -248,8 +247,6 @@ fn update_chase_camera_input(
         ),
     >,
 ) {
-    // NOTE: We assume that only one of the input markers is active at a time.
-    // We also assume that the spaceship and camera are singletons for the player.
     let mut camera_input = camera.into_inner();
     let spaceship_transform = spaceship.into_inner();
     let point_rotation = point_rotation.into_inner();
@@ -261,7 +258,6 @@ fn update_chase_camera_input(
 fn sync_spaceship_control_mode(
     mut commands: Commands,
     mode: Res<SpaceshipCameraControlMode>,
-    // NOTE: Just to ensure the spaceship exists
     _spaceship: Single<&Transform, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
     spaceship_input_rotation: Single<
         (Entity, &PointRotationOutput),
@@ -275,7 +271,6 @@ fn sync_spaceship_control_mode(
         return;
     }
 
-    // NOTE: We assume that only one of the input markers is active at a time.
     let (spaceship_input_rotation, point_rotation) = spaceship_input_rotation.into_inner();
     let spaceship_input_free_look = spaceship_input_free_look.into_inner();
     let spaceship_input_combat = spaceship_input_turret.into_inner();

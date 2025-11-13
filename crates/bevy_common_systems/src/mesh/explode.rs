@@ -63,7 +63,7 @@ fn handle_explosion(
     trace!("handle_explosion: entity {:?}", entity);
 
     let Ok((explode, children)) = q_explode.get(entity) else {
-        warn!(
+        error!(
             "handle_explosion: entity {:?} not found in q_explode.",
             entity,
         );
@@ -97,7 +97,7 @@ fn handle_explosion(
     let mut fragment_meshes = Vec::new();
     for (mesh_entity, mesh3d) in mesh_entities.into_iter() {
         let Some(mesh) = meshes.get(&**mesh3d) else {
-            warn!(
+            error!(
                 "handle_explosion: mesh_entity {:?} has no mesh data.",
                 mesh_entity
             );
@@ -111,7 +111,7 @@ fn handle_explosion(
         );
 
         let Some(fragments) = explode_mesh(&mesh.clone(), fragment_count, MAX_ITERATIONS) else {
-            warn!(
+            error!(
                 "explode_mesh: entity {:?} failed to slice mesh into fragments.",
                 entity
             );
@@ -137,6 +137,8 @@ fn explode_mesh(
     fragment_count: usize,
     max_iterations: usize,
 ) -> Option<Vec<(Mesh, Vec3)>> {
+    // TODO: In the future, we want to never fail here - change to return Vec<(Mesh, Vec3)>
+
     let mut queue = VecDeque::from([(original.clone(), Vec3::ZERO)]);
     let mut rng = rand::rng();
 
@@ -153,7 +155,7 @@ fn explode_mesh(
 
             let Some((pos, neg)) = TriangleMeshBuilder::from(mesh).slice(plane_normal, plane_point)
             else {
-                warn!(
+                error!(
                     "slice_mesh_into_fragments: could not slice mesh with plane normal {:?} at point {:?}.",
                     plane_normal, plane_point
                 );
@@ -167,7 +169,7 @@ fn explode_mesh(
         if fragments.len() >= fragment_count {
             return Some(fragments);
         } else if fragments.is_empty() {
-            warn!("slice_mesh_into_fragments: no fragments generated after slicing.");
+            error!("slice_mesh_into_fragments: no fragments generated after slicing.");
             return None;
         } else {
             queue = VecDeque::from(fragments);

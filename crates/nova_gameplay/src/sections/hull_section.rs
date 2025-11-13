@@ -56,7 +56,7 @@ fn insert_hull_section_render(
     trace!("insert_hull_section_render: entity {:?}", entity);
 
     let Ok(render_mesh) = q_hull.get(entity) else {
-        warn!(
+        error!(
             "insert_hull_section_render: entity {:?} not found in q_hull",
             entity
         );

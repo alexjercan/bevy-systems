@@ -49,7 +49,7 @@ fn on_insert_temp_entity(
     trace!("on_insert_temp_entity: entity {:?}", entity);
 
     let Ok(temp_entity) = q_temp.get(entity) else {
-        warn!(
+        error!(
             "on_insert_temp_entity: entity {:?} not found in q_temp",
             entity
         );

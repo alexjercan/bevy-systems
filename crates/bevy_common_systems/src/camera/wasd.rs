@@ -86,7 +86,7 @@ fn initialize_wasd_camera(
     trace!("initialize_wasd_camera: entity {:?}", entity);
 
     let Ok(transform) = q_transform.get(entity) else {
-        warn!(
+        error!(
             "initialize_wasd_camera: entity {:?} not found in q_transform",
             entity
         );

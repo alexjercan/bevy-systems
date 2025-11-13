@@ -46,7 +46,7 @@ fn setup_hud_velocity(
     debug!("setup_hud_velocity: entity {:?}", entity);
 
     let Ok(spaceship) = q_spaceship.get(entity) else {
-        warn!(
+        error!(
             "setup_hud_velocity: entity {:?} not found in q_spaceship",
             entity
         );
@@ -55,7 +55,7 @@ fn setup_hud_velocity(
 
     commands.spawn((velocity_hud(VelocityHudConfig {
         radius: 5.0,
-        target: Some(spaceship),
+        target: spaceship,
     }),));
 }
 
@@ -85,7 +85,7 @@ fn setup_hud_health(
     debug!("setup_hud_health: entity {:?}", entity);
 
     let Ok(spaceship) = q_spaceship.get(entity) else {
-        warn!(
+        error!(
             "setup_hud_health: entity {:?} not found in q_spaceship",
             entity
         );
@@ -123,7 +123,7 @@ fn setup_hud_objectives(
     debug!("setup_hud_objectives: entity {:?}", entity);
 
     let Ok(_) = q_spaceship.get(entity) else {
-        warn!(
+        error!(
             "setup_hud_objectives: entity {:?} not found in q_spaceship",
             entity
         );

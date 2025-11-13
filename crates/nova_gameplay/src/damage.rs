@@ -23,7 +23,7 @@ impl Plugin for DamagePlugin {
     fn build(&self, app: &mut App) {
         debug!("DamagePlugin: build");
 
-        app.add_observer(on_rigidbody_spawn);
+        app.add_observer(on_collider_of_spawn);
         app.add_observer(on_collision_hit_to_damage);
         app.add_observer(on_destroyed_entity);
         app.add_observer(on_explode_entity);
@@ -31,31 +31,29 @@ impl Plugin for DamagePlugin {
     }
 }
 
-fn on_rigidbody_spawn(
+fn on_collider_of_spawn(
     add: On<Add, ColliderOf>,
     mut commands: Commands,
     q_collider: Query<&ColliderOf>,
     q_health: Query<(), (With<Health>, With<RigidBody>)>,
 ) {
     let entity = add.entity;
-    trace!("on_rigidbody_spawn: entity {:?}", entity);
+    trace!("on_collider_of_spawn: entity {:?}", entity);
 
     let Ok(collider) = q_collider.get(entity) else {
-        warn!(
-            "on_rigidbody_spawn: entity {:?} not found in q_collider",
+        error!(
+            "on_collider_of_spawn: entity {:?} not found in q_collider",
             entity
         );
         return;
     };
 
     let Ok(_) = q_health.get(collider.body) else {
-        // NOTE: RigidBody does not have Health component
         return;
     };
 
-    // NOTE: Add collision damage for all rigid bodies with Health component
     debug!(
-        "on_rigidbody_spawn: adding CollisionImpactMarker to entity {:?}",
+        "on_collider_of_spawn: adding CollisionImpactMarker to entity {:?}",
         entity
     );
     commands.entity(entity).insert(CollisionImpactMarker);
@@ -86,13 +84,13 @@ fn on_destroyed_entity(
     trace!("on_destroyed_entity: entity {:?}", entity);
 
     let Ok((id, type_name)) = q_info.get(entity) else {
-        warn!(
-            "on_destroyed_entity: entity {:?} not found in q_info",
-            entity
-        );
         return;
     };
 
+    debug!(
+        "on_destroyed_entity: entity {:?} destroyed (id: {:?}, type: {:?})",
+        entity, id, type_name
+    );
     commands.fire::<OnDestroyedEvent>(OnDestroyedEventInfo {
         id: id.to_string(),
         type_name: type_name.to_string(),
@@ -108,7 +106,6 @@ fn on_explode_entity(
     trace!("on_explode_entity: entity {:?}", entity);
 
     let Ok(_) = q_explode.get(entity) else {
-        // NOTE: Not an explodable entity
         return;
     };
 
@@ -130,7 +127,7 @@ fn handle_entity_explosion(
     trace!("handle_entity_explosion: entity {:?}", entity);
 
     let Ok(fragments) = q_explode.get(entity) else {
-        warn!(
+        error!(
             "handle_entity_explosion: entity {:?} not found in q_explode.",
             entity,
         );
@@ -139,7 +136,7 @@ fn handle_entity_explosion(
 
     for fragment in fragments.iter() {
         let Ok((transform, mesh_material)) = q_mesh.get(fragment.origin) else {
-            warn!(
+            error!(
                 "handle_entity_explosion: mesh_entity {:?} not found in q_mesh.",
                 fragment.origin,
             );
@@ -151,7 +148,7 @@ fn handle_entity_explosion(
         let velocity = fragment.direction * rng.random_range(2.0..5.0);
         let transform = transform.with_translation(transform.translation + offset);
         let Some(mesh) = meshes.get(&fragment.mesh) else {
-            warn!(
+            error!(
                 "handle_entity_explosion: mesh_entity {:?} has no mesh data.",
                 fragment.origin,
             );

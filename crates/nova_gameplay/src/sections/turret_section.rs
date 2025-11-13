@@ -277,7 +277,7 @@ fn insert_turret_section(
     trace!("insert_turret_section: entity {:?}", turret);
 
     let Ok(config) = q_config.get(turret) else {
-        warn!(
+        error!(
             "insert_turret_section: entity {:?} not found in q_config",
             turret
         );
@@ -422,7 +422,7 @@ fn update_turret_target_yaw_system(
         &mut q_rotator_yaw_base
     {
         let Ok(muzzle_transform) = q_muzzle.get(*muzzle) else {
-            warn!(
+            error!(
                 "update_turret_target_yaw_system: entity {:?} not found in q_muzzle",
                 *muzzle
             );
@@ -430,7 +430,7 @@ fn update_turret_target_yaw_system(
         };
 
         let Ok(target_input) = q_turret.get(*turret) else {
-            warn!(
+            error!(
                 "update_turret_target_yaw_system: entity {:?} not found in q_turret",
                 *turret
             );
@@ -483,7 +483,7 @@ fn update_turret_target_pitch_system(
         &mut q_rotator_pitch_base
     {
         let Ok(muzzle_transform) = q_muzzle.get(*muzzle) else {
-            warn!(
+            error!(
                 "update_turret_target_pitch_system: entity {:?} not found in q_muzzle",
                 *muzzle
             );
@@ -491,7 +491,7 @@ fn update_turret_target_pitch_system(
         };
 
         let Ok(target_input) = q_turret.get(*turret) else {
-            warn!(
+            error!(
                 "update_turret_target_pitch_system: entity {:?} not found in q_turret",
                 *turret
             );
@@ -531,7 +531,7 @@ fn sync_turret_rotator_yaw_system(
 ) {
     for (mut yaw_transform, &ChildOf(entity)) in &mut q_yaw_rotator {
         let Ok(rotator_output) = q_base.get(entity) else {
-            warn!(
+            error!(
                 "sync_turret_rotator_yaw_system: entity {:?} not found in q_base",
                 entity
             );
@@ -548,7 +548,7 @@ fn sync_turret_rotator_pitch_system(
 ) {
     for (mut pitch_transform, &ChildOf(entity)) in &mut q_pitch_rotator {
         let Ok(rotator_output) = q_base.get(entity) else {
-            warn!(
+            error!(
                 "sync_turret_rotator_pitch_system: entity {:?} not found in q_base",
                 entity
             );
@@ -581,7 +581,7 @@ fn on_shoot_spawn_projectile(
 ) {
     let turret = shoot.entity;
     let Ok((muzzle, ChildOf(spaceship), config)) = q_turret.get(turret) else {
-        warn!(
+        error!(
             "on_shoot_spawn_projectile: entity {:?} not found in q_turret",
             turret
         );
@@ -589,7 +589,7 @@ fn on_shoot_spawn_projectile(
     };
 
     let Ok((lin_vel, ang_vel, center)) = q_spaceship.get(*spaceship) else {
-        warn!(
+        error!(
             "on_shoot_spawn_projectile: entity {:?} not found in q_spaceship",
             spaceship
         );
@@ -597,7 +597,7 @@ fn on_shoot_spawn_projectile(
     };
 
     let Ok(mut fire_state) = q_muzzle.get_mut(**muzzle) else {
-        warn!(
+        error!(
             "on_shoot_spawn_projectile: entity {:?} not found in q_muzzle",
             **muzzle
         );
@@ -609,7 +609,7 @@ fn on_shoot_spawn_projectile(
     }
 
     let Ok(muzzle_transform) = transform_helper.compute_global_transform(**muzzle) else {
-        warn!(
+        error!(
             "on_shoot_spawn_projectile: entity {:?} global transform not found",
             **muzzle
         );
@@ -672,7 +672,7 @@ fn on_projectile_marker_effect(
     trace!("on_projectile_marker: entity {:?}", projectile);
 
     let Ok(muzzle) = q_projectile.get(projectile) else {
-        warn!(
+        error!(
             "on_projectile_marker: entity {:?} not found in q_projectile",
             projectile
         );
@@ -680,7 +680,7 @@ fn on_projectile_marker_effect(
     };
 
     let Ok(muzzle_transform) = transform_helper.compute_global_transform(**muzzle) else {
-        warn!(
+        error!(
             "on_projectile_marker_effect: entity {:?} global transform not found",
             **muzzle
         );
@@ -692,7 +692,7 @@ fn on_projectile_marker_effect(
         .iter_mut()
         .find(|(_, _, &ChildOf(parent))| parent == **muzzle)
     else {
-        warn!(
+        error!(
             "on_shoot_spawn_projectile: effect for muzzle {:?} not found",
             **muzzle
         );
@@ -747,7 +747,7 @@ fn insert_projectile_render(
     trace!("insert_projectile_render: entity {:?}", entity);
 
     let Ok(render_mesh) = q_render_mesh.get(entity) else {
-        warn!(
+        error!(
             "insert_projectile_render: entity {:?} not found in q_render_mesh",
             entity
         );
@@ -785,7 +785,7 @@ fn insert_turret_section_render(
     trace!("insert_turret_section_render: entity {:?}", entity);
 
     let Ok((turret, render_mesh)) = q_base.get(entity) else {
-        warn!(
+        error!(
             "insert_turret_section_render: entity {:?} not found in q_base",
             entity
         );
@@ -826,7 +826,7 @@ fn insert_turret_yaw_rotator_render(
     trace!("insert_turret_yaw_rotator_render: entity {:?}", entity);
 
     let Ok((turret, render_mesh)) = q_yaw.get(entity) else {
-        warn!(
+        error!(
             "insert_turret_yaw_rotator_render: entity {:?} not found in q_yaw",
             entity
         );
@@ -906,7 +906,7 @@ fn insert_turret_pitch_rotator_render(
     trace!("insert_turret_pitch_rotator_render: entity {:?}", entity);
 
     let Ok((turret, render_mesh)) = q_pitch.get(entity) else {
-        warn!(
+        error!(
             "insert_turret_pitch_rotator_render: entity {:?} not found in q_pitch",
             entity
         );
@@ -987,7 +987,7 @@ fn insert_turret_barrel_render(
     trace!("insert_turret_barrel_render: entity {:?}", entity);
 
     let Ok((turret, render_mesh)) = q_barrel.get(entity) else {
-        warn!(
+        error!(
             "insert_turret_barrel_render: entity {:?} not found in q_barrel",
             entity
         );
@@ -1062,7 +1062,7 @@ fn insert_turret_barrel_muzzle_effect(
     trace!("insert_turret_barrel_muzzle_effect: entity {:?}", entity);
 
     let Ok(effect_handle) = q_effect.get(entity) else {
-        warn!(
+        error!(
             "insert_turret_barrel_muzzle_effect: entity {:?} not found in q_effect",
             entity
         );
