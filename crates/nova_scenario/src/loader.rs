@@ -239,13 +239,13 @@ fn on_player_spaceship_spawned(
     commands
         .entity(camera)
         .remove::<WASDCameraController>()
-        .insert(SpaceshipCameraControllerMarker);
+        .insert(SpaceshipCameraController);
 }
 
 fn on_player_spaceship_destroyed(
     add: On<Add, DestroyedMarker>,
     mut commands: Commands,
-    camera: Single<Entity, With<SpaceshipCameraControllerMarker>>,
+    camera: Single<Entity, With<SpaceshipCameraController>>,
     spaceship: Single<Entity, With<PlayerSpaceshipMarker>>,
 ) {
     trace!("on_player_spaceship_destroyed: {:?}", add.entity);
@@ -257,6 +257,6 @@ fn on_player_spaceship_destroyed(
 
     commands
         .entity(camera)
-        .remove::<SpaceshipCameraControllerMarker>()
+        .remove::<SpaceshipCameraController>()
         .insert(WASDCameraController);
 }

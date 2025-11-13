@@ -6,7 +6,7 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{
-        NovaCameraSystems, SpaceshipCameraControlMode, SpaceshipCameraControllerMarker,
+        NovaCameraSystems, SpaceshipCameraControlMode, SpaceshipCameraController,
         SpaceshipCameraControllerPlugin, SpaceshipCameraFreeLookInputMarker,
         SpaceshipCameraInputMarker, SpaceshipCameraNormalInputMarker,
         SpaceshipCameraTurretInputMarker, SpaceshipRotationInputActiveMarker,
@@ -50,7 +50,7 @@ impl Plugin for SpaceshipCameraControllerPlugin {
 /// This should be added to an entity that also has a `ChaseCamera` component.
 #[derive(Component, Debug, Clone, Reflect)]
 #[require(ChaseCamera)]
-pub struct SpaceshipCameraControllerMarker;
+pub struct SpaceshipCameraController;
 
 /// The mode that the camera is currently in for controlling the spaceship.
 #[derive(Resource, Default, Clone, Debug)]
@@ -81,9 +81,9 @@ pub struct SpaceshipCameraTurretInputMarker;
 pub struct SpaceshipRotationInputActiveMarker;
 
 fn insert_camera_controller(
-    add: On<Add, SpaceshipCameraControllerMarker>,
+    add: On<Add, SpaceshipCameraController>,
     mut commands: Commands,
-    q_camera: Query<Entity, With<SpaceshipCameraControllerMarker>>,
+    q_camera: Query<Entity, With<SpaceshipCameraController>>,
 ) {
     let entity = add.entity;
     trace!("insert_camera_controller: entity {:?}", entity);
@@ -110,9 +110,9 @@ fn insert_camera_controller(
 }
 
 fn insert_camera_freelook(
-    add: On<Add, SpaceshipCameraControllerMarker>,
+    add: On<Add, SpaceshipCameraController>,
     mut commands: Commands,
-    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
+    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraController>)>,
 ) {
     let entity = add.entity;
     trace!("insert_camera_controller: entity {:?}", entity);
@@ -135,9 +135,9 @@ fn insert_camera_freelook(
 }
 
 fn insert_camera_turret(
-    add: On<Add, SpaceshipCameraControllerMarker>,
+    add: On<Add, SpaceshipCameraController>,
     mut commands: Commands,
-    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
+    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraController>)>,
 ) {
     let entity = add.entity;
     trace!("insert_camera_turret: entity {:?}", entity);
@@ -160,9 +160,9 @@ fn insert_camera_turret(
 }
 
 fn insert_player_input(
-    add: On<Add, SpaceshipCameraControllerMarker>,
+    add: On<Add, SpaceshipCameraController>,
     mut commands: Commands,
-    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
+    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraController>)>,
 ) {
     let entity = add.entity;
     trace!("insert_camera_turret: entity {:?}", entity);
@@ -209,7 +209,7 @@ fn insert_player_input(
 }
 
 fn destroy_camera_controller(
-    remove: On<Remove, SpaceshipCameraControllerMarker>,
+    remove: On<Remove, SpaceshipCameraController>,
     mut commands: Commands,
     q_camera: Query<&Children, With<ChaseCamera>>,
 ) {
@@ -231,13 +231,13 @@ fn destroy_camera_controller(
     // NOTE: use try_remove in case this get's despawned and remove is called after
     commands
         .entity(entity)
-        .try_remove::<(ChaseCamera, SpaceshipCameraControllerMarker)>();
+        .try_remove::<(ChaseCamera, SpaceshipCameraController)>();
 }
 
 fn update_chase_camera_input(
     camera: Single<
         &mut ChaseCameraInput,
-        (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>),
+        (With<ChaseCamera>, With<SpaceshipCameraController>),
     >,
     spaceship: Single<&Transform, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
     point_rotation: Single<
@@ -269,7 +269,7 @@ fn sync_spaceship_control_mode(
     >,
     spaceship_input_free_look: Single<Entity, With<SpaceshipCameraFreeLookInputMarker>>,
     spaceship_input_turret: Single<Entity, With<SpaceshipCameraTurretInputMarker>>,
-    camera: Single<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
+    camera: Single<Entity, (With<ChaseCamera>, With<SpaceshipCameraController>)>,
 ) {
     if !mode.is_changed() {
         return;
