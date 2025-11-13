@@ -200,7 +200,7 @@ fn insert_player_input(
                     (
                         Name::new("Input: Combat Mode"),
                         Action::<CombatInput>::new(),
-                        bindings![MouseButton::Right],
+                        bindings![MouseButton::Right, GamepadButton::LeftTrigger2],
                     ),
                 ]
             ),

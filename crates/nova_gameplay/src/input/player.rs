@@ -1,11 +1,12 @@
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
+use bevy_enhanced_input::prelude::*;
 
 use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{
-        PlayerSpaceshipMarker, SpaceshipPlayerInputPlugin, SpaceshipThrusterInputKey,
+        PlayerSpaceshipMarker, SpaceshipPlayerInputPlugin, SpaceshipThrusterInputBinding,
         SpaceshipTurretInputKey,
     };
 }
@@ -17,12 +18,16 @@ impl Plugin for SpaceshipPlayerInputPlugin {
     fn build(&self, app: &mut App) {
         debug!("SpaceshipPlayerInputPlugin: build");
 
+        app.add_input_context::<ThrusterInputMarker>();
+        app.add_observer(on_thruster_input_binding);
+        app.add_observer(on_thruster_input);
+        app.add_observer(on_thruster_input_completed);
+
         app.add_systems(
             Update,
             (
                 update_controller_target_rotation_torque,
                 update_turret_target_input,
-                on_thruster_input,
                 on_projectile_input,
             )
                 .in_set(super::SpaceshipInputSystems),
@@ -99,22 +104,82 @@ fn update_turret_target_input(
     }
 }
 
-// TODO: improve these input systems
-
 #[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]
-pub struct SpaceshipThrusterInputKey(pub KeyCode);
+pub struct SpaceshipThrusterInputBinding(pub Vec<Binding>);
+
+#[derive(Component, Debug, Clone)]
+struct ThrusterInputMarker(Entity);
+
+#[derive(InputAction)]
+#[action_output(bool)]
+struct ThrusterInput;
+
+fn on_thruster_input_binding(
+    add: On<Add, SpaceshipThrusterInputBinding>,
+    mut commands: Commands,
+    q_binding: Query<&SpaceshipThrusterInputBinding>,
+) {
+    let entity = add.entity;
+    trace!("on_thruster_input_binding: entity {:?}", entity);
+
+    let Ok(binding) = q_binding.get(entity) else {
+        error!(
+            "on_thruster_input_binding: entity {:?} not found in q_binding",
+            entity
+        );
+        return;
+    };
+
+    commands.entity(entity).insert((
+        ThrusterInputMarker(entity),
+        actions!(
+            ThrusterInputMarker[(
+                Name::new("Input: Thruster"),
+                Action::<ThrusterInput>::new(),
+                ActionSettings {
+                    consume_input: false,
+                    ..default()
+                },
+                Bindings::spawn(binding.0.clone()),
+            )]
+        ),
+    ));
+}
 
 fn on_thruster_input(
-    mut q_input: Query<(&mut ThrusterSectionInput, &SpaceshipThrusterInputKey)>,
-    keys: Res<ButtonInput<KeyCode>>,
+    fire: On<Start<ThrusterInput>>,
+    mut q_input: Query<&mut ThrusterSectionInput, With<ThrusterInputMarker>>,
 ) {
-    for (mut input, key) in &mut q_input {
-        if keys.pressed(key.0) {
-            **input = 1.0;
-        } else {
-            **input = 0.0;
-        }
-    }
+    let entity = fire.event().context;
+    trace!("on_thruster_input: entity {:?}", entity);
+
+    let Ok(mut q_input) = q_input.get_mut(entity) else {
+        error!(
+            "on_thruster_input: entity {:?} not found in q_input",
+            entity
+        );
+        return;
+    };
+
+    **q_input = 1.0;
+}
+
+fn on_thruster_input_completed(
+    fire: On<Complete<ThrusterInput>>,
+    mut q_input: Query<&mut ThrusterSectionInput, With<ThrusterInputMarker>>,
+) {
+    let entity = fire.event().context;
+    trace!("on_thruster_input_completed: entity {:?}", entity);
+
+    let Ok(mut q_input) = q_input.get_mut(entity) else {
+        error!(
+            "on_thruster_input_completed: entity {:?} not found in q_input",
+            entity
+        );
+        return;
+    };
+
+    **q_input = 0.0;
 }
 
 #[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]

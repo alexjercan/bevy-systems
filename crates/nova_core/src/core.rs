@@ -7,6 +7,7 @@ use bevy::{
     ui_widgets::{observe, Activate, Button},
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
+use bevy_enhanced_input::prelude::Binding;
 use nova_scenario::prelude::*;
 use rand::prelude::*;
 
@@ -124,7 +125,7 @@ fn switch_scene_editor(
 #[derive(Resource, Debug, Clone, Default, Reflect)]
 struct PlayerSpaceshipConfig {
     sections: HashMap<Entity, SpaceshipSectionConfig>,
-    inputs: HashMap<Entity, KeyCode>,
+    inputs: HashMap<Entity, Vec<Binding>>,
 }
 
 fn test_scenario(
@@ -226,7 +227,7 @@ fn test_scenario(
             input_mapping: player_config
                 .inputs
                 .iter()
-                .map(|(entity, key)| (entity.to_string(), *key))
+                .map(|(entity, key)| (entity.to_string(), key.clone()))
                 .collect(),
         }),
         sections: player_config.sections.values().cloned().collect(),
@@ -598,7 +599,8 @@ fn on_click_spaceship_section(
     q_section: Query<&Transform, With<SectionMarker>>,
     selection: Res<SectionChoice>,
     q_preview: Query<Entity, With<SectionPreviewMarker>>,
-    keyboard: Res<ButtonInput<KeyCode>>,
+    keyboard: Option<Res<ButtonInput<KeyCode>>>,
+    gamepad: Option<Res<ButtonInput<GamepadButton>>>,
     sections: Res<GameSections>,
     mut player_config: ResMut<PlayerSpaceshipConfig>,
 ) {
@@ -661,7 +663,20 @@ fn on_click_spaceship_section(
                 SectionKind::Thruster(thruster) => {
                     let rotation = Quat::from_rotation_arc(Vec3::Z, normal.normalize());
 
-                    let bind = keyboard.get_pressed().next().map_or(KeyCode::Space, |k| *k);
+                    let key_bind = keyboard.map(|k| {
+                        k.get_pressed()
+                            .next()
+                            .map_or(KeyCode::Space.into(), |k| Binding::from(*k))
+                    });
+                    let pad_bind = gamepad.map(|b| {
+                        b.get_pressed()
+                            .next()
+                            .map_or(GamepadButton::RightTrigger.into(), |b| Binding::from(*b))
+                    });
+                    let binds = vec![key_bind, pad_bind]
+                        .into_iter()
+                        .flatten()
+                        .collect::<Vec<Binding>>();
 
                     let mut thruster_entity = Entity::PLACEHOLDER;
                     commands.entity(spaceship).with_children(|parent| {
@@ -669,7 +684,7 @@ fn on_click_spaceship_section(
                             .spawn((
                                 base_section(section.base.clone()),
                                 thruster_section(thruster.clone()),
-                                SpaceshipThrusterInputKey(bind),
+                                SpaceshipThrusterInputBinding(binds.clone()),
                                 Transform {
                                     translation: position,
                                     rotation,
@@ -688,7 +703,7 @@ fn on_click_spaceship_section(
                             config: section.clone(),
                         },
                     );
-                    player_config.inputs.insert(thruster_entity, bind);
+                    player_config.inputs.insert(thruster_entity, binds);
                 }
                 SectionKind::Controller(controller) => {
                     let rotation = Quat::IDENTITY;

@@ -1,4 +1,5 @@
 use bevy::{platform::collections::HashMap, prelude::*};
+use bevy_enhanced_input::prelude::*;
 use nova_events::prelude::*;
 use nova_gameplay::prelude::*;
 
@@ -21,7 +22,7 @@ pub enum SpaceshipController {
 
 #[derive(Clone, Debug, Default, Reflect)]
 pub struct PlayerControllerConfig {
-    pub input_mapping: HashMap<SectionId, KeyCode>,
+    pub input_mapping: HashMap<SectionId, Vec<Binding>>,
 }
 
 #[derive(Clone, Debug, Reflect)]
@@ -107,8 +108,9 @@ fn insert_spaceship_sections(
                     match controller_config {
                         SpaceshipController::None => {}
                         SpaceshipController::Player(config) => {
-                            if let Some(key) = config.input_mapping.get(&section.id) {
-                                section_entity.insert(SpaceshipThrusterInputKey(*key));
+                            if let Some(bindings) = config.input_mapping.get(&section.id) {
+                                section_entity
+                                    .insert(SpaceshipThrusterInputBinding(bindings.clone()));
                             };
                         }
                         SpaceshipController::AI(_) => {}
