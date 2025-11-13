@@ -234,10 +234,7 @@ fn destroy_camera_controller(
 }
 
 fn update_chase_camera_input(
-    camera: Single<
-        &mut ChaseCameraInput,
-        (With<ChaseCamera>, With<SpaceshipCameraController>),
-    >,
+    camera: Single<&mut ChaseCameraInput, (With<ChaseCamera>, With<SpaceshipCameraController>)>,
     spaceship: Single<&Transform, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
     point_rotation: Single<
         &PointRotationOutput,
