@@ -136,7 +136,7 @@ pub fn base_scenario_object(config: &BaseScenarioObjectConfig) -> impl Bundle {
         RigidBody::Dynamic,
         Visibility::Visible,
         Health::new(config.health),
-        ExplodableEntityMarker,
+        ExplodableEntity,
     )
 }
 

@@ -102,7 +102,7 @@ fn on_destroyed_entity(
 fn on_explode_entity(
     add: On<Add, DestroyedMarker>,
     mut commands: Commands,
-    q_explode: Query<(), (With<ExplodableMesh>, With<DestroyedMarker>)>,
+    q_explode: Query<(), (With<ExplodableEntity>, With<DestroyedMarker>)>,
 ) {
     let entity = add.entity;
     trace!("on_explode_entity: entity {:?}", entity);
@@ -113,16 +113,15 @@ fn on_explode_entity(
     };
 
     debug!("on_explode_entity: entity {:?} will explode", entity);
-    commands.trigger(ExplodeMesh {
-        entity,
-        fragment_count: 4,
-    });
+    commands
+        .entity(entity)
+        .insert(ExplodeMesh { fragment_count: 4 });
 }
 
 fn handle_entity_explosion(
-    add: On<Add, ExplodableFragments>,
+    add: On<Add, ExplodeFragments>,
     mut commands: Commands,
-    q_explode: Query<&ExplodableFragments, With<ExplodableEntityMarker>>,
+    q_explode: Query<&ExplodeFragments, With<ExplodableEntity>>,
     q_mesh: Query<(&GlobalTransform, &MeshMaterial3d<StandardMaterial>), With<Mesh3d>>,
     meshes: ResMut<Assets<Mesh>>,
     mut rng: Single<&mut WyRand, With<GlobalRng>>,

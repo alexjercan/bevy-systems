@@ -10,66 +10,6 @@ use bevy::{
 
 use super::util::TriangleMeshBuilder;
 
-fn edge_plane_intersection(a: Vec3, b: Vec3, plane_point: Vec3, plane_normal: Vec3) -> Vec3 {
-    let ab = b - a;
-    let t = (plane_point - a).dot(plane_normal) / ab.dot(plane_normal);
-
-    a + ab * t
-}
-
-enum TriangleSliceResult {
-    Single(Triangle3d),
-    Split(Triangle3d, Triangle3d, Triangle3d),
-}
-
-fn triangle_slice(
-    tri: Triangle3d,
-    plane_normal: Vec3,
-    plane_point: Vec3,
-) -> (TriangleSliceResult, bool) {
-    let d0 = plane_normal.dot(tri.vertices[0] - plane_point);
-    let d1 = plane_normal.dot(tri.vertices[1] - plane_point);
-    let d2 = plane_normal.dot(tri.vertices[2] - plane_point);
-
-    let sides = [d0 >= 0.0, d1 >= 0.0, d2 >= 0.0];
-
-    // Fully positive
-    if sides[0] && sides[1] && sides[2] {
-        (TriangleSliceResult::Single(tri), true)
-    }
-    // Fully negative
-    else if !sides[0] && !sides[1] && !sides[2] {
-        (TriangleSliceResult::Single(tri), false)
-    } else {
-        // Find lonely point index
-        let lonely_index = if sides[0] == sides[1] {
-            2
-        } else if sides[0] == sides[2] {
-            1
-        } else {
-            0
-        };
-
-        let (lonely, first, second) = match lonely_index {
-            0 => (tri.vertices[0], tri.vertices[2], tri.vertices[1]),
-            1 => (tri.vertices[1], tri.vertices[0], tri.vertices[2]),
-            2 => (tri.vertices[2], tri.vertices[1], tri.vertices[0]),
-            _ => unreachable!(),
-        };
-
-        let lonely_side = sides[lonely_index];
-
-        // Edge-plane intersections
-        let first_int = edge_plane_intersection(lonely, first, plane_point, plane_normal);
-        let second_int = edge_plane_intersection(lonely, second, plane_point, plane_normal);
-
-        let single = Triangle3d::new(lonely, second_int, first_int);
-        let tri1 = Triangle3d::new(first, first_int, second);
-        let tri2 = Triangle3d::new(second, first_int, second_int);
-        (TriangleSliceResult::Split(single, tri1, tri2), lonely_side)
-    }
-}
-
 /// Slices a mesh along a plane defined by a normal and a point on the plane.
 /// Returns two meshes: one on the positive side of the plane and one on the negative side.
 pub fn mesh_slice(mesh: &Mesh, plane_normal: Vec3, plane_point: Vec3) -> Option<(Mesh, Mesh)> {
@@ -80,20 +20,6 @@ pub fn mesh_slice(mesh: &Mesh, plane_normal: Vec3, plane_point: Vec3) -> Option<
         }
         _ => panic!("Unsupported position format"),
     };
-
-    // let normals = match mesh.attribute(Mesh::ATTRIBUTE_NORMAL).unwrap() {
-    //     VertexAttributeValues::Float32x3(vals) => {
-    //         vals.iter().map(|v| Vec3::from(*v)).collect::<Vec<_>>()
-    //     }
-    //     _ => vec![Vec3::ZERO; positions.len()],
-    // };
-
-    // let uvs = match mesh.attribute(Mesh::ATTRIBUTE_UV_0) {
-    //     Some(VertexAttributeValues::Float32x2(vals)) => {
-    //         vals.iter().map(|v| Vec2::from(*v)).collect::<Vec<_>>()
-    //     }
-    //     _ => vec![Vec2::ZERO; positions.len()],
-    // };
 
     let triangles = match mesh.indices().unwrap() {
         Indices::U32(indices) => indices.to_vec(),
@@ -190,5 +116,65 @@ mod test {
             _ => assert!(false, "Expected triangle to be split"),
         }
         assert!(is_positive, "Expected lonely vertex to be on positive side");
+    }
+}
+
+fn edge_plane_intersection(a: Vec3, b: Vec3, plane_point: Vec3, plane_normal: Vec3) -> Vec3 {
+    let ab = b - a;
+    let t = (plane_point - a).dot(plane_normal) / ab.dot(plane_normal);
+
+    a + ab * t
+}
+
+enum TriangleSliceResult {
+    Single(Triangle3d),
+    Split(Triangle3d, Triangle3d, Triangle3d),
+}
+
+fn triangle_slice(
+    tri: Triangle3d,
+    plane_normal: Vec3,
+    plane_point: Vec3,
+) -> (TriangleSliceResult, bool) {
+    let d0 = plane_normal.dot(tri.vertices[0] - plane_point);
+    let d1 = plane_normal.dot(tri.vertices[1] - plane_point);
+    let d2 = plane_normal.dot(tri.vertices[2] - plane_point);
+
+    let sides = [d0 >= 0.0, d1 >= 0.0, d2 >= 0.0];
+
+    // Fully positive
+    if sides[0] && sides[1] && sides[2] {
+        (TriangleSliceResult::Single(tri), true)
+    }
+    // Fully negative
+    else if !sides[0] && !sides[1] && !sides[2] {
+        (TriangleSliceResult::Single(tri), false)
+    } else {
+        // Find lonely point index
+        let lonely_index = if sides[0] == sides[1] {
+            2
+        } else if sides[0] == sides[2] {
+            1
+        } else {
+            0
+        };
+
+        let (lonely, first, second) = match lonely_index {
+            0 => (tri.vertices[0], tri.vertices[2], tri.vertices[1]),
+            1 => (tri.vertices[1], tri.vertices[0], tri.vertices[2]),
+            2 => (tri.vertices[2], tri.vertices[1], tri.vertices[0]),
+            _ => unreachable!(),
+        };
+
+        let lonely_side = sides[lonely_index];
+
+        // Edge-plane intersections
+        let first_int = edge_plane_intersection(lonely, first, plane_point, plane_normal);
+        let second_int = edge_plane_intersection(lonely, second, plane_point, plane_normal);
+
+        let single = Triangle3d::new(lonely, second_int, first_int);
+        let tri1 = Triangle3d::new(first, first_int, second);
+        let tri2 = Triangle3d::new(second, first_int, second_int);
+        (TriangleSliceResult::Split(single, tri1, tri2), lonely_side)
     }
 }
