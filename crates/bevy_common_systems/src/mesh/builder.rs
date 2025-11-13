@@ -280,7 +280,7 @@ impl From<Mesh> for TriangleMeshBuilder {
 
 fn edge_plane_intersection(a: Vec3, b: Vec3, plane_point: Vec3, plane_normal: Vec3) -> Vec3 {
     let ab = b - a;
-    let t = (plane_point - a).dot(plane_normal.into()) / ab.dot(plane_normal.into());
+    let t = (plane_point - a).dot(plane_normal) / ab.dot(plane_normal);
 
     a + ab * t
 }

@@ -59,7 +59,7 @@ impl EventAction<NovaEventWorld> for VariableSetActionConfig {
     fn action(&self, world: &mut NovaEventWorld, _: &GameEventInfo) {
         match self.expression.evaluate(world) {
             Ok(literal) => {
-                world.variables.insert(self.key.clone(), literal);
+                world.insert_variable(self.key.clone(), literal);
             }
             Err(e) => {
                 // TODO: Proper error handling
@@ -97,7 +97,7 @@ impl EventAction<NovaEventWorld> for NextScenarioActionConfig {
 
 impl EventAction<NovaEventWorld> for ObjectiveActionConfig {
     fn action(&self, world: &mut NovaEventWorld, _: &GameEventInfo) {
-        world.objectives.push(self.clone());
+        world.push_objective(self.clone());
     }
 }
 
@@ -108,7 +108,7 @@ pub struct ObjectiveCompleteActionConfig {
 
 impl EventAction<NovaEventWorld> for ObjectiveCompleteActionConfig {
     fn action(&self, world: &mut NovaEventWorld, _: &GameEventInfo) {
-        world.objectives.retain(|obj| obj.id != self.id);
+        world.remove_objective(&self.id);
     }
 }
 

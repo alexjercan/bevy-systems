@@ -8,9 +8,9 @@ use crate::prelude::*;
 
 #[derive(Resource, Default)]
 pub struct NovaEventWorld {
-    pub queued_commands: VecDeque<Box<dyn FnOnce(&mut Commands) + Send + Sync>>,
-    pub objectives: Vec<ObjectiveActionConfig>,
-    pub variables: HashMap<String, VariableLiteral>,
+    queued_commands: VecDeque<Box<dyn FnOnce(&mut Commands) + Send + Sync>>,
+    objectives: Vec<ObjectiveActionConfig>,
+    variables: HashMap<String, VariableLiteral>,
     pub next_scenario: Option<NextScenarioActionConfig>,
 }
 
@@ -81,5 +81,21 @@ impl NovaEventWorld {
         F: FnOnce(&mut Commands) + Send + Sync + 'static,
     {
         self.queued_commands.push_back(Box::new(f));
+    }
+
+    pub fn push_objective(&mut self, objective: ObjectiveActionConfig) {
+        self.objectives.push(objective);
+    }
+
+    pub fn remove_objective(&mut self, id: &str) {
+        self.objectives.retain(|obj| obj.id != id);
+    }
+
+    pub fn insert_variable(&mut self, key: String, value: VariableLiteral) {
+        self.variables.insert(key, value);
+    }
+
+    pub fn get_variable(&self, key: &str) -> Option<&VariableLiteral> {
+        self.variables.get(key)
     }
 }
