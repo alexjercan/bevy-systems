@@ -19,6 +19,7 @@ nova_core = { path = "crates/nova_core" }
 [dev-dependencies]
 avian3d = { version = "0.4" }
 bevy = { version = "0.17.2", features = ["experimental_bevy_ui_widgets"] }
+bevy_rand = { version = "0.12.1", default-features = false, features = ["rand_chacha", "wyrand"] }
 rand = { version = "0.9.2" }
 serde = { version = "1.0.228" }
 

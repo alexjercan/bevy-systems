@@ -643,6 +643,7 @@ fn shoot_spawn_projectile(
             BulletProjectileRenderMesh(config.projectile_render_mesh.clone()),
             TempEntity(config.projectile_lifetime),
             Visibility::Visible,
+            TransformInterpolation,
         ));
 
         // Reset the fire state timer
