@@ -55,7 +55,7 @@ pub fn test_scenario(game_assets: &GameAssets, sections: Res<GameSections>) -> S
 
     let spaceship = SpaceshipConfig {
         controller: SpaceshipController::Player(PlayerControllerConfig {
-            input_mapping: HashMap::from([("thruster".to_string(), KeyCode::Space)]),
+            input_mapping: HashMap::from([("thruster".to_string(), vec![KeyCode::Space.into()])]),
         }),
         sections: vec![SpaceshipSectionConfig {
             id: "thruster".to_string(),

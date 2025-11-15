@@ -1,4 +1,4 @@
-//! A Bevy plugin that find impact to entities upon collision.
+//! A Bevy plugin to detect collision impacts and generate impact events for entities.
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
@@ -9,29 +9,32 @@ pub mod prelude {
     };
 }
 
+/// Marker component for entities that should generate collision impact events.
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct CollisionImpactMarker;
 
-/// Event to signal that an entity has taken collision damage.
+/// Event triggered when an entity is impacted by a collision.
 #[derive(Event, Clone, Debug)]
 pub struct CollisionImpactEvent {
-    /// The entity that took damage.
+    /// The entity that took the impact.
     pub entity: Entity,
-    /// The entity that was hit.
+    /// The other entity involved in the collision.
     pub other: Entity,
     // /// The point of impact in world space.
     // pub hit_point: Vec3,
-    // /// The normal of the surface hit.
+    // /// The surface normal at the impact point.
     // pub hit_normal: Vec3,
-    /// The relative velocity at the point of impact.
+    /// The relative velocity between the two entities at the point of impact.
     pub relative_velocity: Vec3,
 }
 
+/// System sets used by the CollisionImpactPlugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CollisionImpactSystems {
     Sync,
 }
 
+/// Plugin to manage collision impact events for entities with `CollisionImpactMarker`.
 pub struct CollisionImpactPlugin;
 
 impl Plugin for CollisionImpactPlugin {
@@ -43,6 +46,7 @@ impl Plugin for CollisionImpactPlugin {
     }
 }
 
+/// Insert collision event tracking for newly added entities with `CollisionImpactMarker`.
 fn insert_collision_events(add: On<Add, CollisionImpactMarker>, mut commands: Commands) {
     let entity = add.entity;
     trace!("insert_collision_events: entity {:?}", entity);
@@ -50,6 +54,7 @@ fn insert_collision_events(add: On<Add, CollisionImpactMarker>, mut commands: Co
     commands.entity(entity).insert(CollisionEventsEnabled);
 }
 
+/// Handle collision events and trigger `CollisionImpactEvent`s for impacted entities.
 fn on_collision_event(
     collision: On<CollisionStart>,
     mut commands: Commands,
@@ -70,6 +75,7 @@ fn on_collision_event(
     let Ok(velocity2) = q_velocity.get(other) else {
         return;
     };
+
     let relative_velocity = **velocity1 - **velocity2;
 
     commands.trigger(CollisionImpactEvent {

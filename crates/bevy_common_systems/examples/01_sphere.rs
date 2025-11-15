@@ -17,7 +17,7 @@ fn main() {
     app.add_plugins(PhysicsPlugins::default());
 
     #[cfg(feature = "debug")]
-    app.add_plugins(InpsectorDebugPlugin);
+    app.add_plugins(InspectorDebugPlugin);
 
     app.add_plugins(bevy_enhanced_input::EnhancedInputPlugin);
     app.add_plugins(WASDCameraPlugin);

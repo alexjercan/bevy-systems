@@ -1,4 +1,32 @@
-//! A simple WASD camera implementation for Bevy.
+//! A simple WASD and mouse look camera implementation for Bevy.
+//!
+//! This plugin provides a first person style camera controller that supports:
+//! - WASD movement
+//! - Vertical movement (for example, space and shift keys)
+//! - Mouse look for yaw and pitch
+//!
+//! The camera logic is split into three parts:
+//! 1. `WASDCamera` stores configuration like sensitivity values.
+//! 2. `WASDCameraInput` stores user input for the current frame. Your input
+//!    systems should write to this component.
+//! 3. Internal target and state components track camera motion and apply it
+//!    to the Transform each frame.
+//!
+//! To use the WASD camera:
+//!
+//! ```rust
+//! commands.spawn((
+//!     Camera3d::default(),
+//!     WASDCamera::default(),
+//! ));
+//!
+//! // In your input system:
+//! input.pan = mouse_delta;
+//! input.wasd = movement_axis;
+//! input.vertical = vertical_axis;
+//! ```
+//!
+//! The plugin will handle smoothing and transform updates automatically.
 
 use bevy::prelude::*;
 
@@ -6,13 +34,18 @@ pub mod prelude {
     pub use super::{WASDCamera, WASDCameraInput, WASDCameraPlugin, WASDCameraSystems};
 }
 
-/// The WASD camera component, which allows for wasd movement and mouse look.
+/// The main WASD camera configuration component.
+///
+/// This component defines how sensitive the camera is to mouse movements
+/// and keyboard movement inputs. Insert this component on a camera entity
+/// to enable WASD movement and mouse look.
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 #[require(Transform)]
 pub struct WASDCamera {
-    /// The look sensitivity of the camera
+    /// Mouse look sensitivity.
     pub look_sensitivity: f32,
-    /// The wasd sensitivity of the camera
+
+    /// Movement sensitivity for WASD and vertical movement.
     pub wasd_sensitivity: f32,
 }
 
@@ -25,8 +58,15 @@ impl Default for WASDCamera {
     }
 }
 
-/// The input component for the WASD camera, which stores the current input state.
-/// This component should be updated by user input systems to control the camera.
+/// Input component for the WASD camera.
+///
+/// Your input system should update these values every frame.
+/// The plugin reads this component to determine how to move
+/// and rotate the camera.
+///
+/// - `pan` contains the mouse delta for yaw and pitch.
+/// - `wasd` contains horizontal and forward movement values.
+/// - `vertical` is upward or downward movement.
 #[derive(Component, Clone, Copy, Debug, Default, Reflect)]
 pub struct WASDCameraInput {
     pub pan: Vec2,
@@ -34,6 +74,9 @@ pub struct WASDCameraInput {
     pub vertical: f32,
 }
 
+/// Internal target state. This is where the camera *wants* to be.
+///
+/// The target is updated based on user input.
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 struct WASDCameraTarget {
     position: Vec3,
@@ -41,6 +84,9 @@ struct WASDCameraTarget {
     pitch: f32,
 }
 
+/// Internal smoothed state used to update the Transform.
+///
+/// This mirrors the target but allows for interpolation if needed.
 #[derive(Component, Clone, Copy, Debug, Reflect)]
 struct WASDCameraState {
     position: Vec3,
@@ -48,13 +94,17 @@ struct WASDCameraState {
     pitch: f32,
 }
 
-/// The SystemSet for the WASDCameraPlugin
+/// System set for the WASD camera plugin.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum WASDCameraSystems {
     Sync,
 }
 
-/// Plugin to manage entities with `WASDCamera` component.
+/// Plugin that manages the WASD camera components and systems.
+///
+/// This plugin initializes camera state when a `WASDCamera` is added,
+/// updates the target and internal state based on input, and applies
+/// the resulting transform each frame.
 pub struct WASDCameraPlugin;
 
 impl Plugin for WASDCameraPlugin {
@@ -64,9 +114,7 @@ impl Plugin for WASDCameraPlugin {
         app.add_observer(initialize_wasd_camera);
         app.add_observer(destroy_wasd_camera);
 
-        // I am using PostUpdate here to ensure that the camera updates after the input was set by
-        // the user or other systems in the Update stage. Then the new transform will be available
-        // for the next frame.
+        // PostUpdate ensures all input systems have run for this frame.
         app.add_systems(
             PostUpdate,
             (update_target, update_state, sync_transform)
@@ -77,6 +125,7 @@ impl Plugin for WASDCameraPlugin {
     }
 }
 
+/// Initialize the WASD camera input, target, and state components.
 fn initialize_wasd_camera(
     insert: On<Insert, WASDCamera>,
     mut commands: Commands,
@@ -111,16 +160,17 @@ fn initialize_wasd_camera(
     ));
 }
 
+/// Clean up camera components when the WASD camera is removed.
 fn destroy_wasd_camera(remove: On<Remove, WASDCamera>, mut commands: Commands) {
     let entity = remove.entity;
     trace!("destroy_wasd_camera: entity {:?}", entity);
 
-    // use try_remove in case this get's despawned and remove is called after
     commands
         .entity(entity)
         .try_remove::<(WASDCameraInput, WASDCameraTarget, WASDCameraState)>();
 }
 
+/// Update the target state based on user input.
 fn update_target(mut q_camera: Query<(&WASDCamera, &WASDCameraInput, &mut WASDCameraTarget)>) {
     for (camera, input, mut target) in q_camera.iter_mut() {
         target.yaw -= input.pan.x * camera.look_sensitivity;
@@ -138,6 +188,8 @@ fn update_target(mut q_camera: Query<(&WASDCamera, &WASDCameraInput, &mut WASDCa
     }
 }
 
+/// Copy the target values into the state.
+/// This allows for smoothing in the future if needed.
 fn update_state(mut q_camera: Query<(&mut WASDCameraState, &WASDCameraTarget)>) {
     for (mut state, target) in q_camera.iter_mut() {
         state.position = target.position;
@@ -146,6 +198,7 @@ fn update_state(mut q_camera: Query<(&mut WASDCameraState, &WASDCameraTarget)>) 
     }
 }
 
+/// Apply the current state to the camera transform.
 fn sync_transform(
     mut q_camera: Query<(&mut Transform, &WASDCameraState), Changed<WASDCameraState>>,
 ) {

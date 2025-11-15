@@ -249,7 +249,7 @@ fn update_chase_camera_input(
     let point_rotation = point_rotation.into_inner();
 
     camera_input.anchor_pos = spaceship_transform.translation;
-    camera_input.achor_rot = **point_rotation;
+    camera_input.anchor_rot = **point_rotation;
 }
 
 fn sync_spaceship_control_mode(
