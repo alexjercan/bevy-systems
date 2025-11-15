@@ -7,10 +7,8 @@ pub mod sphere_orbit;
 /// Prelude to easily import all transform utility components and systems.
 pub mod prelude {
     pub use super::{
-        directional_sphere_orbit::prelude::*,
-        point_rotation::prelude::*,
-        random_sphere_orbit::prelude::*,
-        smooth_look_rotation::prelude::*,
+        directional_sphere_orbit::prelude::*, point_rotation::prelude::*,
+        random_sphere_orbit::prelude::*, smooth_look_rotation::prelude::*,
         sphere_orbit::prelude::*,
     };
 }
