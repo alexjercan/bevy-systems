@@ -21,7 +21,10 @@ fn main() {
 }
 
 fn custom_plugin(app: &mut App) {
-    app.insert_resource(DemoWidgetStates { zoom_scale: 0.1, seed: 0.0 });
+    app.insert_resource(DemoWidgetStates {
+        zoom_scale: 0.1,
+        seed: 0.0,
+    });
     app.insert_resource(PlanetHeight::default());
 
     app.add_systems(

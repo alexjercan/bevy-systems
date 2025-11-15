@@ -26,7 +26,7 @@ impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(DebugEnabled(true));
 
-        app.add_plugins(InpsectorDebugPlugin);
+        app.add_plugins(InspectorDebugPlugin);
         app.add_plugins(WireframeDebugPlugin);
         app.add_plugins(sections::SectionsDebugPlugin);
 
