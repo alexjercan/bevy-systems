@@ -1,43 +1,133 @@
-use bevy::{mesh::{Indices, VertexAttributeValues}, prelude::*};
+use avian3d::prelude::*;
+use bevy::prelude::*;
+use bevy_common_systems::prelude::*;
+use bevy_rand::prelude::*;
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
-use super::util::TriangleMeshBuilder;
+use nova_events::prelude::*;
+use rand::RngCore;
 
-// TODO: Refactor this so we can have customizable parameters
-// maybe apply_noise_to_mesh(mesh: &Mesh, noise_fn: &impl NoiseFn<[f64; 3]>) -> Mesh
-pub fn apply_noise_to_mesh(mesh: &Mesh, seed: u32) -> Mesh {
-    let positions = match mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap() {
-        VertexAttributeValues::Float32x3(vals) => {
-            vals.iter().map(|v| Vec3::from(*v)).collect::<Vec<_>>()
+pub mod prelude {
+    pub use super::{
+        asteroid_scenario_object, AsteroidConfig, AsteroidMarker, AsteroidPlugin, AsteroidRadius,
+        AsteroidRenderMesh, AsteroidTexture, ASTEROID_TYPE_NAME,
+    };
+}
+
+pub const ASTEROID_TYPE_NAME: &str = "asteroid";
+
+#[derive(Clone, Debug)]
+pub struct AsteroidConfig {
+    pub radius: f32,
+    pub texture: Handle<Image>,
+}
+
+pub fn asteroid_scenario_object(config: AsteroidConfig) -> impl Bundle {
+    debug!("asteroid_scenario_object: config {:?}", config);
+
+    (
+        AsteroidMarker,
+        EntityTypeName::new(ASTEROID_TYPE_NAME),
+        AsteroidTexture(config.texture),
+        AsteroidRadius(config.radius),
+    )
+}
+
+#[derive(Component, Clone, Debug, Reflect)]
+pub struct AsteroidMarker;
+
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+pub struct AsteroidTexture(pub Handle<Image>);
+
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+pub struct AsteroidRenderMesh(pub Mesh);
+
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+pub struct AsteroidRadius(pub f32);
+
+pub struct AsteroidPlugin {
+    pub render: bool,
+}
+
+impl Plugin for AsteroidPlugin {
+    fn build(&self, app: &mut App) {
+        debug!("AsteroidPlugin: build");
+
+        app.add_observer(insert_asteroid_collider);
+        if self.render {
+            app.add_observer(insert_asteroid_render);
         }
-        _ => panic!("Unsupported position format"),
+    }
+}
+
+fn insert_asteroid_collider(
+    add: On<Add, AsteroidMarker>,
+    mut commands: Commands,
+    q_asteroid: Query<&AsteroidRadius, With<AsteroidMarker>>,
+    mut rng: Single<&mut WyRand, With<GlobalRng>>,
+) {
+    let entity = add.entity;
+    trace!("insert_asteroid_render: entity {:?}", entity);
+
+    let Ok(radius) = q_asteroid.get(entity) else {
+        error!(
+            "insert_asteroid_render: entity {:?} not found in q_asteroid",
+            entity
+        );
+        return;
     };
 
-    let planet = PlanetHeight::default().with_seed(seed);
-    let height_values = positions.iter().map(|&p| planet.get_point(p)).collect::<Vec<_>>();
+    let planet = PlanetHeight::default().with_seed(rng.next_u32());
+    let mesh = TriangleMeshBuilder::new_octahedron(3)
+        .apply_noise(&planet)
+        .build();
+    let collider = Collider::trimesh_from_mesh(&mesh).unwrap_or(Collider::sphere(1.0));
 
-    let positions = positions
-        .iter()
-        .zip(height_values.iter())
-        .map(|(pos, height)| pos + pos.normalize() * (*height as f32 * 5.0))
-        .collect::<Vec<_>>();
+    commands.entity(entity).insert((children![(
+        Transform::from_scale(Vec3::splat(**radius)),
+        AsteroidRenderMesh(mesh.clone()),
+        collider,
+        ColliderDensity(1.0),
+        Visibility::Inherited,
+    )],));
+}
 
-    let triangles = match mesh.indices().unwrap() {
-        Indices::U32(indices) => indices.to_vec(),
-        Indices::U16(indices) => indices.iter().map(|&i| i as u32).collect::<Vec<_>>(),
-    }
-    .chunks(3)
-    .map(|c| {
-        Triangle3d::new(
-            positions[c[0] as usize],
-            positions[c[1] as usize],
-            positions[c[2] as usize],
-        )
-    })
-    .collect::<Vec<_>>();
+fn insert_asteroid_render(
+    add: On<Add, AsteroidRenderMesh>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    q_render: Query<(&AsteroidRenderMesh, &ChildOf)>,
+    q_asteroid: Query<&AsteroidTexture, With<AsteroidMarker>>,
+) {
+    let entity = add.entity;
+    trace!("insert_asteroid_render: entity {:?}", entity);
 
-    let builder = TriangleMeshBuilder { triangles };
+    let Ok((render_mesh, ChildOf(asteroid))) = q_render.get(entity) else {
+        error!(
+            "insert_asteroid_render: entity {:?} not found in q_render",
+            entity
+        );
+        return;
+    };
 
-    builder.build()
+    let Ok(texture) = q_asteroid.get(*asteroid) else {
+        error!(
+            "insert_asteroid_render: entity {:?} not found in q_asteroid",
+            entity
+        );
+        return;
+    };
+
+    let mesh = (**render_mesh).clone();
+    let material = StandardMaterial {
+        base_color_texture: Some((**texture).clone()),
+        ..default()
+    };
+
+    commands.entity(entity).insert((
+        Mesh3d(meshes.add(mesh)),
+        MeshMaterial3d(materials.add(material)),
+    ));
 }
 
 /// Planet seed. Change this to generate a different planet.
@@ -133,26 +223,26 @@ const RIVER_DEPTH: f64 = 0.0234375;
 
 #[derive(Resource, Clone, Copy, Debug)]
 pub struct PlanetHeight {
-    seed: u32,
-    zoom_scale: f64,
-    continent_frequency: f64,
-    continent_lacunarity: f64,
-    mountain_lacunarity: f64,
-    hills_lacunarity: f64,
-    plains_lacunarity: f64,
-    badlands_lacunarity: f64,
-    mountains_twist: f64,
-    hills_twist: f64,
-    badlands_twist: f64,
-    sea_level: f64,
-    shelf_level: f64,
-    mountains_amount: f64,
-    hills_amount: f64,
-    badlands_amount: f64,
-    terrain_offset: f64,
-    mountain_glaciation: f64,
-    continent_height_scale: f64,
-    river_depth: f64,
+    pub seed: u32,
+    pub zoom_scale: f64,
+    pub continent_frequency: f64,
+    pub continent_lacunarity: f64,
+    pub mountain_lacunarity: f64,
+    pub hills_lacunarity: f64,
+    pub plains_lacunarity: f64,
+    pub badlands_lacunarity: f64,
+    pub mountains_twist: f64,
+    pub hills_twist: f64,
+    pub badlands_twist: f64,
+    pub sea_level: f64,
+    pub shelf_level: f64,
+    pub mountains_amount: f64,
+    pub hills_amount: f64,
+    pub badlands_amount: f64,
+    pub terrain_offset: f64,
+    pub mountain_glaciation: f64,
+    pub continent_height_scale: f64,
+    pub river_depth: f64,
 }
 
 impl Default for PlanetHeight {
@@ -275,7 +365,7 @@ impl PlanetHeight {
         let z = point.z as f64 * self.zoom_scale;
 
         let noise = base_continent_def.get([x, y, z]);
-        (noise + 1.0) * 0.5
+        ((noise + 1.0) * 0.5) * 5.0
     }
 }
 

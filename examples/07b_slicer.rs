@@ -20,7 +20,7 @@ fn custom_plugin(app: &mut App) {
     app.add_systems(OnEnter(GameStates::Playing), setup_scenario);
 
     app.add_observer(on_click_damage_health);
-    app.add_observer(on_fragment_added);
+    // app.add_observer(on_fragment_added);
 }
 
 fn setup_scenario(mut commands: Commands, game_assets: Res<GameAssets>) {
@@ -47,17 +47,17 @@ fn on_click_damage_health(
     }
 }
 
-fn on_fragment_added(
-    add: On<Add, FragmentMeshMarker>,
-    mut commands: Commands,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    commands.entity(add.entity).insert((
-        ExplodableEntityMarker,
-        MeshMaterial3d(materials.add(Color::srgb(rand::random(), rand::random(), rand::random()))),
-        Health::new(10.0),
-    ));
-}
+// fn on_fragment_added(
+//     add: On<Add, FragmentMeshMarker>,
+//     mut commands: Commands,
+//     mut materials: ResMut<Assets<StandardMaterial>>,
+// ) {
+//     commands.entity(add.entity).insert((
+//         ExplodableEntityMarker,
+//         MeshMaterial3d(materials.add(Color::srgb(rand::random(), rand::random(), rand::random()))),
+//         Health::new(10.0),
+//     ));
+// }
 
 pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
     let mut rng = rand::rng();
@@ -72,25 +72,32 @@ pub fn test_scenario(game_assets: &GameAssets) -> ScenarioConfig {
         let radius = rng.random_range(1.0..3.0);
         let texture = game_assets.asteroid_texture.clone();
 
-        objects.push(GameObjectConfig::Asteroid(AsteroidConfig {
-            id: format!("asteroid_{}", i),
-            name: format!("Asteroid {}", i),
-            position: pos,
-            rotation: Quat::IDENTITY,
-            radius,
-            texture,
-            health: 100.0,
-        }));
+        objects.push(ScenarioObjectConfig {
+            base: BaseScenarioObjectConfig {
+                id: format!("asteroid_{}", i),
+                name: format!("Asteroid {}", i),
+                position: pos,
+                rotation: Quat::IDENTITY,
+                health: 100.0,
+            },
+            kind: ScenarioObjectKind::Asteroid(AsteroidConfig { radius, texture }),
+        });
     }
+
+    let events = vec![ScenarioEventConfig {
+        name: EventConfig::OnStart,
+        filters: vec![],
+        actions: objects
+            .into_iter()
+            .map(EventActionConfig::SpawnScenarioObject)
+            .collect::<_>(),
+    }];
 
     ScenarioConfig {
         id: "test_scenario".to_string(),
         name: "Test Scenario".to_string(),
         description: "A test scenario.".to_string(),
-        map: MapConfig {
-            cubemap: game_assets.cubemap.clone(),
-            objects,
-        },
-        events: vec![],
+        cubemap: game_assets.cubemap.clone(),
+        events,
     }
 }

@@ -53,7 +53,7 @@ fn setup_skybox_camera(
     trace!("setup_skybox_camera: entity {:?}", entity);
 
     let Ok(config) = q_config.get(entity) else {
-        warn!(
+        error!(
             "setup_skybox_camera: entity {:?} not found in q_config",
             entity
         );

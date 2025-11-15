@@ -81,7 +81,7 @@ fn initialize_sphere_orbit_system(
     trace!("initialize_sphere_orbit_system: entity {:?}", entity);
 
     let Ok(orbit) = q_orbit.get(entity) else {
-        warn!(
+        error!(
             "initialize_sphere_orbit_system: entity {:?} not found in q_orbit",
             entity
         );

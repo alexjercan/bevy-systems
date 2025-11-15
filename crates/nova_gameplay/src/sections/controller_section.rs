@@ -3,7 +3,7 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-use crate::prelude::{SectionRenderOf, SpaceshipRootMarker, SpaceshipSystems};
+use crate::prelude::{SectionRenderOf, SpaceshipRootMarker};
 
 pub mod prelude {
     pub use super::{
@@ -14,7 +14,7 @@ pub mod prelude {
 }
 
 /// Configuration for a controller section.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Reflect)]
 pub struct ControllerSectionConfig {
     /// The frequency of the PD controller in Hz.
     pub frequency: f32,
@@ -83,12 +83,11 @@ pub struct ControllerSectionPlugin {
 
 impl Plugin for ControllerSectionPlugin {
     fn build(&self, app: &mut App) {
-        // NOTE: How can we check that the TorquePdControllerPlugin is added?
         debug!("ControllerSectionPlugin: build");
 
         app.add_systems(
             FixedUpdate,
-            update_controller_root_torque.in_set(SpaceshipSystems::Sections),
+            update_controller_root_torque.in_set(super::SpaceshipSectionSystems),
         );
 
         if self.render {
@@ -110,7 +109,7 @@ fn update_controller_root_torque(
 ) {
     for (controller, controller_input, &ChildOf(root)) in &q_controller {
         let Ok((angular_inertia, rotation, mut forces)) = q_root.get_mut(root) else {
-            warn!(
+            error!(
                 "update_controller_root_torque: root entity {:?} not found in q_root",
                 root
             );
@@ -145,7 +144,7 @@ fn insert_controller_section_render(
     trace!("insert_controller_section_render: entity {:?}", entity);
 
     let Ok(render_mesh) = q_controller.get(entity) else {
-        warn!(
+        error!(
             "insert_controller_section_render: entity {:?} not found in q_controller",
             entity
         );

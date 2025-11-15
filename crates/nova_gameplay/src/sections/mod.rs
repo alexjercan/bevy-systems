@@ -11,9 +11,18 @@ pub mod turret_section;
 pub mod prelude {
     pub use super::{
         base_section::prelude::*, controller_section::prelude::*, hull_section::prelude::*,
-        thruster_section::prelude::*, turret_section::prelude::*, SpaceshipSectionPlugin,
+        thruster_section::prelude::*, turret_section::prelude::*, SpaceshipRootMarker,
+        SpaceshipSectionPlugin, SpaceshipSectionSystems,
     };
 }
+
+/// This will be the root component for the entire spaceship. All other sections will be children
+/// of this entity.
+#[derive(Component, Clone, Debug, Default, Reflect)]
+pub struct SpaceshipRootMarker;
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SpaceshipSectionSystems;
 
 /// A plugin that adds all the spaceship sections and their related systems.
 #[derive(Default, Clone, Debug)]

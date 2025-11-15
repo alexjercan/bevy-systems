@@ -21,7 +21,7 @@ impl Plugin for SpaceshipAIInputPlugin {
                 update_turret_target_input,
                 on_projectile_input,
             )
-                .in_set(SpaceshipSystems::Input),
+                .in_set(super::SpaceshipInputSystems),
         );
     }
 }
@@ -32,8 +32,6 @@ impl Plugin for SpaceshipAIInputPlugin {
 #[derive(Component, Debug, Clone, Reflect)]
 #[require(SpaceshipRootMarker)]
 pub struct AISpaceshipMarker;
-
-// NOTE: The AI was generated using ChatGPT to see how good it can play my game :)
 
 fn update_controller_target_rotation_torque(
     mut q_controller: Query<
@@ -138,7 +136,6 @@ fn update_turret_target_input(
     q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<AISpaceshipMarker>)>,
     player: Single<&Transform, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
 ) {
-    // NOTE: We assume that there is only one player spaceship in the scene.
     let transform = player.into_inner();
 
     for entity in &q_spaceship {
@@ -152,8 +149,14 @@ fn update_turret_target_input(
 }
 
 fn on_projectile_input(
-    mut commands: Commands,
-    q_turret: Query<(Entity, &TurretSectionMuzzleEntity, &ChildOf), With<TurretSectionMarker>>,
+    mut q_turret: Query<
+        (
+            &TurretSectionMuzzleEntity,
+            &mut TurretSectionInput,
+            &ChildOf,
+        ),
+        With<TurretSectionMarker>,
+    >,
     q_muzzle: Query<&GlobalTransform, With<TurretSectionBarrelMuzzleMarker>>,
     q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<AISpaceshipMarker>)>,
     player: Single<&Transform, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
@@ -161,12 +164,12 @@ fn on_projectile_input(
     let player_transform = player.into_inner();
 
     for entity in &q_spaceship {
-        for (turret, muzzle, _) in q_turret
-            .iter()
+        for (muzzle, mut input, _) in q_turret
+            .iter_mut()
             .filter(|(_, _, ChildOf(c_parent))| *c_parent == entity)
         {
             let Ok(muzzle_transform) = q_muzzle.get(**muzzle) else {
-                warn!(
+                error!(
                     "on_projectile_input: muzzle entity {:?} not found in q_muzzle",
                     **muzzle
                 );
@@ -178,9 +181,7 @@ fn on_projectile_input(
             let forward = muzzle_transform.forward();
 
             let alignment = forward.dot(direction_to_player);
-            if alignment > 0.95 {
-                commands.trigger(TurretShoot { entity: turret });
-            }
+            **input = alignment > 0.95;
         }
     }
 }

@@ -1,5 +1,5 @@
-pub mod collision_damage;
+pub mod collision_impact;
 
 pub mod prelude {
-    pub use super::collision_damage::prelude::*;
+    pub use super::collision_impact::prelude::*;
 }

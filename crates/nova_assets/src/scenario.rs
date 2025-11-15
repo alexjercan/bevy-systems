@@ -1,15 +1,26 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use nova_gameplay::prelude::*;
+use nova_scenario::prelude::*;
 use rand::prelude::*;
 
-pub(crate) fn register_scenario(mut commands: Commands, game_assets: Res<super::GameAssets>) {
+pub(crate) fn register_scenario(
+    mut commands: Commands,
+    game_assets: Res<super::GameAssets>,
+    sections: Res<GameSections>,
+) {
     commands.insert_resource(GameScenarios(HashMap::from([
-        ("asteroid_field".to_string(), asteroid_field(&game_assets)),
-        ("asteroid_next".to_string(), asteroid_next(&game_assets)),
+        (
+            "asteroid_field".to_string(),
+            asteroid_field(&game_assets, &sections),
+        ),
+        (
+            "asteroid_next".to_string(),
+            asteroid_next(&game_assets, &sections),
+        ),
     ])));
 }
 
-pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
+pub fn asteroid_field(game_assets: &super::GameAssets, sections: &GameSections) -> ScenarioConfig {
     let mut rng = rand::rng();
 
     let mut objects = Vec::new();
@@ -22,218 +33,163 @@ pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
         let radius = rng.random_range(1.0..3.0);
         let texture = game_assets.asteroid_texture.clone();
 
-        objects.push(GameObjectConfig::Asteroid(AsteroidConfig {
-            id: format!("asteroid_{}", i),
-            name: format!("Asteroid {}", i),
-            position: pos,
-            rotation: Quat::IDENTITY,
-            radius,
-            texture,
-            health: 100.0,
-        }));
+        objects.push(ScenarioObjectConfig {
+            base: BaseScenarioObjectConfig {
+                id: format!("asteroid_{}", i),
+                name: format!("Asteroid {}", i),
+                position: pos,
+                rotation: Quat::IDENTITY,
+                health: 100.0,
+            },
+            kind: ScenarioObjectKind::Asteroid(AsteroidConfig { radius, texture }),
+        });
     }
 
     let spaceship = SpaceshipConfig {
-        id: "player_spaceship".to_string(),
-        name: "Player Spaceship".to_string(),
-        position: Vec3::ZERO,
-        rotation: Quat::IDENTITY,
-        health: 500.0,
-        controller: SpaceshipController::Player(PlayerControllerConfig {}),
+        controller: SpaceshipController::Player(PlayerControllerConfig {
+            input_mapping: HashMap::from([
+                (
+                    "thruster".to_string(),
+                    vec![KeyCode::Space.into(), GamepadButton::RightTrigger.into()],
+                ),
+                (
+                    "turret".to_string(),
+                    vec![
+                        MouseButton::Left.into(),
+                        GamepadButton::RightTrigger2.into(),
+                    ],
+                ),
+            ]),
+        }),
         sections: vec![
             SpaceshipSectionConfig {
+                id: "controller".to_string(),
                 position: Vec3::ZERO,
                 rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Controller Section".to_string(),
-                        description: "A basic controller section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Controller(ControllerSectionConfig {
-                        frequency: 4.0,
-                        damping_ratio: 4.0,
-                        max_torque: 100.0,
-                        render_mesh: None,
-                    }),
-                },
+                config: sections
+                    .get_section("basic_controller_section")
+                    .unwrap()
+                    .clone(),
             },
             SpaceshipSectionConfig {
+                id: "hull_front".to_string(),
                 position: Vec3::new(0.0, 0.0, 1.0),
                 rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Hull Section".to_string(),
-                        description: "A basic hull section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Hull(HullSectionConfig { render_mesh: None }),
-                },
+                config: sections
+                    .get_section("reinforced_hull_section")
+                    .unwrap()
+                    .clone(),
             },
             SpaceshipSectionConfig {
+                id: "hull_back".to_string(),
                 position: Vec3::new(0.0, 0.0, -1.0),
                 rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Hull Section".to_string(),
-                        description: "A basic hull section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Hull(HullSectionConfig { render_mesh: None }),
-                },
+                config: sections
+                    .get_section("reinforced_hull_section")
+                    .unwrap()
+                    .clone(),
             },
             SpaceshipSectionConfig {
+                id: "thruster".to_string(),
                 position: Vec3::new(0.0, 0.0, 2.0),
                 rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Thruster Section".to_string(),
-                        description: "A basic thruster section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Thruster(ThrusterSectionConfig {
-                        magnitude: 1.0,
-                        render_mesh: None,
-                    }),
-                },
+                config: sections
+                    .get_section("basic_thruster_section")
+                    .unwrap()
+                    .clone(),
             },
             SpaceshipSectionConfig {
+                id: "turret".to_string(),
                 position: Vec3::new(0.0, 0.0, -2.0),
                 rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2),
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Turret Section".to_string(),
-                        description: "A basic turret section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Turret(TurretSectionConfig {
-                        yaw_speed: std::f32::consts::PI,
-                        pitch_speed: std::f32::consts::PI,
-                        min_pitch: Some(-std::f32::consts::FRAC_PI_6),
-                        max_pitch: Some(std::f32::consts::FRAC_PI_2),
-                        render_mesh_base: None,
-                        base_offset: Vec3::new(0.0, -0.5, 0.0),
-                        render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
-                        yaw_offset: Vec3::new(0.0, 0.1, 0.0),
-                        render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
-                        pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
-                        render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
-                        barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
-                        muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
-                        fire_rate: 100.0,
-                        muzzle_speed: 100.0,
-                        projectile_lifetime: 5.0,
-                        projectile_mass: 0.1,
-                        projectile_render_mesh: None,
-                        muzzle_effect: None,
-                    }),
-                },
+                config: sections
+                    .get_section("better_turret_section")
+                    .unwrap()
+                    .clone(),
             },
         ],
     };
-    objects.push(GameObjectConfig::Spaceship(spaceship));
+    objects.push(ScenarioObjectConfig {
+        base: BaseScenarioObjectConfig {
+            id: "player_spaceship".to_string(),
+            name: "Player Spaceship".to_string(),
+            position: Vec3::ZERO,
+            rotation: Quat::IDENTITY,
+            health: 500.0,
+        },
+        kind: ScenarioObjectKind::Spaceship(spaceship),
+    });
 
     let spaceship = SpaceshipConfig {
-        id: "other_spaceship".to_string(),
-        name: "Other Spaceship".to_string(),
-        position: Vec3::new(10.0, 0.0, 0.0),
-        rotation: Quat::IDENTITY,
-        health: 100.0,
         controller: SpaceshipController::None,
         sections: vec![
             SpaceshipSectionConfig {
+                id: "controller".to_string(),
                 position: Vec3::ZERO,
                 rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Controller Section".to_string(),
-                        description: "A basic controller section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Controller(ControllerSectionConfig {
-                        frequency: 4.0,
-                        damping_ratio: 4.0,
-                        max_torque: 100.0,
-                        render_mesh: None,
-                    }),
-                },
+                config: sections
+                    .get_section("basic_controller_section")
+                    .unwrap()
+                    .clone(),
             },
             SpaceshipSectionConfig {
+                id: "hull_front".to_string(),
                 position: Vec3::new(0.0, 0.0, 1.0),
                 rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Hull Section".to_string(),
-                        description: "A basic hull section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Hull(HullSectionConfig { render_mesh: None }),
-                },
+                config: sections
+                    .get_section("reinforced_hull_section")
+                    .unwrap()
+                    .clone(),
             },
             SpaceshipSectionConfig {
+                id: "hull_back".to_string(),
                 position: Vec3::new(0.0, 0.0, -1.0),
                 rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Hull Section".to_string(),
-                        description: "A basic hull section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Hull(HullSectionConfig { render_mesh: None }),
-                },
+                config: sections
+                    .get_section("reinforced_hull_section")
+                    .unwrap()
+                    .clone(),
             },
             SpaceshipSectionConfig {
+                id: "thruster".to_string(),
                 position: Vec3::new(0.0, 0.0, 2.0),
                 rotation: Quat::IDENTITY,
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Thruster Section".to_string(),
-                        description: "A basic thruster section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Thruster(ThrusterSectionConfig {
-                        magnitude: 1.0,
-                        render_mesh: None,
-                    }),
-                },
+                config: sections
+                    .get_section("basic_thruster_section")
+                    .unwrap()
+                    .clone(),
             },
             SpaceshipSectionConfig {
+                id: "turret".to_string(),
                 position: Vec3::new(0.0, 0.0, -2.0),
                 rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2),
-                config: SectionConfig {
-                    base: BaseSectionConfig {
-                        name: "Basic Turret Section".to_string(),
-                        description: "A basic turret section for spaceships.".to_string(),
-                        mass: 1.0,
-                    },
-                    kind: SectionKind::Turret(TurretSectionConfig {
-                        yaw_speed: std::f32::consts::PI,
-                        pitch_speed: std::f32::consts::PI,
-                        min_pitch: Some(-std::f32::consts::FRAC_PI_6),
-                        max_pitch: Some(std::f32::consts::FRAC_PI_2),
-                        render_mesh_base: None,
-                        base_offset: Vec3::new(0.0, -0.5, 0.0),
-                        render_mesh_yaw: Some(game_assets.turret_yaw_01.clone()),
-                        yaw_offset: Vec3::new(0.0, 0.1, 0.0),
-                        render_mesh_pitch: Some(game_assets.turret_pitch_01.clone()),
-                        pitch_offset: Vec3::new(0.0, 0.332706, 0.303954),
-                        render_mesh_barrel: Some(game_assets.turret_barrel_01.clone()),
-                        barrel_offset: Vec3::new(0.0, 0.128437, -0.110729),
-                        muzzle_offset: Vec3::new(0.0, 0.0, -1.2),
-                        fire_rate: 100.0,
-                        muzzle_speed: 100.0,
-                        projectile_lifetime: 5.0,
-                        projectile_mass: 0.1,
-                        projectile_render_mesh: None,
-                        muzzle_effect: None,
-                    }),
-                },
+                config: sections
+                    .get_section("better_turret_section")
+                    .unwrap()
+                    .clone(),
             },
         ],
     };
-    objects.push(GameObjectConfig::Spaceship(spaceship));
+    objects.push(ScenarioObjectConfig {
+        base: BaseScenarioObjectConfig {
+            id: "other_spaceship".to_string(),
+            name: "Other Spaceship".to_string(),
+            position: Vec3::new(10.0, 0.0, 0.0),
+            rotation: Quat::IDENTITY,
+            health: 100.0,
+        },
+        kind: ScenarioObjectKind::Spaceship(spaceship),
+    });
 
     let events = vec![
+        ScenarioEventConfig {
+            name: EventConfig::OnStart,
+            filters: vec![],
+            actions: objects
+                .into_iter()
+                .map(EventActionConfig::SpawnScenarioObject)
+                .collect::<_>(),
+        },
         ScenarioEventConfig {
             name: EventConfig::OnStart,
             filters: vec![],
@@ -359,23 +315,26 @@ pub fn asteroid_field(game_assets: &super::GameAssets) -> ScenarioConfig {
         id: "asteroid_field".to_string(),
         name: "Asteroid Field".to_string(),
         description: "A dense asteroid field.".to_string(),
-        map: MapConfig {
-            cubemap: game_assets.cubemap.clone(),
-            objects,
-        },
+        cubemap: game_assets.cubemap.clone(),
         events,
     }
 }
 
-pub fn asteroid_next(game_assets: &super::GameAssets) -> ScenarioConfig {
+pub fn asteroid_next(game_assets: &super::GameAssets, _sections: &GameSections) -> ScenarioConfig {
+    let events = vec![ScenarioEventConfig {
+        name: EventConfig::OnStart,
+        filters: vec![],
+        actions: vec![EventActionConfig::NextScenario(NextScenarioActionConfig {
+            scenario_id: "asteroid_field".to_string(),
+            linger: true,
+        })],
+    }];
+
     ScenarioConfig {
         id: "asteroid_next".to_string(),
         name: "Asteroid Field - Next".to_string(),
         description: "The next scenario after the asteroid field.".to_string(),
-        map: MapConfig {
-            cubemap: game_assets.cubemap.clone(),
-            objects: vec![],
-        },
-        events: vec![],
+        cubemap: game_assets.cubemap.clone(),
+        events,
     }
 }

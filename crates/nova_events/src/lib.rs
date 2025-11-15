@@ -1,31 +1,35 @@
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
-use super::world::NovaEventWorld;
-
 pub mod prelude {
     pub use super::{
-        EventConfig, OnDestroyedEvent, OnDestroyedEventInfo, OnStartEvent, OnStartEventInfo,
-        OnUpdateEvent, OnUpdateEventInfo,
+        EntityId, EntityTypeName, OnDestroyedEvent, OnDestroyedEventInfo, OnStartEvent,
+        OnStartEventInfo, OnUpdateEvent, OnUpdateEventInfo, ENTITY_ID_COMPONENT_NAME,
+        ENTITY_TYPE_NAME_COMPONENT_NAME,
     };
 }
 
-#[derive(Debug, Clone, Copy, Reflect)]
-pub enum EventConfig {
-    OnStart,
-    OnDestroyed,
-    OnUpdate,
-}
+#[derive(Component, Debug, Clone, Default, Deref, DerefMut, Reflect)]
+pub struct EntityId(pub String);
 
-impl From<EventConfig> for EventHandler<NovaEventWorld> {
-    fn from(value: EventConfig) -> Self {
-        match value {
-            EventConfig::OnStart => EventHandler::new::<OnStartEvent>(),
-            EventConfig::OnDestroyed => EventHandler::new::<OnDestroyedEvent>(),
-            EventConfig::OnUpdate => EventHandler::new::<OnUpdateEvent>(),
-        }
+impl EntityId {
+    pub fn new<S: Into<String>>(s: S) -> Self {
+        EntityId(s.into())
     }
 }
+
+pub const ENTITY_ID_COMPONENT_NAME: &str = "id";
+
+#[derive(Component, Debug, Clone, Default, Deref, DerefMut, Reflect)]
+pub struct EntityTypeName(pub String);
+
+impl EntityTypeName {
+    pub fn new<S: Into<String>>(s: S) -> Self {
+        EntityTypeName(s.into())
+    }
+}
+
+pub const ENTITY_TYPE_NAME_COMPONENT_NAME: &str = "type_name";
 
 #[derive(Debug, Clone, EventKind, Reflect)]
 #[event_name("onstart")]
@@ -42,7 +46,9 @@ pub struct OnDestroyedEvent;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default, Reflect)]
 pub struct OnDestroyedEventInfo {
+    #[serde(rename = "id")]
     pub id: String,
+    #[serde(rename = "type_name")]
     pub type_name: String,
 }
 

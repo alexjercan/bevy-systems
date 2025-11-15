@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_common_systems::modding::prelude::*;
 
-use super::{variables::VariableConditionNode, world::NovaEventWorld};
+use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{
@@ -104,7 +104,6 @@ impl EventFilter<NovaEventWorld> for ExpressionFilterConfig {
         match self.0.evaluate(world) {
             Ok(result) => result,
             Err(e) => {
-                // TODO: Proper error handling
                 error!(
                     "VariableFilterConfig: failed to evaluate condition: {:?}",
                     e

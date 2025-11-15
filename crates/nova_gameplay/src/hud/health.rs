@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 
-use crate::prelude::SpaceshipSystems;
-
 pub mod prelude {
     pub use super::{
         health_hud, HealthHudConfig, HealthHudMarker, HealthHudPlugin, HealthHudTargetEntity,
@@ -44,7 +42,7 @@ pub struct HealthHudPlugin;
 
 impl Plugin for HealthHudPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, update_text_hud.in_set(SpaceshipSystems::Hud));
+        app.add_systems(Update, update_text_hud.in_set(super::NovaHudSystems));
     }
 }
 

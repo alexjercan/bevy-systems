@@ -18,8 +18,11 @@ fn main() {
 fn custom_plugin(app: &mut App) {
     app.add_systems(
         OnEnter(GameAssetsStates::Loaded),
-        |mut commands: Commands| {
-            commands.trigger(LoadScenarioById("asteroid_field".to_string()));
+        |mut commands: Commands, scenarios: Res<GameScenarios>| {
+            let scenario = scenarios
+                .get("asteroid_field")
+                .expect("Scenario 'asteroid_field' not found");
+            commands.trigger(LoadScenario(scenario.clone()));
         },
     );
 }

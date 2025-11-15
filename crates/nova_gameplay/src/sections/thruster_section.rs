@@ -8,7 +8,7 @@ use bevy::{
     shader::ShaderRef,
 };
 
-use crate::prelude::{SectionRenderOf, SpaceshipRootMarker, SpaceshipSystems};
+use crate::prelude::{SectionRenderOf, SpaceshipRootMarker};
 
 pub mod prelude {
     pub use super::{
@@ -20,7 +20,7 @@ pub mod prelude {
 const THRUSTER_SECTION_DEFAULT_MAGNITUDE: f32 = 1.0;
 
 /// Configuration for a thruster section of a spaceship.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Reflect)]
 pub struct ThrusterSectionConfig {
     /// The magnitude of the force produced by this thruster section.
     pub magnitude: f32,
@@ -86,11 +86,11 @@ impl Plugin for ThrusterSectionPlugin {
 
         app.add_systems(
             Update,
-            thruster_shader_update_system.in_set(SpaceshipSystems::Sections),
+            thruster_shader_update_system.in_set(super::SpaceshipSectionSystems),
         );
         app.add_systems(
             FixedUpdate,
-            thruster_impulse_system.in_set(SpaceshipSystems::Sections),
+            thruster_impulse_system.in_set(super::SpaceshipSectionSystems),
         );
     }
 }
@@ -110,7 +110,7 @@ fn thruster_impulse_system(
 ) {
     for (position, rotation, &ChildOf(root), magnitude, input) in &q_thruster {
         let Ok(mut force) = q_root.get_mut(root) else {
-            warn!(
+            error!(
                 "thruster_impulse_system: entity {:?} not found in q_root",
                 root
             );
@@ -141,7 +141,7 @@ fn thruster_shader_update_system(
 ) {
     for (material, &ChildOf(parent)) in &q_render {
         let Ok(input) = q_thruster.get(parent) else {
-            warn!(
+            error!(
                 "thruster_shader_update_system: entity {:?} not found in q_thruster",
                 parent
             );
@@ -149,7 +149,7 @@ fn thruster_shader_update_system(
         };
 
         let Some(material) = materials.get_mut(&**material) else {
-            warn!(
+            error!(
                 "thruster_shader_update_system: material for entity {:?} not found",
                 parent
             );
@@ -174,7 +174,7 @@ fn insert_thruster_section_render(
     trace!("insert_thruster_section_render: entity {:?}", entity);
 
     let Ok(render_mesh) = q_thruster.get(entity) else {
-        warn!(
+        error!(
             "insert_thruster_section_render: entity {:?} not found in q_thruster",
             entity
         );
@@ -207,7 +207,6 @@ fn insert_thruster_section_render(
                     Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
                 ),
                 (
-                    // NOTE: This is not really part of the render mesh, but I just added it here
                     Name::new("Thruster Exhaust"),
                     ThrusterSectionExhaustShaderMarker,
                     Mesh3d(meshes.add(Cone::new(0.4, 0.1))),

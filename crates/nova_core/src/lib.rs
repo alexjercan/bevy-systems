@@ -1,5 +1,3 @@
-//! TODO: Add description in this crate
-
 use bevy::{
     app::Plugins,
     log::{Level, LogPlugin},
@@ -9,20 +7,25 @@ use bevy::{
 use nova_assets::prelude::*;
 #[cfg(feature = "debug")]
 use nova_debug::DebugPlugin;
+pub use nova_events;
 pub use nova_gameplay;
 use nova_gameplay::prelude::*;
+pub use nova_info;
+pub use nova_scenario;
+use nova_scenario::prelude::*;
 
 mod core;
 
 pub mod prelude {
-    // NOTE: These are temporary, until I finis the refactor to move everything to new_gui_app
     pub use nova_assets::prelude::*;
     #[cfg(feature = "debug")]
     pub use nova_debug::prelude::*;
+    pub use nova_events::prelude::*;
     pub use nova_gameplay::prelude::*;
+    pub use nova_info::prelude::*;
+    pub use nova_scenario::prelude::*;
 
     pub use super::{AppBuilder, GameStates};
-    pub use nova_info::prelude::*;
 }
 
 /// Game states for the application.
@@ -86,12 +89,12 @@ impl AppBuilder {
         self.app.add_plugins(NovaGameplayPlugin {
             render: self.render,
         });
+        self.app.add_plugins(NovaScenarioPlugin {
+            render: self.render,
+        });
 
         // Add default game plugins if none were provided
         if self.use_default_plugins {
-            // TODO: Main menu plugin
-            // TODO: Gameplay loop plugin
-
             self.app.add_plugins(core::core_plugin);
         }
 
@@ -100,7 +103,6 @@ impl AppBuilder {
 
         // When we enter the Loaded state, switch to Playing state
         // Setup the status UI when entering the Playing state
-        // TODO: Here we will add a MainMenu state before Playing
         self.app.add_systems(
             OnEnter(GameAssetsStates::Loaded),
             (
@@ -159,7 +161,14 @@ fn log_plugin() -> LogPlugin {
 
 fn log_filter_str<'a>() -> &'a str {
     if cfg!(feature = "debug") {
-        "wgpu=error,bevy_render=info,bevy_ecs=warn,bevy_time=warn,naga=warn,bevy_common_systems=debug,nova_gameplay=debug,nova_assets=debug,nova_core=debug,nova_debug=debug"
+        if std::env::var("RUST_LOG")
+            .unwrap_or_default()
+            .contains("trace")
+        {
+            "wgpu=error,bevy_render=info,bevy_ecs=warn,bevy_time=warn,naga=warn,bevy_common_systems=trace,nova_assets=trace,nova_core=trace,nova_debug=trace,nova_events=trace,nova_gameplay=trace,nova_info=trace,nova_scenario=trace"
+        } else {
+            "wgpu=error,bevy_render=info,bevy_ecs=warn,bevy_time=warn,naga=warn,bevy_common_systems=debug,nova_assets=debug,nova_core=debug,nova_debug=debug,nova_events=debug,nova_gameplay=debug,nova_info=debug,nova_scenario=debug"
+        }
     } else {
         "wgpu=error,bevy_render=warn,bevy_ecs=warn,bevy_time=warn,naga=warn"
     }

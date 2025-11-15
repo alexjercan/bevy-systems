@@ -54,8 +54,7 @@ fn thruster_shader_update_system(
     let material = material.into_inner();
 
     let Some(material) = materials.get_mut(&**material) else {
-        warn!("thruster_shader_update_system: material not found in assets");
-        return;
+        panic!("thruster_shader_update_system: material not found in assets");
     };
 
     material.extension.thruster_input = value.slider_value / 100.0;

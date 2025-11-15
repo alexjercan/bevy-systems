@@ -60,9 +60,6 @@ fn fragment(
 ) -> FragmentOutput {
     var pbr_input = pbr_input_from_standard_material(in, is_front);
 
-    // TODO: use thruster_input and thruster_exhaust_radius to make it whiter
-    // pbr_input.material.base_color = ...;
-
     // alpha discard
     pbr_input.material.base_color = alpha_discard(pbr_input.material, pbr_input.material.base_color);
 #ifdef PREPASS_PIPELINE

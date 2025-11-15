@@ -6,12 +6,15 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{
-        SpaceshipCameraControlMode, SpaceshipCameraControllerMarker,
+        NovaCameraSystems, SpaceshipCameraControlMode, SpaceshipCameraController,
         SpaceshipCameraControllerPlugin, SpaceshipCameraFreeLookInputMarker,
         SpaceshipCameraInputMarker, SpaceshipCameraNormalInputMarker,
         SpaceshipCameraTurretInputMarker, SpaceshipRotationInputActiveMarker,
     };
 }
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NovaCameraSystems;
 
 pub struct SpaceshipCameraControllerPlugin;
 
@@ -26,6 +29,7 @@ impl Plugin for SpaceshipCameraControllerPlugin {
         app.add_observer(insert_camera_freelook);
         app.add_observer(insert_camera_turret);
         app.add_observer(insert_player_input);
+        app.add_observer(destroy_camera_controller);
 
         app.add_observer(on_rotation_input);
         app.add_observer(on_rotation_input_completed);
@@ -36,8 +40,7 @@ impl Plugin for SpaceshipCameraControllerPlugin {
 
         app.add_systems(
             Update,
-            (update_chase_camera_input, sync_spaceship_control_mode)
-                .in_set(SpaceshipSystems::Camera),
+            (update_chase_camera_input, sync_spaceship_control_mode).in_set(NovaCameraSystems),
         );
     }
 }
@@ -47,7 +50,7 @@ impl Plugin for SpaceshipCameraControllerPlugin {
 /// This should be added to an entity that also has a `ChaseCamera` component.
 #[derive(Component, Debug, Clone, Reflect)]
 #[require(ChaseCamera)]
-pub struct SpaceshipCameraControllerMarker;
+pub struct SpaceshipCameraController;
 
 /// The mode that the camera is currently in for controlling the spaceship.
 #[derive(Resource, Default, Clone, Debug)]
@@ -78,41 +81,44 @@ pub struct SpaceshipCameraTurretInputMarker;
 pub struct SpaceshipRotationInputActiveMarker;
 
 fn insert_camera_controller(
-    add: On<Add, SpaceshipCameraControllerMarker>,
+    add: On<Add, SpaceshipCameraController>,
     mut commands: Commands,
-    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
+    q_camera: Query<Entity, With<SpaceshipCameraController>>,
 ) {
     let entity = add.entity;
     trace!("insert_camera_controller: entity {:?}", entity);
 
     let Ok(camera) = q_camera.get(entity) else {
-        warn!(
+        error!(
             "insert_camera_controller: entity {:?} not found in q_camera",
             add.entity
         );
         return;
     };
 
-    commands.entity(camera).with_children(|parent| {
-        parent.spawn((
-            SpaceshipCameraInputMarker,
-            SpaceshipCameraNormalInputMarker,
-            SpaceshipRotationInputActiveMarker,
-            PointRotation::default(),
-        ));
-    });
+    commands
+        .entity(camera)
+        .insert(ChaseCamera::default())
+        .with_children(|parent| {
+            parent.spawn((
+                SpaceshipCameraInputMarker,
+                SpaceshipCameraNormalInputMarker,
+                SpaceshipRotationInputActiveMarker,
+                PointRotation::default(),
+            ));
+        });
 }
 
 fn insert_camera_freelook(
-    add: On<Add, SpaceshipCameraControllerMarker>,
+    add: On<Add, SpaceshipCameraController>,
     mut commands: Commands,
-    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
+    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraController>)>,
 ) {
     let entity = add.entity;
     trace!("insert_camera_controller: entity {:?}", entity);
 
     let Ok(camera) = q_camera.get(entity) else {
-        warn!(
+        error!(
             "insert_camera_controller: entity {:?} not found in q_camera",
             entity
         );
@@ -129,15 +135,15 @@ fn insert_camera_freelook(
 }
 
 fn insert_camera_turret(
-    add: On<Add, SpaceshipCameraControllerMarker>,
+    add: On<Add, SpaceshipCameraController>,
     mut commands: Commands,
-    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
+    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraController>)>,
 ) {
     let entity = add.entity;
     trace!("insert_camera_turret: entity {:?}", entity);
 
     let Ok(camera) = q_camera.get(entity) else {
-        warn!(
+        error!(
             "insert_camera_turret: entity {:?} not found in q_camera",
             entity
         );
@@ -154,15 +160,15 @@ fn insert_camera_turret(
 }
 
 fn insert_player_input(
-    add: On<Add, SpaceshipCameraControllerMarker>,
+    add: On<Add, SpaceshipCameraController>,
     mut commands: Commands,
-    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
+    q_camera: Query<Entity, (With<ChaseCamera>, With<SpaceshipCameraController>)>,
 ) {
     let entity = add.entity;
     trace!("insert_camera_turret: entity {:?}", entity);
 
     let Ok(camera) = q_camera.get(entity) else {
-        warn!(
+        error!(
             "insert_player_input: entity {:?} not found in q_camera",
             entity
         );
@@ -194,7 +200,7 @@ fn insert_player_input(
                     (
                         Name::new("Input: Combat Mode"),
                         Action::<CombatInput>::new(),
-                        bindings![MouseButton::Right],
+                        bindings![MouseButton::Right, GamepadButton::LeftTrigger2],
                     ),
                 ]
             ),
@@ -202,11 +208,33 @@ fn insert_player_input(
     });
 }
 
+fn destroy_camera_controller(
+    remove: On<Remove, SpaceshipCameraController>,
+    mut commands: Commands,
+    q_camera: Query<&Children, With<ChaseCamera>>,
+) {
+    let entity = remove.entity;
+    trace!("destroy_camera_controller: entity {:?}", entity);
+
+    let Ok(children) = q_camera.get(entity) else {
+        error!(
+            "destroy_camera_controller: entity {:?} not found in q_camera",
+            entity
+        );
+        return;
+    };
+
+    for child in children.iter() {
+        commands.entity(child).try_despawn();
+    }
+
+    commands
+        .entity(entity)
+        .try_remove::<(ChaseCamera, SpaceshipCameraController)>();
+}
+
 fn update_chase_camera_input(
-    camera: Single<
-        &mut ChaseCameraInput,
-        (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>),
-    >,
+    camera: Single<&mut ChaseCameraInput, (With<ChaseCamera>, With<SpaceshipCameraController>)>,
     spaceship: Single<&Transform, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
     point_rotation: Single<
         &PointRotationOutput,
@@ -216,8 +244,6 @@ fn update_chase_camera_input(
         ),
     >,
 ) {
-    // NOTE: We assume that only one of the input markers is active at a time.
-    // We also assume that the spaceship and camera are singletons for the player.
     let mut camera_input = camera.into_inner();
     let spaceship_transform = spaceship.into_inner();
     let point_rotation = point_rotation.into_inner();
@@ -229,7 +255,6 @@ fn update_chase_camera_input(
 fn sync_spaceship_control_mode(
     mut commands: Commands,
     mode: Res<SpaceshipCameraControlMode>,
-    // NOTE: Just to ensure the spaceship exists
     _spaceship: Single<&Transform, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
     spaceship_input_rotation: Single<
         (Entity, &PointRotationOutput),
@@ -237,13 +262,12 @@ fn sync_spaceship_control_mode(
     >,
     spaceship_input_free_look: Single<Entity, With<SpaceshipCameraFreeLookInputMarker>>,
     spaceship_input_turret: Single<Entity, With<SpaceshipCameraTurretInputMarker>>,
-    camera: Single<Entity, (With<ChaseCamera>, With<SpaceshipCameraControllerMarker>)>,
+    camera: Single<Entity, (With<ChaseCamera>, With<SpaceshipCameraController>)>,
 ) {
     if !mode.is_changed() {
         return;
     }
 
-    // NOTE: We assume that only one of the input markers is active at a time.
     let (spaceship_input_rotation, point_rotation) = spaceship_input_rotation.into_inner();
     let spaceship_input_free_look = spaceship_input_free_look.into_inner();
     let spaceship_input_combat = spaceship_input_turret.into_inner();

@@ -71,8 +71,8 @@ impl Plugin for SmoothLookRotationPlugin {
 
         app.add_observer(initialize_smooth_look_system);
 
-        // NOTE: I am using PostUpdate here to ensure that this runs after any input or other
-        // systems that might modify the target angle.
+        // I am using PostUpdate here to ensure that this runs after any input or other systems
+        // that might modify the target angle.
         app.add_systems(
             PostUpdate,
             smooth_look_rotation_update_system.in_set(SmoothLookRotationSystems::Sync),
@@ -89,7 +89,7 @@ fn initialize_smooth_look_system(
     trace!("initialize_smooth_look_system: entity {:?}", entity);
 
     let Ok(look) = q_look.get(entity) else {
-        warn!(
+        error!(
             "initialize_smooth_look_system: entity {:?} not found in q_look",
             entity
         );

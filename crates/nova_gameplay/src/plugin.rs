@@ -1,5 +1,6 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
+use bevy_rand::prelude::*;
 
 use crate::{bevy_common_systems, prelude::*};
 
@@ -7,10 +8,6 @@ use crate::{bevy_common_systems, prelude::*};
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SpaceshipSystems {
     First,
-    Input,
-    Sections,
-    Hud,
-    Camera,
     Last,
 }
 
@@ -26,6 +23,9 @@ impl Plugin for NovaGameplayPlugin {
         app.add_plugins(PhysicsPlugins::default().with_collision_hooks::<TurretProjectileHooks>());
         app.add_plugins(PhysicsPickingPlugin);
         app.insert_resource(Gravity::ZERO);
+
+        // Random number generator
+        app.add_plugins(EntropyPlugin::<WyRand>::default());
 
         // FIXME: For now we disable particle effects on wasm because it's not working
         #[cfg(not(target_family = "wasm"))]
@@ -53,7 +53,7 @@ impl Plugin for NovaGameplayPlugin {
         app.add_plugins(bevy_common_systems::prelude::DespawnEntityPlugin);
         app.add_plugins(bevy_common_systems::prelude::ExplodeMeshPlugin);
         // Core Mechanics
-        app.add_plugins(bevy_common_systems::prelude::CollisionDamagePlugin);
+        app.add_plugins(bevy_common_systems::prelude::CollisionImpactPlugin);
         app.add_plugins(bevy_common_systems::prelude::HealthPlugin);
 
         // UI Plugins
@@ -67,7 +67,6 @@ impl Plugin for NovaGameplayPlugin {
         app.add_plugins(crate::hud::NovaHudPlugin);
         app.add_plugins(crate::camera_controller::SpaceshipCameraControllerPlugin);
         app.add_plugins(crate::damage::DamagePlugin);
-        app.add_plugins(crate::modding::NovaEventsPlugin);
 
         // Diagnostics
         if !app.is_plugin_added::<bevy::diagnostic::FrameTimeDiagnosticsPlugin>() {
@@ -79,10 +78,10 @@ impl Plugin for NovaGameplayPlugin {
             Update,
             (
                 SpaceshipSystems::First,
-                SpaceshipSystems::Input,
-                SpaceshipSystems::Sections,
-                SpaceshipSystems::Hud,
-                SpaceshipSystems::Camera,
+                SpaceshipInputSystems,
+                SpaceshipSectionSystems,
+                NovaHudSystems,
+                NovaCameraSystems,
                 SpaceshipSystems::Last,
             )
                 .chain(),
@@ -92,10 +91,10 @@ impl Plugin for NovaGameplayPlugin {
             FixedUpdate,
             (
                 SpaceshipSystems::First,
-                SpaceshipSystems::Input,
-                SpaceshipSystems::Sections,
-                SpaceshipSystems::Hud,
-                SpaceshipSystems::Camera,
+                SpaceshipInputSystems,
+                SpaceshipSectionSystems,
+                NovaHudSystems,
+                NovaCameraSystems,
                 SpaceshipSystems::Last,
             )
                 .chain(),

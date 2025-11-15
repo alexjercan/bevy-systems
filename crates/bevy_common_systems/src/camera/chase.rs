@@ -64,10 +64,11 @@ impl Plugin for ChaseCameraPlugin {
         debug!("ChaseCameraPlugin: build");
 
         app.add_observer(initialize_chase_camera);
+        app.add_observer(destroy_chase_camera);
 
-        // NOTE: I am using PostUpdate here to ensure that the camera updates after the input was
-        // set by the user or other systems in the Update stage. Then the new transform will be
-        // available in the next frame's Update stage.
+        // I am using PostUpdate here to ensure that the camera updates after the input was set by
+        // the user or other systems in the Update stage. Then the new transform will be available
+        // in the next frame's Update stage.
         app.add_systems(
             PostUpdate,
             (
@@ -90,7 +91,7 @@ fn initialize_chase_camera(
     trace!("initialize_chase_camera: entity {:?}", entity);
 
     let Ok(has_state) = q_state.get(entity) else {
-        warn!(
+        error!(
             "initialize_chase_camera: entity {:?} not found in q_state",
             entity
         );
@@ -104,6 +105,16 @@ fn initialize_chase_camera(
     if !has_state {
         commands.entity(entity).insert(ChaseCameraState::default());
     }
+}
+
+fn destroy_chase_camera(remove: On<Remove, ChaseCamera>, mut commands: Commands) {
+    let entity = remove.entity;
+    trace!("destroy_chase_camera: entity {:?}", entity);
+
+    // use try_remove in case this get's despawned and remove is called after
+    commands
+        .entity(entity)
+        .try_remove::<(ChaseCameraInput, ChaseCameraState)>();
 }
 
 fn chase_camera_update_state_system(

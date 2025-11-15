@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::world::NovaEventWorld;
+use crate::prelude::*;
 
 pub mod prelude {
     pub use super::{
@@ -48,8 +48,7 @@ impl VariableFactorNode {
             VariableFactorNode::Parens(expr) => expr.evaluate(world),
             VariableFactorNode::Literal(lit) => Ok(lit.clone()),
             VariableFactorNode::Name(name) => world
-                .variables
-                .get(name)
+                .get_variable(name)
                 .cloned()
                 .ok_or_else(|| VariableError::UndefinedVariable(name.clone())),
         }

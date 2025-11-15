@@ -109,7 +109,6 @@ fn log_position(
             spaceship_global_transform,
         )) = q_spaceship.get(parent)
         else {
-            warn!("log_position: entity {:?} not found in q_spaceship", parent);
             continue;
         };
 

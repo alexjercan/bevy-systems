@@ -1,5 +1,3 @@
-//! TODO: Document this module
-
 use std::{collections::VecDeque, sync::Arc};
 
 use bevy::prelude::*;
@@ -194,7 +192,6 @@ fn queue_system<W: EventWorld>(
         );
 
         for handler in &q_handler {
-            // TODO: Optimize by indexing handlers by event name
             if handler.name == event.name && handler.filter(&world, &event.info) {
                 trace!("queue_system: handler {:?} passed filters", handler.name);
 

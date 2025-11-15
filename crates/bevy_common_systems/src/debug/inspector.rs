@@ -34,8 +34,6 @@ impl Plugin for InpsectorDebugPlugin {
             ..Default::default()
         });
 
-        // TODO: Ideally we would have an extra camera for the inspector only, but for now we
-        // will just use the primary camera.
         app.add_observer(on_add_camera);
 
         app.add_plugins((
@@ -49,7 +47,10 @@ impl Plugin for InpsectorDebugPlugin {
             PhysicsDiagnosticsUiPlugin,
         ));
 
-        app.add_systems(Update, (enable_physics_gizmos, enable_physics_ui, toggle_debug_mode));
+        app.add_systems(
+            Update,
+            (enable_physics_gizmos, enable_physics_ui, toggle_debug_mode),
+        );
     }
 }
 
@@ -58,7 +59,7 @@ fn inspector_ui(world: &mut World) {
         .query_filtered::<&mut EguiContext, With<PrimaryEguiContext>>()
         .single(world)
     else {
-        warn!("inspector_ui: No EguiContext found");
+        error!("inspector_ui: No EguiContext found");
         return;
     };
     let mut egui_context = egui_context.clone();

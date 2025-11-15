@@ -7,8 +7,6 @@ use bevy::{
 };
 use bevy_common_systems::prelude::*;
 
-use crate::prelude::SpaceshipSystems;
-
 pub mod prelude {
     pub use super::{
         velocity_hud, VelocityHudConfig, VelocityHudIndicatorMarker, VelocityHudMarker,
@@ -25,14 +23,14 @@ pub struct VelocityHudIndicatorMarker;
 #[derive(Clone, Debug)]
 pub struct VelocityHudConfig {
     pub radius: f32,
-    pub target: Option<Entity>,
+    pub target: Entity,
 }
 
 impl Default for VelocityHudConfig {
     fn default() -> Self {
         Self {
             radius: 5.0,
-            target: None,
+            target: Entity::PLACEHOLDER,
         }
     }
 }
@@ -54,7 +52,7 @@ pub fn velocity_hud(config: VelocityHudConfig) -> impl Bundle {
 }
 
 #[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]
-pub struct VelocityHudTargetEntity(Option<Entity>);
+pub struct VelocityHudTargetEntity(Entity);
 
 #[derive(Default)]
 pub struct VelocityHudPlugin;
@@ -76,33 +74,21 @@ impl Plugin for VelocityHudPlugin {
                 sync_orbit_state,
                 direction_shader_update_system,
             )
-                .in_set(SpaceshipSystems::Hud),
+                .in_set(super::NovaHudSystems),
         );
     }
 }
 
 fn update_velocity_hud_input(
     mut q_hud: Query<
-        (
-            Entity,
-            &mut DirectionalSphereOrbitInput,
-            &VelocityHudTargetEntity,
-        ),
+        (&mut DirectionalSphereOrbitInput, &VelocityHudTargetEntity),
         With<VelocityHudMarker>,
     >,
     q_target: Query<&LinearVelocity>,
 ) {
-    for (entity, mut hud_input, target) in q_hud.iter_mut() {
-        let Some(target) = **target else {
-            warn!(
-                "update_velocity_hud_input: entity {:?} has no target entity set",
-                entity
-            );
-            continue;
-        };
-
-        let Ok(velocity) = q_target.get(target) else {
-            warn!(
+    for (mut hud_input, target) in q_hud.iter_mut() {
+        let Ok(velocity) = q_target.get(**target) else {
+            error!(
                 "update_velocity_hud_input: entity {:?} not found in q_target",
                 target
             );
@@ -117,7 +103,6 @@ fn update_velocity_hud_input(
 fn sync_orbit_state(
     mut q_orbit: Query<
         (
-            Entity,
             &mut Transform,
             &DirectionalSphereOrbitOutput,
             &VelocityHudTargetEntity,
@@ -129,17 +114,9 @@ fn sync_orbit_state(
     >,
     q_target: Query<&Transform, Without<VelocityHudMarker>>,
 ) {
-    for (entity, mut transform, output, target) in &mut q_orbit {
-        let Some(target) = **target else {
-            warn!(
-                "sync_orbit_state: entity {:?} has no target entity set",
-                entity
-            );
-            continue;
-        };
-
-        let Ok(target_transform) = q_target.get(target) else {
-            warn!(
+    for (mut transform, output, target) in &mut q_orbit {
+        let Ok(target_transform) = q_target.get(**target) else {
+            error!(
                 "sync_orbit_state: entity {:?} not found in q_target",
                 target
             );
@@ -164,23 +141,15 @@ fn direction_shader_update_system(
 ) {
     for (material, &ChildOf(parent)) in &q_render {
         let Ok((_, target)) = q_hud.get(parent) else {
-            warn!(
+            error!(
                 "direction_shader_update_system: parent entity {:?} not found in q_hud",
                 parent
             );
             continue;
         };
 
-        let Some(target) = **target else {
-            warn!(
-                "direction_shader_update_system: entity {:?} has no target entity set",
-                parent
-            );
-            continue;
-        };
-
-        let Ok(velocity) = q_target.get(target) else {
-            warn!(
+        let Ok(velocity) = q_target.get(**target) else {
+            error!(
                 "direction_shader_update_system: entity {:?} not found in q_target",
                 target
             );
@@ -189,7 +158,7 @@ fn direction_shader_update_system(
         let magnitude = velocity.length() / 100.0;
 
         let Some(material) = materials.get_mut(&**material) else {
-            warn!(
+            error!(
                 "direction_shader_update_system: material for entity {:?} not found",
                 parent
             );

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{hud::objectives::ObjectiveRootHudMarker, prelude::*};
+use crate::prelude::*;
 
 pub mod health;
 pub mod objectives;
@@ -9,8 +9,12 @@ pub mod velocity;
 pub mod prelude {
     pub use super::{
         health::prelude::*, objectives::prelude::*, velocity::prelude::*, NovaHudPlugin,
+        NovaHudSystems,
     };
 }
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NovaHudSystems;
 
 #[derive(Default)]
 pub struct NovaHudPlugin;
@@ -23,7 +27,7 @@ impl Plugin for NovaHudPlugin {
         app.add_plugins(health::HealthHudPlugin);
         app.add_plugins(objectives::ObjectivesHudPlugin);
 
-        // NOTE: Setup and remove HUDs when player spaceship is added/removed
+        // Setup and remove HUDs when player spaceship is added/removed
         app.add_observer(setup_hud_velocity);
         app.add_observer(remove_hud_velocity);
         app.add_observer(setup_hud_health);
@@ -42,7 +46,7 @@ fn setup_hud_velocity(
     debug!("setup_hud_velocity: entity {:?}", entity);
 
     let Ok(spaceship) = q_spaceship.get(entity) else {
-        warn!(
+        error!(
             "setup_hud_velocity: entity {:?} not found in q_spaceship",
             entity
         );
@@ -51,7 +55,7 @@ fn setup_hud_velocity(
 
     commands.spawn((velocity_hud(VelocityHudConfig {
         radius: 5.0,
-        target: Some(spaceship),
+        target: spaceship,
     }),));
 }
 
@@ -64,10 +68,8 @@ fn remove_hud_velocity(
     debug!("remove_hud_velocity: entity {:?}", entity);
 
     for (hud_entity, target) in &q_hud {
-        if let Some(target_entity) = **target {
-            if target_entity == entity {
-                commands.entity(hud_entity).despawn();
-            }
+        if **target == entity {
+            commands.entity(hud_entity).despawn();
         }
     }
 }
@@ -81,7 +83,7 @@ fn setup_hud_health(
     debug!("setup_hud_health: entity {:?}", entity);
 
     let Ok(spaceship) = q_spaceship.get(entity) else {
-        warn!(
+        error!(
             "setup_hud_health: entity {:?} not found in q_spaceship",
             entity
         );
@@ -119,7 +121,7 @@ fn setup_hud_objectives(
     debug!("setup_hud_objectives: entity {:?}", entity);
 
     let Ok(_) = q_spaceship.get(entity) else {
-        warn!(
+        error!(
             "setup_hud_objectives: entity {:?} not found in q_spaceship",
             entity
         );

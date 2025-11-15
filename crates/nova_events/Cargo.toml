@@ -1,0 +1,16 @@
+[package]
+name = "nova_events"
+version = { workspace = true }
+edition = { workspace = true }
+description = "Events for the Nova Protocol game"
+
+[dependencies]
+bevy = { version = "0.17.2", features = ["experimental_bevy_ui_widgets"] }
+serde = { version = "1.0.228" }
+bevy_common_systems = { path = "../bevy_common_systems" }
+
+[lints]
+workspace = true
+
+[features]
+debug = ["bevy/track_location", "bevy_common_systems/debug"]
