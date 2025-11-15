@@ -12,10 +12,10 @@
 //! use bevy_common_systems::camera::prelude::*;
 //! ```
 
-mod chase;
-mod post;
-mod skybox;
-mod wasd;
+pub mod chase;
+pub mod post;
+pub mod skybox;
+pub mod wasd;
 
 /// Re-exports commonly used camera systems and utilities for convenience.
 ///

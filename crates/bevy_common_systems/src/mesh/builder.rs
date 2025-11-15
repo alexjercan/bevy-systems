@@ -1,3 +1,21 @@
+//! A triangle mesh builder for Bevy.
+//!
+//! This module provides utilities to create, manipulate, and convert triangle-based 3D meshes.
+//! It supports:
+//! - Creating basic primitives like octahedrons
+//! - Subdividing faces for higher resolution
+//! - Applying procedural noise to vertices
+//! - Slicing meshes along planes
+//! - Generating normals and UVs
+//! - Converting to and from `Mesh`
+//!
+//! Example usage:
+//!
+//! ```rust
+//! let mut builder = TriangleMeshBuilder::new_octahedron(2);
+//! builder.apply_noise(&my_noise_fn);
+//! let mesh = builder.build();
+//! ```
 use bevy::{
     asset::RenderAssetUsages,
     mesh::{Indices, PrimitiveTopology, VertexAttributeValues},
@@ -11,18 +29,23 @@ pub mod prelude {
     pub use super::TriangleMeshBuilder;
 }
 
+/// A triangle mesh builder that stores a collection of 3D triangles.
 #[derive(Clone, Debug, Default)]
 pub struct TriangleMeshBuilder {
     pub triangles: Vec<Triangle3d>,
 }
 
 impl TriangleMeshBuilder {
+    /// Create an empty mesh builder with no triangles.
     pub fn new_empty() -> Self {
         Self {
             triangles: Vec::new(),
         }
     }
 
+    /// Create a subdivided octahedron mesh with a given resolution.
+    ///
+    /// Each triangular face is recursively subdivided `resolution` times.
     pub fn new_octahedron(resolution: u32) -> Self {
         let mut builder = TriangleMeshBuilder::default();
 
@@ -51,11 +74,15 @@ impl TriangleMeshBuilder {
         builder
     }
 
+    /// Add a triangle to the mesh.
     pub fn add_triangle(&mut self, t: Triangle3d) -> &mut Self {
         self.triangles.push(t);
         self
     }
 
+    /// Apply procedural noise to all vertices using a 3D noise function.
+    ///
+    /// The noise value is added along the normalized vertex direction.
     pub fn apply_noise(&mut self, noise_fn: &impl NoiseFn<f64, 3>) -> &mut Self {
         let (vertices, indices) = self.vertices_and_indices();
 
@@ -84,6 +111,10 @@ impl TriangleMeshBuilder {
         self
     }
 
+    /// Slice the mesh along a plane defined by `plane_normal` and `plane_point`.
+    ///
+    /// Returns `Some((positive_side, negative_side))` if the slice produces
+    /// two non-empty meshes, otherwise `None`.
     pub fn slice(&self, plane_normal: Vec3, plane_point: Vec3) -> Option<(Self, Self)> {
         let triangles = self.triangles.clone();
 
@@ -128,6 +159,9 @@ impl TriangleMeshBuilder {
         Some((positive_mesh_builder, negative_mesh_builder))
     }
 
+    /// Fill a boundary with triangles to close holes after slicing.
+    ///
+    /// Assumes the boundary is a polygon and fills triangles toward its centroid.
     pub fn fill_boundary(&mut self, boundary: &[Vec3]) -> &Self {
         if boundary.len() < 3 {
             return self;
@@ -148,6 +182,7 @@ impl TriangleMeshBuilder {
         self
     }
 
+    /// Extract all vertices and triangle indices from the mesh.
     pub fn vertices_and_indices(&self) -> (Vec<Vec3>, Vec<u32>) {
         let mut base = 0;
         let mut vertices = vec![];
@@ -168,6 +203,7 @@ impl TriangleMeshBuilder {
         (vertices, indices)
     }
 
+    /// Compute per-vertex normals based on triangle faces.
     pub fn normals(&self) -> Vec<Vec3> {
         let mut normals = vec![];
 
@@ -182,6 +218,7 @@ impl TriangleMeshBuilder {
         normals
     }
 
+    /// Compute simple planar UVs for the mesh.
     pub fn uvs(&self) -> Vec<Vec2> {
         let mut uvs = vec![];
 
@@ -202,10 +239,12 @@ impl TriangleMeshBuilder {
         uvs
     }
 
+    /// Returns true if there are no triangles in the mesh.
     pub fn is_empty(&self) -> bool {
         self.triangles.is_empty()
     }
 
+    /// Recursively subdivide a triangle face to increase mesh resolution.
     fn subdivide_face(&mut self, a: Vec3, b: Vec3, c: Vec3, depth: u32) {
         if depth == 0 {
             self.add_triangle(Triangle3d::new(a, b, c));
@@ -214,7 +253,7 @@ impl TriangleMeshBuilder {
             let bc = slerp(b, c, 0.5);
             let ca = slerp(c, a, 0.5);
 
-            // Recursively subdivide into 4 smaller triangles
+            // Recursively subdivide into four smaller triangles
             self.subdivide_face(a, ab, ca, depth - 1);
             self.subdivide_face(b, bc, ab, depth - 1);
             self.subdivide_face(c, ca, bc, depth - 1);
@@ -224,6 +263,7 @@ impl TriangleMeshBuilder {
 }
 
 impl MeshBuilder for TriangleMeshBuilder {
+    /// Build a Bevy Mesh from the triangle mesh builder.
     fn build(&self) -> Mesh {
         let (vertices, indices) = self.vertices_and_indices();
         let normals = self.normals();
@@ -250,6 +290,7 @@ impl MeshBuilder for TriangleMeshBuilder {
 }
 
 impl From<Mesh> for TriangleMeshBuilder {
+    /// Convert a Bevy Mesh into a TriangleMeshBuilder.
     fn from(mesh: Mesh) -> Self {
         let positions = match mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap() {
             VertexAttributeValues::Float32x3(vals) => {
@@ -276,6 +317,7 @@ impl From<Mesh> for TriangleMeshBuilder {
     }
 }
 
+/// Compute intersection between an edge and a plane.
 fn edge_plane_intersection(a: Vec3, b: Vec3, plane_point: Vec3, plane_normal: Vec3) -> Vec3 {
     let ab = b - a;
     let t = (plane_point - a).dot(plane_normal) / ab.dot(plane_normal);
@@ -283,11 +325,16 @@ fn edge_plane_intersection(a: Vec3, b: Vec3, plane_point: Vec3, plane_normal: Ve
     a + ab * t
 }
 
+/// Result of slicing a triangle against a plane.
 enum TriangleSliceResult {
     Single(Triangle3d),
     Split(Triangle3d, Triangle3d, Triangle3d),
 }
 
+/// Slice a triangle along a plane.
+///
+/// Returns a tuple containing the slice result and a boolean indicating
+/// whether the lonely vertex is on the positive side of the plane.
 fn triangle_slice(
     tri: Triangle3d,
     plane_normal: Vec3,
@@ -299,15 +346,11 @@ fn triangle_slice(
 
     let sides = [d0 >= 0.0, d1 >= 0.0, d2 >= 0.0];
 
-    // Fully positive
     if sides[0] && sides[1] && sides[2] {
         (TriangleSliceResult::Single(tri), true)
-    }
-    // Fully negative
-    else if !sides[0] && !sides[1] && !sides[2] {
+    } else if !sides[0] && !sides[1] && !sides[2] {
         (TriangleSliceResult::Single(tri), false)
     } else {
-        // Find lonely point index
         let lonely_index = if sides[0] == sides[1] {
             2
         } else if sides[0] == sides[2] {
@@ -315,7 +358,6 @@ fn triangle_slice(
         } else {
             0
         };
-
         let (lonely, first, second) = match lonely_index {
             0 => (tri.vertices[0], tri.vertices[2], tri.vertices[1]),
             1 => (tri.vertices[1], tri.vertices[0], tri.vertices[2]),
@@ -324,14 +366,13 @@ fn triangle_slice(
         };
 
         let lonely_side = sides[lonely_index];
-
-        // Edge-plane intersections
         let first_int = edge_plane_intersection(lonely, first, plane_point, plane_normal);
         let second_int = edge_plane_intersection(lonely, second, plane_point, plane_normal);
 
         let single = Triangle3d::new(lonely, second_int, first_int);
         let tri1 = Triangle3d::new(first, first_int, second);
         let tri2 = Triangle3d::new(second, first_int, second_int);
+
         (TriangleSliceResult::Split(single, tri1, tri2), lonely_side)
     }
 }
@@ -342,22 +383,18 @@ mod test {
 
     #[test]
     fn test_edge_plane_intersection() {
-        // Arrange
         let a = Vec3::new(0.0, 0.0, 0.0);
         let b = Vec3::new(1.0, 0.0, 0.0);
         let plane_point = Vec3::new(0.5, 0.0, 0.0);
         let plane_normal = Vec3::new(1.0, 0.0, 0.0);
 
-        // Act
         let intersection = edge_plane_intersection(a, b, plane_point, plane_normal);
 
-        // Assert
         assert_eq!(intersection, Vec3::new(0.5, 0.0, 0.0));
     }
 
     #[test]
     fn test_triangle_slice() {
-        // Arrange
         let tri = Triangle3d::new(
             Vec3::new(0.0, 1.0, 0.0),
             Vec3::new(-1.0, -1.0, 0.0),
@@ -366,10 +403,8 @@ mod test {
         let plane_point = Vec3::new(0.0, 0.0, 0.0);
         let plane_normal = Vec3::new(0.0, 1.0, 0.0);
 
-        // Act
         let (result, is_positive) = triangle_slice(tri, plane_normal, plane_point);
 
-        // Assert
         match result {
             TriangleSliceResult::Split(_, _, _) => assert!(true),
             _ => assert!(false, "Expected triangle to be split"),
