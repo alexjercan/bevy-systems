@@ -2,6 +2,8 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_common_systems::prelude::*;
 use clap::Parser;
+use noise::{Fbm, MultiFractal, Perlin};
+use rand::RngCore;
 
 #[derive(Parser)]
 #[command(name = "02_sphere")]
@@ -33,7 +35,16 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mesh = apply_noise_to_mesh(&octahedron_sphere(5), 0);
+    let mut rng = rand::rng();
+    let perlin = Fbm::<Perlin>::new(rng.next_u32())
+        .set_frequency(1.0)
+        .set_persistence(0.5)
+        .set_lacunarity(2.208984375)
+        .set_octaves(14);
+
+    let mesh = TriangleMeshBuilder::new_octahedron(3)
+        .apply_noise(&perlin)
+        .build();
 
     commands.spawn((
         Name::new("Sphere"),

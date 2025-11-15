@@ -33,7 +33,7 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mesh = octahedron_sphere(3);
+    let mesh = TriangleMeshBuilder::new_octahedron(3).build();
 
     commands.spawn((
         Name::new("Sphere"),
