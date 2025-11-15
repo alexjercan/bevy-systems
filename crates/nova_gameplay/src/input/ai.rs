@@ -33,8 +33,6 @@ impl Plugin for SpaceshipAIInputPlugin {
 #[require(SpaceshipRootMarker)]
 pub struct AISpaceshipMarker;
 
-// NOTE: The AI was generated using ChatGPT to see how good it can play my game :)
-
 fn update_controller_target_rotation_torque(
     mut q_controller: Query<
         (&mut ControllerSectionRotationInput, &ChildOf),
@@ -138,7 +136,6 @@ fn update_turret_target_input(
     q_spaceship: Query<Entity, (With<SpaceshipRootMarker>, With<AISpaceshipMarker>)>,
     player: Single<&Transform, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
 ) {
-    // NOTE: We assume that there is only one player spaceship in the scene.
     let transform = player.into_inner();
 
     for entity in &q_spaceship {

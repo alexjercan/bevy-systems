@@ -137,8 +137,6 @@ fn explode_mesh(
     fragment_count: usize,
     max_iterations: usize,
 ) -> Option<Vec<(Mesh, Vec3)>> {
-    // TODO: In the future, we want to never fail here - change to return Vec<(Mesh, Vec3)>
-
     let mut queue = VecDeque::from([(original.clone(), Vec3::ZERO)]);
     let mut rng = rand::rng();
 

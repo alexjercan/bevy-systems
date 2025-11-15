@@ -34,8 +34,6 @@ impl Plugin for InpsectorDebugPlugin {
             ..Default::default()
         });
 
-        // TODO: Ideally we would have an extra camera for the inspector only, but for now we
-        // will just use the primary camera.
         app.add_observer(on_add_camera);
 
         app.add_plugins((

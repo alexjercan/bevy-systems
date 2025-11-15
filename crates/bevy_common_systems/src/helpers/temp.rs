@@ -27,10 +27,7 @@ impl Plugin for TempEntityPlugin {
 
         app.add_observer(on_insert_temp_entity);
 
-        // NOTE: Using Update stage to ensure timers are updated correctly.
-        // TODO: Check what happens if this system is called before other systems that use the
-        // TempEntity. Will the .depsawn() call despawn the entity imediatelly or at the end of the
-        // frame?
+        // Using Update stage to ensure timers are updated correctly.
         app.add_systems(
             Update,
             (update_temp_entities,)

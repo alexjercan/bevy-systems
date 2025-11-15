@@ -104,7 +104,6 @@ impl EventFilter<NovaEventWorld> for ExpressionFilterConfig {
         match self.0.evaluate(world) {
             Ok(result) => result,
             Err(e) => {
-                // TODO: Proper error handling
                 error!(
                     "VariableFilterConfig: failed to evaluate condition: {:?}",
                     e

@@ -37,8 +37,6 @@ pub struct DirectionalSphereOrbit {
 pub struct DirectionalSphereOrbitOutput(pub Vec3);
 
 /// The input direction for the orbiting entity on the sphere surface.
-///
-/// TODO: Make this a [`Dir3`].
 #[derive(Component, Default, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
 pub struct DirectionalSphereOrbitInput(pub Vec3);
 

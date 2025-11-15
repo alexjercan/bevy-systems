@@ -1,5 +1,3 @@
-//! TODO: Add description in this crate
-
 use bevy::{
     app::Plugins,
     log::{Level, LogPlugin},
@@ -19,7 +17,6 @@ use nova_scenario::prelude::*;
 mod core;
 
 pub mod prelude {
-    // NOTE: These are temporary, until I finis the refactor to move everything to new_gui_app
     pub use nova_assets::prelude::*;
     #[cfg(feature = "debug")]
     pub use nova_debug::prelude::*;
@@ -98,9 +95,6 @@ impl AppBuilder {
 
         // Add default game plugins if none were provided
         if self.use_default_plugins {
-            // TODO: Main menu plugin
-            // TODO: Gameplay loop plugin
-
             self.app.add_plugins(core::core_plugin);
         }
 
@@ -109,7 +103,6 @@ impl AppBuilder {
 
         // When we enter the Loaded state, switch to Playing state
         // Setup the status UI when entering the Playing state
-        // TODO: Here we will add a MainMenu state before Playing
         self.app.add_systems(
             OnEnter(GameAssetsStates::Loaded),
             (

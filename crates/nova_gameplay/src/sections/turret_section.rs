@@ -1,9 +1,6 @@
 //! A turret section is a component that can be added to an entity to give it a turret-like
 //! behavior.
 
-// TODO: Cleanup the magic numbers into constants
-// TODO: Refactor this plugin when I have time
-
 use avian3d::prelude::*;
 use bevy::{
     ecs::system::{lifetimeless::Read, SystemParam},
@@ -194,7 +191,6 @@ impl Plugin for TurretSectionPlugin {
 
         app.add_observer(insert_turret_section);
 
-        // NOTE: How can we check that the SmoothLookRotationPlugin is added?
         if self.render {
             app.add_observer(insert_turret_section_render);
             app.add_observer(insert_turret_yaw_rotator_render);
@@ -574,8 +570,8 @@ fn shoot_spawn_projectile(
         With<TurretSectionMarker>,
     >,
     mut q_muzzle: Query<&mut TurretSectionBarrelFireState, With<TurretSectionBarrelMuzzleMarker>>,
-    // NOTE: We are using TransformHelper here because we need to compute the global transform;
-    // And it should be fine, since it will not be called frequently.
+    // We are using TransformHelper here because we need to compute the global transform; And it
+    // should be fine, since it will not be called frequently.
     transform_helper: TransformHelper,
 ) {
     for (turret, muzzle, ChildOf(spaceship), config, input) in &q_turret {
@@ -661,8 +657,8 @@ fn on_projectile_marker_effect(
             Without<TurretSectionBarrelMuzzleMarker>,
         ),
     >,
-    // NOTE: We are using TransformHelper here because we need to compute the global transform;
-    // And it should be fine, since it will not be called frequently.
+    // We are using TransformHelper here because we need to compute the global transform; And it
+    // should be fine, since it will not be called frequently.
     transform_helper: TransformHelper,
 ) {
     let projectile = add.entity;

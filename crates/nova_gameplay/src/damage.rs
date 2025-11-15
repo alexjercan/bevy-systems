@@ -167,6 +167,5 @@ fn handle_entity_explosion(
         ));
     }
 
-    // TODO: How can I just disable the object in case I still need it somehow?
     commands.entity(entity).despawn();
 }

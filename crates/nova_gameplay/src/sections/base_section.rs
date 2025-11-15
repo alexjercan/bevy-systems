@@ -38,7 +38,6 @@ pub enum SectionKind {
 #[derive(Clone, Debug, Reflect)]
 pub struct SectionConfig {
     pub base: BaseSectionConfig,
-    // TODO: I will probably want to box this later to reduce the size of the struct.
     pub kind: SectionKind,
 }
 
@@ -57,9 +56,6 @@ pub fn base_section(config: BaseSectionConfig) -> impl Bundle {
     (
         Name::new(config.name.clone()),
         SectionMarker,
-        // NOTE: Somehow I want to be able to use the mesh for the collider size later.
-        // Ideally I will not use the mesh for collider because that will be expensive.
-        // But I want to parametrise the collider to look better than just a cube.
         Collider::cuboid(1.0, 1.0, 1.0),
         ColliderDensity(config.mass),
         Visibility::Inherited,

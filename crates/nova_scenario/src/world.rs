@@ -41,7 +41,6 @@ impl EventWorld for NovaEventWorld {
                 if let Some(next_scenario) = scenario {
                     world.trigger(LoadScenario(next_scenario.clone()));
                 } else {
-                    // TODO: Proper error handling
                     error!(
                         "Next scenario id '{}' not found in scenarios!",
                         next_scenario.scenario_id

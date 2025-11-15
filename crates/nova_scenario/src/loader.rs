@@ -31,7 +31,6 @@ pub struct ScenarioConfig {
     /// A brief description of the scenario
     pub description: String,
     /// The cubemap image used for the scenario's skybox
-    /// TODO: Maybe allow to change the cubemap via events
     pub cubemap: Handle<Image>,
     /// Events associated with the scenario
     pub events: Vec<ScenarioEventConfig>,
@@ -59,7 +58,6 @@ pub struct LoadScenario(pub ScenarioConfig);
 pub struct UnloadScenario;
 
 /// Event that is triggered once a scenario has been successfully loaded.
-/// TODO: Maybe we want to add status and other info here later.
 #[derive(Event, Clone, Debug)]
 pub struct ScenarioLoaded;
 
@@ -114,8 +112,6 @@ fn on_load_scenario(
     q_scoped: Query<Entity, With<ScenarioScopedMarker>>,
     mut world: ResMut<NovaEventWorld>,
 ) {
-    // TODO: Maybe in the future we want to filter more specifically in case we keep other
-    // scenario-scoped entities around (e.g the player spaceship or similar)
     world.clear();
     for entity in q_scoped.iter() {
         commands.entity(entity).despawn();

@@ -27,7 +27,7 @@ impl Plugin for NovaHudPlugin {
         app.add_plugins(health::HealthHudPlugin);
         app.add_plugins(objectives::ObjectivesHudPlugin);
 
-        // NOTE: Setup and remove HUDs when player spaceship is added/removed
+        // Setup and remove HUDs when player spaceship is added/removed
         app.add_observer(setup_hud_velocity);
         app.add_observer(remove_hud_velocity);
         app.add_observer(setup_hud_health);

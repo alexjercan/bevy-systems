@@ -61,9 +61,7 @@ fn update_controller_target_rotation_torque(
     >,
     spaceship: Single<Entity, (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>)>,
 ) {
-    // NOTE: we assume that there is only one point rotation output with the given markers.
     let point_rotation = point_rotation.into_inner();
-    // NOTE: We assume that there is only one player spaceship in the scene.
     let spaceship = spaceship.into_inner();
 
     for (mut controller, _) in q_controller
@@ -90,9 +88,7 @@ fn update_turret_target_input(
         (With<SpaceshipRootMarker>, With<PlayerSpaceshipMarker>),
     >,
 ) {
-    // NOTE: we assume that there is only one point rotation output with the given markers.
     let point_rotation = point_rotation.into_inner();
-    // NOTE: We assume that there is only one player spaceship in the scene.
     let (transform, spaceship) = spaceship.into_inner();
 
     for (mut turret, _) in q_turret
@@ -200,10 +196,6 @@ fn on_turret_input_binding(
     trace!("on_turret_input_binding: entity {:?}", entity);
 
     let Ok(binding) = q_binding.get(entity) else {
-        error!(
-            "on_turret_input_binding: entity {:?} not found in q_binding",
-            entity
-        );
         return;
     };
 
@@ -231,10 +223,6 @@ fn on_projectile_input(
     trace!("on_projectile_input: entity {:?}", entity);
 
     let Ok(mut q_turret) = q_turret.get_mut(entity) else {
-        error!(
-            "on_projectile_input: entity {:?} not found in q_turret",
-            entity
-        );
         return;
     };
 

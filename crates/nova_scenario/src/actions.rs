@@ -62,7 +62,6 @@ impl EventAction<NovaEventWorld> for VariableSetActionConfig {
                 world.insert_variable(self.key.clone(), literal);
             }
             Err(e) => {
-                // TODO: Proper error handling
                 error!(
                     "VariableSetActionConfig: failed to evaluate expression for key '{}': {:?}",
                     self.key, e

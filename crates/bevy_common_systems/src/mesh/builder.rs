@@ -135,9 +135,7 @@ impl TriangleMeshBuilder {
 
         let center = boundary.iter().fold(Vec3::ZERO, |acc, v| acc + v) / (boundary.len() as f32);
 
-        // TODO: optionally implement reordering logic if boundary isn't guaranteed CCW
         let reordered = boundary.to_vec();
-
         for i in (0..reordered.len()).step_by(2) {
             let a = reordered[i];
             let b = reordered[i + 1];

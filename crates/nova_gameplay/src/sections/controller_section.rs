@@ -83,7 +83,6 @@ pub struct ControllerSectionPlugin {
 
 impl Plugin for ControllerSectionPlugin {
     fn build(&self, app: &mut App) {
-        // NOTE: How can we check that the TorquePdControllerPlugin is added?
         debug!("ControllerSectionPlugin: build");
 
         app.add_systems(

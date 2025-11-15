@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use nova_gameplay::prelude::*;
 
 pub(crate) fn register_sections(mut commands: Commands, game_assets: Res<super::GameAssets>) {
-    // TODO: This should be loaded from a JSON file, but for now it is fine.
+    // This should be loaded from a JSON file, but for now it is fine.
 
     commands.insert_resource(GameSections(vec![
         SectionConfig {

@@ -35,8 +35,6 @@ pub struct SpaceshipSectionConfig {
     pub id: SectionId,
     pub position: Vec3,
     pub rotation: Quat,
-    // NOTE: Maybe in the future this will be a Handle and in the .cfg file it will be represented
-    // by an ID.
     pub config: SectionConfig,
 }
 

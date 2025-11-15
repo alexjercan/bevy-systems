@@ -207,7 +207,6 @@ fn insert_thruster_section_render(
                     Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
                 ),
                 (
-                    // NOTE: This is not really part of the render mesh, but I just added it here
                     Name::new("Thruster Exhaust"),
                     ThrusterSectionExhaustShaderMarker,
                     Mesh3d(meshes.add(Cone::new(0.4, 0.1))),

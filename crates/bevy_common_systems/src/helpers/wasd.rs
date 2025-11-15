@@ -3,8 +3,6 @@
 //! This should be used together with the [`WASDCamera`] component from the `bevy_common_systems`
 //! crate. It sets up input bindings for WASD movement, mouse look, and vertical movement
 //! (space and shift keys).
-//!
-//! TODO: Maybe add support for configurable keybindings in the future.
 
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
@@ -126,7 +124,7 @@ fn destroy_wasd_camera(remove: On<Remove, WASDCameraController>, mut commands: C
     let entity = remove.entity;
     trace!("destroy_wasd_camera: entity {:?}", entity);
 
-    // NOTE: use try_remove in case this get's despawned and remove is called after
+    // use try_remove in case this get's despawned and remove is called after
     commands.entity(entity).try_remove::<(
         Actions<WASDCameraInputMarker>,
         WASDCamera,
